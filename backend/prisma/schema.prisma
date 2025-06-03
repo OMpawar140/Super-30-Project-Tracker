@@ -1,0 +1,193 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  email String @id
+  skillset String?
+
+  // Projects created by this user
+  createdProjects Project[] @relation("ProjectCreator")
+  
+  // Project memberships with roles
+  projectMembers ProjectMember[]
+  
+  // Tasks assigned to this user
+  assignedTasks Task[] @relation("TaskAssignee")
+  
+  // Task reviews performed by this user
+  taskReviews TaskReview[]
+
+  @@map("users")
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  status      ProjectStatus @default(ACTIVE)
+  startDate   DateTime?
+  endDate     DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Project creator
+  creatorId String
+  creator   User   @relation("ProjectCreator", fields: [creatorId], references: [email], onDelete: Cascade)
+
+  // Project members (admins and task completers)
+  members    ProjectMember[]
+  
+  // Milestones within this project
+  milestones Milestone[]
+
+  @@map("projects")
+}
+
+model ProjectMember {
+  id        String      @id @default(cuid())
+  role      ProjectRole
+  joinedAt  DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  // User and Project relationships
+  userId    String
+  user      User    @relation(fields: [userId], references: [email], onDelete: Cascade)
+  
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // Unique constraint to prevent duplicate memberships
+  @@unique([userId, projectId])
+  @@map("project_members")
+}
+
+model Milestone {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  startDate   DateTime?
+  endDate     DateTime?
+  status      MilestoneStatus @default(PLANNED)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Project relationship
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // Tasks within this milestone
+  tasks Task[]
+
+  @@map("milestones")
+}
+
+model Task {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  priority    TaskPriority @default(MEDIUM)
+  status      TaskStatus @default(UPCOMING)
+  startDate   DateTime?
+  dueDate     DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  // Milestone relationship
+  milestoneId String
+  milestone   Milestone @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+
+  // Task assignee
+  assigneeId String?
+  assignee   User?   @relation("TaskAssignee", fields: [assigneeId], references: [email], onDelete: SetNull)
+
+  // Task reviews/submissions
+  reviews TaskReview[]
+
+  // Task attachments/proof of completion
+  attachments TaskAttachment[]
+
+  @@map("tasks")
+}
+
+model TaskReview {
+  id        String           @id @default(cuid())
+  status    TaskReviewStatus
+  comment   String?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  // Task relationship
+  taskId String
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  // Reviewer (Creator or Admin)
+  reviewerId String
+  reviewer   User   @relation(fields: [reviewerId], references: [email], onDelete: Cascade)
+
+  @@map("task_reviews")
+}
+
+model TaskAttachment {
+  id        String   @id @default(cuid())
+  fileName  String
+  fileUrl   String
+  fileSize  Int?
+  mimeType  String?
+  createdAt DateTime @default(now())
+
+  // Task relationship
+  taskId String
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@map("task_attachments")
+}
+
+// Enums
+enum ProjectStatus {
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+  ON_HOLD
+}
+
+enum ProjectRole {
+  ADMIN
+  TASK_COMPLETER
+}
+
+enum MilestoneStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  OVERDUE
+}
+
+enum TaskStatus {
+  UPCOMING
+  IN_PROGRESS
+  IN_REVIEW
+  COMPLETED
+  OVERDUE
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TaskReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
