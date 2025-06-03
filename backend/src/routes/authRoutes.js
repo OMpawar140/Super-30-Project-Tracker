@@ -2,7 +2,7 @@ const express = require('express');
 const { getUserByUid, createCustomToken } = require('../config/firebase');
 const { authenticateToken } = require('../middlewares/authMiddleware');
 const { PrismaClient } = require("@prisma/client");
-
+const admin = require('firebase-admin');
 const prisma = new PrismaClient();
 
 const router = express.Router();
@@ -12,7 +12,7 @@ router.post('/register', authenticateToken, async (req, res) => {
   try {
     const user = await getUserByUid(req.user.uid);
     const email = user.email;
-    //console.log('Registering user:', email);
+    console.log('Registering user:', email);
 
     // Ensure required fields are provided
     if (!email) {

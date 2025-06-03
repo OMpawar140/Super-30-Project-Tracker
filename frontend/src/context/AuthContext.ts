@@ -17,7 +17,7 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, displayName?: string) => Promise<void>;
-  loginWithGoogle: () => Promise<void>;
+  loginWithGoogle: () => Promise<User>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   getIdToken: () => Promise<string | null>;
@@ -57,9 +57,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   // Login with Google
-  const loginWithGoogle = async (): Promise<void> => {
-    await signInWithPopup(auth, googleProvider);
-  };
+ const loginWithGoogle = async (): Promise<User> => {
+  const result = await signInWithPopup(auth, googleProvider);
+  return result.user;
+};
 
   // Logout
   const logout = async (): Promise<void> => {

@@ -35,15 +35,14 @@ const LoginSignupForm: React.FC<LoginSignupFormProps> = ({ onSuccess }) => {
     setError('');
   };
 
-  const handleRegisterEmail = async () => {
-      try {
-        // Call backend logout endpoint first
-        await callApi(() => apiService.auth.emailRegister(formData.email));
-        setSuccess('Email registered successfully!');
-      } catch (err) {
-        console.error('Email already present', err);
-      }
-    };
+const handleRegisterEmail = async (email?: string) => {
+  try {
+    await callApi(() => apiService.auth.emailRegister(email || formData.email));
+    setSuccess('Email registered successfully!');
+  } catch (err) {
+    console.error('Email already present', err);
+  }
+};
 
   const validateForm = () => {
     if (!formData.email || !formData.password) {
@@ -104,24 +103,25 @@ const LoginSignupForm: React.FC<LoginSignupFormProps> = ({ onSuccess }) => {
     }
   };
 
-  const handleGoogleSignIn = async () => {
-    setLoading(true);
-    setError('');
-    
-    try {
-      await loginWithGoogle();
-      setSuccess('Successfully signed in with Google!');
-      if (formData.email) {
-        await handleRegisterEmail();
-      }
-      onSuccess?.();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
-      setError(err.message || 'Google sign-in failed');
-    } finally {
-      setLoading(false);
+const handleGoogleSignIn = async () => {
+  setLoading(true);
+  setError('');
+  
+  try {
+    const user = await loginWithGoogle();
+    setSuccess('Successfully signed in with Google!');
+    const email = user?.email || formData.email;
+    if (email) {
+      await handleRegisterEmail(email);
     }
-  };
+    onSuccess?.();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (err: any) {
+    setError(err.message || 'Google sign-in failed');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleForgotPassword = async () => {
     if (!formData.email) {
