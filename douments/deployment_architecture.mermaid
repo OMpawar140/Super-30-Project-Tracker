@@ -1,0 +1,125 @@
+graph TB
+    %% User Layer
+    subgraph "Client Layer"
+        U1[Web Browser - Desktop]
+        U2[Mobile Browser]
+        U3[Tablet Browser]
+    end
+
+    %% CDN and Load Balancing
+    subgraph "Content Delivery Network"
+        CDN[CloudFlare CDN<br/>Static Assets<br/>CSS, JS, Images]
+    end
+
+    %% Frontend Deployment
+    subgraph "Frontend Hosting - Vercel/Netlify"
+        FE[React Application<br/>Build: Production<br/>Framework: Vite/CRA<br/>Styling: Tailwind CSS]
+    end
+
+    %% Backend Infrastructure
+    subgraph "Backend Hosting - Railway/Render"
+        subgraph "Application Server"
+            API[Node.js + Express API<br/>Port: 3001<br/>Environment: Production<br/>PM2 Process Manager]
+        end
+        
+        subgraph "Authentication Service"
+            AUTH[Firebase Admin SDK<br/>JWT Token Validation<br/>User Management]
+        end
+    end
+
+    %% Database Layer
+    subgraph "Database Layer - PostgreSQL"
+        subgraph "Primary Database"
+            DB[(PostgreSQL Database<br/>Host: Railway/Supabase<br/>Connection Pool: 20<br/>SSL: Enabled)]
+        end
+        
+        subgraph "ORM Layer"
+            PRISMA[Prisma ORM<br/>Schema Management<br/>Query Builder<br/>Type Safety]
+        end
+    end
+
+    %% External Services
+    subgraph "External Services"
+        subgraph "Authentication Provider"
+            FIREBASE[Firebase Authentication<br/>Google, Email/Password<br/>JWT Tokens<br/>User Profiles]
+        end
+        
+        subgraph "File Storage"
+            STORAGE[Firebase Storage<br/>File Uploads<br/>Document Attachments<br/>Image Assets]
+        end
+        
+        subgraph "Email Service"
+            EMAIL[Email Service<br/>SendGrid/Nodemailer<br/>Notifications<br/>Password Reset]
+        end
+    end
+
+    %% Monitoring and Logging
+    subgraph "Monitoring & Analytics"
+        subgraph "Error Tracking"
+            SENTRY[Sentry<br/>Error Monitoring<br/>Performance Tracking<br/>Real-time Alerts]
+        end
+        
+        subgraph "Analytics"
+            GA[Google Analytics<br/>User Behavior<br/>Page Views<br/>Conversion Tracking]
+        end
+        
+        subgraph "Application Monitoring"
+            LOGS[Application Logs<br/>Request/Response<br/>Database Queries<br/>System Metrics]
+        end
+    end
+
+    %% Environment Configuration
+    subgraph "Environment Configuration"
+        subgraph "Production Environment"
+            ENV[Environment Variables<br/>API Keys<br/>Database URLs<br/>Service Credentials]
+        end
+        
+        subgraph "CI/CD Pipeline"
+            CICD[GitHub Actions<br/>Automated Testing<br/>Build & Deploy<br/>Environment Promotion]
+        end
+    end
+
+    %% Security Layer
+    subgraph "Security & SSL"
+        SSL[SSL/TLS Certificates<br/>HTTPS Enforcement<br/>Security Headers<br/>CORS Configuration]
+    end
+
+    %% Data Flow Connections
+    U1 --> CDN
+    U2 --> CDN
+    U3 --> CDN
+    
+    CDN --> FE
+    FE --> SSL
+    SSL --> API
+    
+    API --> AUTH
+    API --> PRISMA
+    API --> FIREBASE
+    API --> STORAGE
+    API --> EMAIL
+    
+    PRISMA --> DB
+    
+    API --> SENTRY
+    FE --> GA
+    API --> LOGS
+    
+    CICD --> FE
+    CICD --> API
+    ENV --> API
+
+    %% Styling
+    classDef frontend fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef backend fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef database fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef external fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef monitoring fill:#fce4ec,stroke:#880e4f,stroke-width:2px
+    classDef security fill:#f1f8e9,stroke:#33691e,stroke-width:2px
+
+    class FE,CDN frontend
+    class API,AUTH,PRISMA backend
+    class DB database
+    class FIREBASE,STORAGE,EMAIL external
+    class SENTRY,GA,LOGS monitoring
+    class SSL,ENV,CICD security
