@@ -9,6 +9,7 @@ const { initializeFirebase } = require('./src/config/firebase');
 
 // Import routes
 const authRoutes = require('./src/routes/authRoutes');
+const projectRoutes = require('./src/routes/projectRoutes');
 const protectedRoutes = require('./src/routes/protectedRoutes');
 
 // Initialize Express app
@@ -57,6 +58,7 @@ app.get('/health', (req, res) => {
 
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/projects', projectRoutes);
 app.use('/api', protectedRoutes);
 
 // 404 handler
@@ -84,5 +86,6 @@ app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Health check: http://localhost:${PORT}/health`);
   console.log(`Auth routes: http://localhost:${PORT}/api/auth`);
+  console.log(`Project routes: http://localhost:${PORT}/api/projects`);
   console.log(`Protected routes: http://localhost:${PORT}/api`);
 });

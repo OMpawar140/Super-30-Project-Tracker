@@ -160,6 +160,7 @@ enum ProjectStatus {
 }
 
 enum ProjectRole {
+  CREATOR
   ADMIN
   TASK_COMPLETER
 }
