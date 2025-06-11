@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { auth } from '../lib/firebase';
 
 const API_BASE_URL = 'http://localhost:5000/api';
@@ -15,7 +16,6 @@ const getAuthToken = async (): Promise<string | null> => {
 const apiCall = async (
   endpoint: string,
   options: RequestInit = {}
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<any> => {
   const token = await getAuthToken();
   
@@ -60,7 +60,6 @@ export const apiService = {
     logout: () => apiCall('/auth/logout', { method: 'POST' }),
     
     // Create custom token
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     createCustomToken: (claims: Record<string, any>) =>
       apiCall('/auth/custom-token', {
         method: 'POST',
@@ -86,7 +85,6 @@ export const apiService = {
     getUserSettings: () => apiCall('/user/settings'),
     
     // Update user settings
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     updateUserSettings: (settings: Record<string, any>) =>
       apiCall('/user/settings', {
         method: 'PUT',
@@ -99,14 +97,55 @@ export const apiService = {
     // Get admin data
     getAdminData: () => apiCall('/admin/users'),
   },
+
+  // Project management endpoints
+  projects: {
+    // Get all projects (maps to GET /api/projects)
+    getAllProjects: () => apiCall('/projects'),
+    
+    // Get project by ID (maps to GET /api/projects/:id)
+    getProjectById: (id: string) => apiCall(`/projects/${id}`),
+    
+    // Create new project (maps to POST /api/projects)
+    createProject: (projectData: Record<string, any>) =>
+      apiCall('/projects', {
+        method: 'POST',
+        body: JSON.stringify(projectData),
+      }),
+    
+    // Update existing project (maps to PUT /api/projects/:id)
+    updateProject: (id: string, projectData: Record<string, any>) =>
+      apiCall(`/projects/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(projectData),
+      }),
+    
+    // Delete project (maps to DELETE /api/projects/:id)
+    deleteProject: (id: string) =>
+      apiCall(`/projects/${id}`, { method: 'DELETE' }),
+
+
+    // Get project members (maps to GET /api/projects/:id/members)
+    getProjectMembers: (id: string) => apiCall(`/projects/${id}/members`),
+
+    // Add project member (maps to POST /api/projects/:id/members)
+    addProjectMember: (id: string, memberData: Record<string, any>) =>
+      apiCall(`/projects/${id}/members`, {
+        method: 'POST',
+        body: JSON.stringify(memberData),
+      }),
+
+    // Remove project member (maps to DELETE /api/projects/:id/members/:userId)
+    removeProjectMember: (id: string, userId: string) =>
+      apiCall(`/projects/${id}/members/${userId}`, { method: 'DELETE' }),
+  },
+
 };
 
 // Custom hook for API calls with loading and error states
 export const useApiCall = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const callApi = async (apiFunction: () => Promise<any>) => {
     setLoading(true);
     setError(null);
@@ -114,7 +153,6 @@ export const useApiCall = () => {
     try {
       const result = await apiFunction();
       return result;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setError(err.message || 'An error occurred');
       throw err;
