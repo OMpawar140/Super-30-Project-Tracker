@@ -77,7 +77,7 @@ const DashboardLayout = () => {
               <button
                 key={item.name}
                 onClick={() => navigateTo(item.name)}
-                className={`w-full flex items-center px-2 py-2 text-base font-medium rounded-md transition-colors duration-150 ${
+                className={`w-full flex items-center px-2 py-2 text-base font-medium rounded-md transition-colors duration-150 hover:cursor-pointer ${
                   activeTab === item.name
                     ? 'bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-100'
                     : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white'

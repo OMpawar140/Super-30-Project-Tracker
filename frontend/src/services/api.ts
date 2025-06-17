@@ -43,7 +43,6 @@ export const apiService = {
   // Auth endpoints
   auth: {
     
-   
     emailRegister: (email: string) =>
       apiCall('/auth/register', {
         method: 'POST',
@@ -138,6 +137,159 @@ export const apiService = {
     // Remove project member (maps to DELETE /api/projects/:id/members/:userId)
     removeProjectMember: (id: string, userId: string) =>
       apiCall(`/projects/${id}/members/${userId}`, { method: 'DELETE' }),
+  },
+
+  // Milestone management endpoints
+  milestones: {
+    // Get all milestones for a project (maps to GET /api/projects/:id/milestones)
+    getProjectMilestones: (id: string) => 
+      apiCall(`/projects/${id}/milestones`),
+    
+    // Get milestone by ID (maps to GET /api/milestones/:id)
+    getMilestoneById: (id: string) => apiCall(`/milestones/${id}`),
+    
+    // Create new milestone (maps to POST /api/projects/:id/milestones)
+    createMilestone: (id: string, milestoneData: Record<string, any>) =>
+      apiCall(`/projects/${id}/milestones`, {
+        method: 'POST',
+        body: JSON.stringify(milestoneData),
+      }),
+    
+    // Update existing milestone (maps to PUT /api/milestones/:id)
+    updateMilestone: (id: string, milestoneData: Record<string, any>) =>
+      apiCall(`/milestones/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(milestoneData),
+      }),
+    
+    // Delete milestone (maps to DELETE /api/milestones/:id)
+    deleteMilestone: (id: string) =>
+      apiCall(`/milestones/${id}`, { method: 'DELETE' }),
+
+    // Update milestone status (maps to PATCH /api/milestones/:id/status)
+    updateMilestoneStatus: (id: string, status: string) =>
+      apiCall(`/milestones/${id}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status }),
+      }),
+
+    // Reorder milestones (maps to PUT /api/projects/:projectId/milestones/reorder)
+    reorderMilestones: (projectId: string, milestoneIds: string[]) =>
+      apiCall(`/projects/${projectId}/milestones/reorder`, {
+        method: 'PUT',
+        body: JSON.stringify({ milestoneIds }),
+      }),
+  },
+
+  // Task management endpoints
+  tasks: {
+    // Get all tasks for a milestone (maps to GET /api/milestones/:milestoneId/tasks)
+    getMilestoneTasks: (milestoneId: string) => 
+      apiCall(`/milestones/${milestoneId}/tasks`),
+    
+    // Get all tasks for a project (maps to GET /api/projects/:projectId/tasks)
+    getProjectTasks: (projectId: string) => 
+      apiCall(`/projects/${projectId}/tasks`),
+    
+    // Get task by ID (maps to GET /api/tasks/:id)
+    getTaskById: (id: string) => apiCall(`/tasks/${id}`),
+    
+    // Create new task (maps to POST /api/milestones/:milestoneId/tasks)
+    createTask: (milestoneId: string, taskData: Record<string, any>) =>
+      apiCall(`/milestones/${milestoneId}/tasks`, {
+        method: 'POST',
+        body: JSON.stringify(taskData),
+      }),
+    
+    // Update existing task (maps to PUT /api/tasks/:id)
+    updateTask: (id: string, taskData: Record<string, any>) =>
+      apiCall(`/tasks/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(taskData),
+      }),
+    
+    // Delete task (maps to DELETE /api/tasks/:id)
+    deleteTask: (id: string) =>
+      apiCall(`/tasks/${id}`, { method: 'DELETE' }),
+
+    // Update task status (maps to PATCH /api/tasks/:id/status)
+    updateTaskStatus: (id: string, status: string) =>
+      apiCall(`/tasks/${id}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status }),
+      }),
+
+    // Assign task to user (maps to PATCH /api/tasks/:id/assign)
+    assignTask: (id: string, userId: string) =>
+      apiCall(`/tasks/${id}/assign`, {
+        method: 'PATCH',
+        body: JSON.stringify({ userId }),
+      }),
+
+    // Unassign task (maps to PATCH /api/tasks/:id/unassign)
+    unassignTask: (id: string) =>
+      apiCall(`/tasks/${id}/unassign`, { method: 'PATCH' }),
+
+    // Update task priority (maps to PATCH /api/tasks/:id/priority)
+    updateTaskPriority: (id: string, priority: string) =>
+      apiCall(`/tasks/${id}/priority`, {
+        method: 'PATCH',
+        body: JSON.stringify({ priority }),
+      }),
+
+    // Add comment to task (maps to POST /api/tasks/:id/comments)
+    addTaskComment: (id: string, comment: string) =>
+      apiCall(`/tasks/${id}/comments`, {
+        method: 'POST',
+        body: JSON.stringify({ comment }),
+      }),
+
+    // Get task comments (maps to GET /api/tasks/:id/comments)
+    getTaskComments: (id: string) => apiCall(`/tasks/${id}/comments`),
+
+    // Update task due date (maps to PATCH /api/tasks/:id/due-date)
+    updateTaskDueDate: (id: string, dueDate: string) =>
+      apiCall(`/tasks/${id}/due-date`, {
+        method: 'PATCH',
+        body: JSON.stringify({ dueDate }),
+      }),
+
+    // Get tasks assigned to current user (maps to GET /api/tasks/assigned-to-me)
+    getMyTasks: () => apiCall('/tasks/assigned-to-me'),
+
+    // Get tasks by status (maps to GET /api/tasks?status=:status)
+    getTasksByStatus: (status: string, projectId?: string) => {
+      const params = new URLSearchParams({ status });
+      if (projectId) params.append('projectId', projectId);
+      return apiCall(`/tasks?${params.toString()}`);
+    },
+
+    // Get overdue tasks (maps to GET /api/tasks/overdue)
+    getOverdueTasks: (projectId?: string) => {
+      const params = projectId ? `?projectId=${projectId}` : '';
+      return apiCall(`/tasks/overdue${params}`);
+    },
+
+    // Reorder tasks within a milestone (maps to PUT /api/milestones/:milestoneId/tasks/reorder)
+    reorderTasks: (milestoneId: string, taskIds: string[]) =>
+      apiCall(`/milestones/${milestoneId}/tasks/reorder`, {
+        method: 'PUT',
+        body: JSON.stringify({ taskIds }),
+      }),
+
+    // Move task to different milestone (maps to PATCH /api/tasks/:id/move)
+    moveTask: (id: string, milestoneId: string) =>
+      apiCall(`/tasks/${id}/move`, {
+        method: 'PATCH',
+        body: JSON.stringify({ milestoneId }),
+      }),
+
+    // Bulk update tasks (maps to PUT /api/tasks/bulk)
+    bulkUpdateTasks: (updates: { taskId: string; updates: Record<string, any> }[]) =>
+      apiCall('/tasks/bulk', {
+        method: 'PUT',
+        body: JSON.stringify({ updates }),
+      }),
   },
 
 };

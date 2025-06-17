@@ -106,6 +106,29 @@ class ProjectController {
     }
   }
 
+  // Create a new milestone
+  async createMilestone(req, res) {
+    try {
+      // Check validation errors
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return errorResponse(res, 'Validation failed', 400, errors.array());
+      }
+
+      const { id } = req.params;
+      const milestoneData = {
+        ...req.body,
+        projectId: id
+      };
+
+      const milestone = await projectService.createMilestone(id, milestoneData);
+
+      return successResponse(res, 'Milestone created successfully', milestone, 201);
+    } catch (error) {
+      console.error('Error creating milestone:', error);
+      return errorResponse(res, 'Failed to create milestone', 500);
+    }
+  }
 
   // Add project member
   async addProjectMember(req, res) {

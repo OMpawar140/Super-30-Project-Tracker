@@ -88,6 +88,7 @@ const ProjectsPage: React.FC = () => {
         })) || [];
 
         setProjects(transformedProjects);
+        console.log('Fetched projects:', transformedProjects);
         
         // Animate items on load
         setTimeout(() => {

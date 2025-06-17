@@ -91,14 +91,14 @@ class ProjectService {
         }
           },
           members: {
-        include: {
-          user: {
-            select: {
-          email: true,
-          skillset: true
+            include: {
+              user: {
+                select: {
+              email: true,
+              skillset: true
+                }
+              }
             }
-          }
-        }
           }
         }
       });
@@ -246,6 +246,43 @@ class ProjectService {
     }
   }
 
+  async createMilestone(id, milestoneData) {
+    try {
+      const milestone = await prisma.milestone.create({
+        data: {
+          name: milestoneData.name,
+          description: milestoneData.description,
+          startDate: milestoneData.startDate ? new Date(milestoneData.startDate) : null,
+          endDate: milestoneData.endDate ? new Date(milestoneData.endDate) : null,
+          projectId: id,
+          status: milestoneData.status || 'PLANNED',
+          createdAt: new Date(),
+          updatedAt: new Date()
+        },
+        include: {
+          project: {
+            select: {
+              id: true,
+            }
+          },
+          tasks: {
+            include: {
+              assignee: {
+                select: {
+                  email: true,
+                }
+              }
+            }
+          }
+        }
+      });
+
+      return milestone;
+    } catch (error) {
+      console.error('Error in createMilestone:', error);
+      throw error;
+    }
+  }
 
   // Get user by email
   async getUserByEmail(email) {
