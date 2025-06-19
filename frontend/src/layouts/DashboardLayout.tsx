@@ -93,7 +93,7 @@ const DashboardLayout = () => {
             <Button
               onClick={handleLogout}
               variant="outline"
-              className='w-full flex items-center justify-center space-x-2 text-gray-600 hover:text-red-700 dark:text-gray-300 dark:hover:text-red-400'
+              className='w-full flex items-center justify-center space-x-2 text-gray-600 hover:text-red-700 dark:text-gray-300 dark:hover:text-red-400 cursor-pointer'
             >
               <HiLogout/>
               Logout

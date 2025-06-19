@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState, useEffect } from 'react';
-import { HiClipboardList, HiFlag, HiUser, HiCalendar, HiChevronDown, HiChevronUp, HiSearch, HiFilter } from 'react-icons/hi';
+import { HiClipboardList, HiFlag, HiUser, HiCalendar, HiChevronDown, HiChevronUp, HiSearch, HiFilter, HiCheckCircle, HiClock, HiExclamation } from 'react-icons/hi';
 import { apiService, useApiCall } from '@/services/api';
 
 // Types for our data (updated to match backend structure)
@@ -21,12 +21,26 @@ interface ProjectMember {
   user: User;
 }
 
+interface Task {
+  id: string;
+  title: string;
+  description?: string;
+  status: string;
+  priority?: string;
+  startDate?: string;
+  dueDate?: string;
+  assigneeId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface Milestone {
   id: string;
   name: string;
   status: string;
   startDate: string;
   endDate: string;
+  tasks: Task[];
 }
 
 interface Project {
@@ -52,6 +66,8 @@ interface Project {
   priority?: string;
   budget?: number;
   tags?: string[];
+  totalTasks?: number;
+  completedTasks?: number;
 }
 
 const ProjectsPage: React.FC = () => {
@@ -59,6 +75,7 @@ const ProjectsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedProjects, setExpandedProjects] = useState<string[]>([]);
+  const [expandedMilestones, setExpandedMilestones] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [priorityFilter, setPriorityFilter] = useState<string>('All');
@@ -84,6 +101,8 @@ const ProjectsPage: React.FC = () => {
           tags: extractTags(project),
           priority: project.priority || 'medium', // Default priority since API doesn't provide it
           budget: project.budget || null,
+          totalTasks: calculateTotalTasks(project),
+          completedTasks: calculateCompletedTasks(project),
           // Keep dates as strings since they're already in ISO format
         })) || [];
 
@@ -109,6 +128,28 @@ const ProjectsPage: React.FC = () => {
 
     fetchProjects();
   }, []);
+
+  // Calculate total tasks across all milestones
+  const calculateTotalTasks = (project: any): number => {
+    if (!project.milestones || project.milestones.length === 0) return 0;
+    
+    return project.milestones.reduce((total: number, milestone: Milestone) => {
+      return total + (milestone.tasks ? milestone.tasks.length : 0);
+    }, 0);
+  };
+
+  // Calculate completed tasks across all milestones
+  const calculateCompletedTasks = (project: any): number => {
+    if (!project.milestones || project.milestones.length === 0) return 0;
+    
+    return project.milestones.reduce((total: number, milestone: Milestone) => {
+      if (!milestone.tasks) return total;
+      const completedTasks = milestone.tasks.filter(
+        (task: Task) => task.status.toLowerCase() === 'completed'
+      ).length;
+      return total + completedTasks;
+    }, 0);
+  };
 
   // Calculate project progress based on milestones
   const calculateProjectProgress = (project: any): number => {
@@ -151,23 +192,35 @@ const ProjectsPage: React.FC = () => {
     );
   };
 
+  const toggleMilestoneExpansion = (milestoneId: string) => {
+    setExpandedMilestones(prev => 
+      prev.includes(milestoneId) 
+        ? prev.filter(id => id !== milestoneId)
+        : [...prev, milestoneId]
+    );
+  };
+
   const getStatusColor = (status: string, _type: 'project' | 'task' | 'milestone' = 'project') => {
     const statusLower = status.toLowerCase();
     switch (statusLower) {
       case 'completed':
+      case 'done':
         return 'text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 border-green-200 dark:border-green-700';
       case 'active':
       case 'in_progress':
       case 'in progress':
+      case 'ongoing':
         return 'text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700';
       case 'planning':
       case 'upcoming':
       case 'not_started':
       case 'not started':
+      case 'todo':
         return 'text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-900/30 border-orange-200 dark:border-orange-700';
       case 'on_hold':
       case 'on hold':
       case 'delayed':
+      case 'blocked':
         return 'text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30 border-red-200 dark:border-red-700';
       case 'cancelled':
         return 'text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700';
@@ -188,6 +241,24 @@ const ProjectsPage: React.FC = () => {
         return 'text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20';
       default:
         return 'text-gray-700 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/20';
+    }
+  };
+
+  const getTaskIcon = (status: string) => {
+    const statusLower = status.toLowerCase();
+    switch (statusLower) {
+      case 'completed':
+      case 'done':
+        return <HiCheckCircle className="w-4 h-4 text-green-500" />;
+      case 'in_progress':
+      case 'in progress':
+      case 'ongoing':
+        return <HiClock className="w-4 h-4 text-blue-500" />;
+      case 'blocked':
+      case 'on_hold':
+        return <HiExclamation className="w-4 h-4 text-red-500" />;
+      default:
+        return <HiClock className="w-4 h-4 text-gray-400" />;
     }
   };
 
@@ -308,22 +379,6 @@ const ProjectsPage: React.FC = () => {
               </select>
               <HiFilter className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-4 h-4 pointer-events-none" />
             </div>
-            
-            {/* Priority Filter - Hidden since API doesn't provide priority */}
-            <div className="relative" style={{ display: 'none' }}>
-              <select
-                value={priorityFilter}
-                onChange={(e) => setPriorityFilter(e.target.value)}
-                className="appearance-none bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 pr-8 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-300"
-              >
-                <option value="All">All Priority</option>
-                <option value="critical">Critical</option>
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
-              </select>
-              <HiFilter className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-4 h-4 pointer-events-none" />
-            </div>
           </div>
         </div>
 
@@ -374,6 +429,12 @@ const ProjectsPage: React.FC = () => {
                         <HiFlag className="w-4 h-4 text-gray-400 dark:text-gray-500" />
                         <span className="text-gray-600 dark:text-gray-400">
                           {project._count.milestones} milestones
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <HiClipboardList className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                        <span className="text-gray-600 dark:text-gray-400">
+                          {project.completedTasks || 0}/{project.totalTasks || 0} tasks
                         </span>
                       </div>
                       {project.budget && (
@@ -448,18 +509,82 @@ const ProjectsPage: React.FC = () => {
                       </h3>
                       <div className="space-y-3">
                         {project.milestones.map((milestone) => (
-                          <div key={milestone.id} className="bg-gray-50 dark:bg-gray-750 rounded-lg border border-gray-200 dark:border-gray-600 p-4">
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <h4 className="font-medium text-gray-900 dark:text-white mb-1">{milestone.name}</h4>
-                                <div className="text-xs text-gray-500 dark:text-gray-400">
-                                  {formatDate(milestone.startDate)} - {formatDate(milestone.endDate)}
+                          <div key={milestone.id} className="bg-gray-50 dark:bg-gray-750 rounded-lg border border-gray-200 dark:border-gray-600">
+                            {/* Milestone Header */}
+                            <div 
+                              className="p-4 cursor-pointer hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-900 transition-colors duration-200"
+                              onClick={() => toggleMilestoneExpansion(milestone.id)}
+                            >
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <h4 className="font-medium text-gray-900 dark:text-white">{milestone.name}</h4>
+                                    {expandedMilestones.includes(milestone.id) ? 
+                                      <HiChevronUp className="w-4 h-4 text-gray-400 dark:text-gray-500" /> : 
+                                      <HiChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                                    }
+                                  </div>
+                                  <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+                                    <span>{formatDate(milestone.startDate)} - {formatDate(milestone.endDate)}</span>
+                                    <span>{milestone.tasks ? milestone.tasks.length : 0} tasks</span>
+                                  </div>
+                                </div>
+                                <span className={`px-2 py-1 rounded text-xs font-medium border ${getStatusColor(milestone.status, 'milestone')}`}>
+                                  {milestone.status.replace('_', ' ')}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Tasks Section */}
+                            {expandedMilestones.includes(milestone.id) && milestone.tasks && (
+                              <div className="border-t border-gray-200 dark:border-gray-600 p-4 bg-gray-100 dark:bg-gray-800 animate-slide-down">
+                                <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                                  <HiClipboardList className="w-4 h-4" />
+                                  Tasks ({milestone.tasks.length})
+                                </h5>
+                                <div className="space-y-2">
+                                  {milestone.tasks.map((task) => (
+                                    <div key={task.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-600 p-3 cursor-pointer">
+                                      <div className="flex items-start justify-between">
+                                        <div className="flex-1">
+                                          <div className="flex items-center gap-2 mb-1">
+                                            {getTaskIcon(task.status)}
+                                            <h6 className="text-sm font-medium text-gray-900 dark:text-white">{task.title}</h6>
+                                          </div>
+                                          {task.description && (
+                                            <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">{task.description}</p>
+                                          )}
+                                          <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+                                            {task.startDate && task.dueDate && (
+                                              <span>{formatDate(task.startDate)} - {formatDate(task.dueDate)}</span>
+                                            )}
+                                            {task.assigneeId && (
+                                              <span className="flex items-center gap-1 text-base">
+                                                <HiUser className="w-4 h-4" />
+                                                {task.assigneeId}
+                                              </span>
+                                            )}
+                                          </div>
+                                        </div>
+                                        <div className="flex flex-col items-end gap-1 ml-3">
+                                          <span className={`px-2 py-1 rounded text-xs font-medium border ${getStatusColor(task.status, 'task')}`}>
+                                            {task.status.replace('_', ' ')}
+                                          </span>
+                                          {task.priority && (
+                                            <span className={`px-2 py-1 rounded text-xs font-medium ${getPriorityColor(task.priority)}`}>
+                                              {task.priority}
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                  {milestone.tasks.length === 0 && (
+                                    <p className="text-gray-500 dark:text-gray-400 text-sm py-2">No tasks defined for this milestone.</p>
+                                  )}
                                 </div>
                               </div>
-                              <span className={`px-2 py-1 rounded text-xs font-medium border ${getStatusColor(milestone.status, 'milestone')}`}>
-                                {milestone.status.replace('_', ' ')}
-                              </span>
-                            </div>
+                            )}
                           </div>
                         ))}
                         {project.milestones.length === 0 && (

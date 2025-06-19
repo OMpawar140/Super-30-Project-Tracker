@@ -11,6 +11,7 @@ const { initializeFirebase } = require('./src/config/firebase');
 const authRoutes = require('./src/routes/authRoutes');
 const projectRoutes = require('./src/routes/projectRoutes');
 const protectedRoutes = require('./src/routes/protectedRoutes');
+const milestoneRoutes = require('./src/routes/milestoneRoutes');
 
 // Initialize Express app
 const app = express();
@@ -59,6 +60,7 @@ app.get('/health', (req, res) => {
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/projects', projectRoutes);
+app.use('/api/milestones', milestoneRoutes);
 app.use('/api', protectedRoutes);
 
 // 404 handler

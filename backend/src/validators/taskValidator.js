@@ -1,14 +1,14 @@
 const { body, param } = require('express-validator');
 
-// Validation for creating a milestone
-const createMilestoneValidator = [
-  body('name')
+// Validation for creating a task
+const createTaskValidator = [
+  body('title')
     .notEmpty()
-    .withMessage('Milestone name is required')
+    .withMessage('Task title is required')
     .isString()
-    .withMessage('Milestone name must be a string')
+    .withMessage('Task title must be a string')
     .isLength({ min: 1, max: 255 })
-    .withMessage('Milestone name must be between 1 and 255 characters')
+    .withMessage('Task title must be between 1 and 255 characters')
     .trim(),
 
   body('description')
@@ -21,8 +21,8 @@ const createMilestoneValidator = [
 
   body('status')
     .optional()
-    .isIn(['PLANNED', 'IN_PROGRESS', 'COMPLETED', 'OVERDUE'])
-    .withMessage('Status must be one of: PLANNED, IN_PROGRESS, COMPLETED, OVERDUE'),
+    .isIn(['UPCOMING', 'IN_PROGRESS', 'IN_REVIEW', 'COMPLETED', 'OVERDUE'])
+    .withMessage('Status must be one of: UPCOMING, IN_PROGRESS, IN_REVIEW, COMPLETED, OVERDUE'),
 
   body('startDate')
     .optional()
@@ -46,14 +46,14 @@ const createMilestoneValidator = [
     })
 ];
 
-// Validation for updating a milestone
-const updateMilestoneValidator = [
+// Validation for updating a task
+const updateTaskValidator = [
   body('name')
     .optional()
     .isString()
-    .withMessage('Milestone name must be a string')
+    .withMessage('Task name must be a string')
     .isLength({ min: 1, max: 255 })
-    .withMessage('Milestone name must be between 1 and 255 characters')
+    .withMessage('Task name must be between 1 and 255 characters')
     .trim(),
 
   body('description')
@@ -66,8 +66,8 @@ const updateMilestoneValidator = [
 
   body('status')
     .optional()
-    .isIn(['PLANNED', 'IN_PROGRESS', 'COMPLETED', 'OVERDUE'])
-    .withMessage('Status must be one of: PLANNED, IN_PROGRESS, COMPLETED, OVERDUE'),
+    .isIn(['UPCOMING', 'IN_PROGRESS', 'IN_REVIEW', 'COMPLETED', 'OVERDUE'])
+    .withMessage('Status must be one of: UPCOMING, IN_PROGRESS, IN_REVIEW, COMPLETED, OVERDUE'),
 
   body('startDate')
     .optional()
@@ -91,15 +91,15 @@ const updateMilestoneValidator = [
     })
 ];
 
-// Validation for milestone ID parameter
-const milestoneIdValidator = [
+// Validation for task ID parameter
+const taskIdValidator = [
   param('id')
     .notEmpty()
-    .withMessage('Milestone ID is required')
+    .withMessage('Task ID is required')
     .isString()
-    .withMessage('Milestone ID must be a string')
+    .withMessage('Task ID must be a string')
     .isLength({ min: 1 })
-    .withMessage('Milestone ID cannot be empty')
+    .withMessage('Task ID cannot be empty')
 ];
 
 // Validation for user ID parameter (email)
@@ -113,8 +113,8 @@ const userIdValidator = [
 ];
 
 module.exports = {
-  createMilestoneValidator,
-  updateMilestoneValidator,
-  milestoneIdValidator,
+  createTaskValidator,
+  updateTaskValidator,
+  taskIdValidator,
   userIdValidator
 };

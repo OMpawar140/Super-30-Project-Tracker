@@ -36,12 +36,8 @@ class ProjectService {
             }
           },
           milestones: {
-            select: {
-              id: true,
-              name: true,
-              status: true,
-              startDate: true,
-              endDate: true
+            include: {
+              tasks: true
             }
           },
           _count: {

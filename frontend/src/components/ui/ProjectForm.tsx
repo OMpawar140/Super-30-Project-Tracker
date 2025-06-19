@@ -171,6 +171,9 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
   };
 
   const handleSaveMilestones = async (milestonesData: Milestone[]) => {
+
+    console.log('Saving milestones:', milestonesData);
+
     try {
       if (createdProjectId && milestonesData.length > 0) {
         // Save milestones to backend
@@ -189,6 +192,8 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
 
           const milestoneId = milestoneResponse?.data?.id || milestoneResponse?.id;
 
+          console.log('Created milestone:', milestoneResponse);
+
           // Save tasks for this milestone
           if (milestone.tasks.length > 0) {
             for (const task of milestone.tasks) {
@@ -199,7 +204,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                   startDate: task.startDate,
                   endDate: task.endDate,
                   priority: task.priority,
-                  assigneeEmail: task.assigneeEmail,
+                  assigneeId: task.assigneeEmail,
                 })
               );
             }
