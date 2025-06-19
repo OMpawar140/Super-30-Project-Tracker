@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const errorHandler = require('./src/middlewares/errorHandler');
 
 // Import Firebase config
 const { initializeFirebase } = require('./src/config/firebase');
@@ -12,6 +13,7 @@ const authRoutes = require('./src/routes/authRoutes');
 const projectRoutes = require('./src/routes/projectRoutes');
 const protectedRoutes = require('./src/routes/protectedRoutes');
 const milestoneRoutes = require('./src/routes/milestoneRoutes');
+const fileRoutes = require('./src/routes/fileRoutes');
 
 // Initialize Express app
 const app = express();
@@ -62,6 +64,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/milestones', milestoneRoutes);
 app.use('/api', protectedRoutes);
+app.use('/api/files', fileRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
@@ -82,6 +85,9 @@ app.use((error, req, res, next) => {
     ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
   });
 });
+
+app.use(errorHandler);
+
 
 // Start server
 app.listen(PORT, () => {
