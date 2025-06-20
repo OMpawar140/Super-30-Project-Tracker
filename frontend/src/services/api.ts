@@ -12,16 +12,44 @@ const getAuthToken = async (): Promise<string | null> => {
   return null;
 };
 
-// Generic API call function
+// // Generic API call function
+// const apiCall = async (
+//   endpoint: string,
+//   options: RequestInit = {}
+// ): Promise<any> => {
+//   const token = await getAuthToken();
+  
+//   const config: RequestInit = {
+//     headers: {
+//       'Content-Type': 'application/json',
+//       ...(token && { Authorization: `Bearer ${token}` }),
+//       ...options.headers,
+//     },
+//     ...options,
+//   };
+
+//   const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+  
+//   if (!response.ok) {
+//     const errorData = await response.json().catch(() => ({}));
+//     throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+//   }
+
+//   return await response.json();
+// };
+
 const apiCall = async (
   endpoint: string,
   options: RequestInit = {}
 ): Promise<any> => {
   const token = await getAuthToken();
   
+  // Don't set Content-Type if body is FormData
+  const isFormData = options.body instanceof FormData;
+  
   const config: RequestInit = {
     headers: {
-      'Content-Type': 'application/json',
+      ...(!isFormData && { 'Content-Type': 'application/json' }), // Only set for non-FormData
       ...(token && { Authorization: `Bearer ${token}` }),
       ...options.headers,
     },
@@ -292,6 +320,87 @@ export const apiService = {
       }),
   },
 
+  files: {
+    // Get all files (maps to GET /api/files)
+    getAllFiles: (searchParams?: Record<string, any>) => {
+      const queryString = searchParams ? 
+        '?' + new URLSearchParams(searchParams).toString() : '';
+      return apiCall(`/files${queryString}`);
+    },
+    
+    // Upload file (maps to POST /api/files/upload)
+    uploadFile: (taskId: string, file: File, metadata?: Record<string, any>) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('taskId', taskId);
+      if (metadata) {
+        Object.keys(metadata).forEach(key => {
+          formData.append(key, metadata[key]);
+        });
+      }
+      return apiCall('/files/upload', {
+        method: 'POST',
+        body: formData,
+        // Don't set Content-Type header, let browser set it for FormData
+        // headers: {},
+      }).then(result => {
+      console.log('Upload result:', result);
+      return result;
+    });
+    },
+    
+    // Get file details/preview (maps to GET /api/files/:key)
+    getFileDetails: (key: string) => apiCall(`/files/${key}/preview`),
+    
+    // Update file metadata (maps to PUT /api/files/:key)
+    // updateFileMetadata: (key: string, metadata: Record<string, any>) =>
+    //   apiCall(`/files/${key}`, {
+    //     method: 'PUT',
+    //     body: JSON.stringify(metadata),
+    //   }),
+    
+    // Delete file (maps to DELETE /api/files/:key)
+    deleteFile: (key: string) => apiCall(`/files/${key}`, { method: 'DELETE' }),
+
+    // Download file (maps to GET /api/files/:key/download)
+    downloadFile: (key: string) => {
+      // Return the URL for direct download or handle blob response
+      return apiCall(`/files/${key}/download`, {
+        responseType: 'blob'
+      });
+    },
+
+    // Get file signed URL (maps to GET /api/files/:key/url)
+    getFileUrl: (key: string, expires?: number) => {
+      const queryString = expires ? `?expires=${expires}` : '';
+      return apiCall(`/files/${key}/url${queryString}`);
+    },
+
+    // Share file (maps to POST /api/files/:key/share)
+    // shareFile: (key: string, shareData: Record<string, any>) =>
+    //   apiCall(`/files/${key}/share`, {
+    //     method: 'POST',
+    //     body: JSON.stringify(shareData),
+    //   }),
+
+    // Bulk delete files (maps to POST /api/files/bulk/delete)
+    bulkDeleteFiles: (keys: string[]) =>
+      apiCall('/files/bulk/delete', {
+        method: 'POST',
+        body: JSON.stringify({ keys }),
+      }),
+
+    // Bulk download files (maps to POST /api/files/bulk/download)
+    bulkDownloadFiles: (keys: string[]) =>
+      apiCall('/files/bulk/download', {
+        method: 'POST',
+        body: JSON.stringify({ keys }),
+        responseType: 'blob'
+      }),
+
+    // Health check (maps to GET /api/files/health)
+    healthCheck: () => apiCall('/files/health'),
+  },
 };
 
 // Custom hook for API calls with loading and error states

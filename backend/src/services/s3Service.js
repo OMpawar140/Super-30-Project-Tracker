@@ -1,8 +1,9 @@
 const { s3, BUCKET_NAME } = require('../config/aws');
 
 class S3Service {
-  static async uploadFile(fileData) {
-    const fileKey = `${Date.now()}-${fileData.originalname}`;
+  static async uploadFile(taskId, fileData) {
+    console.log('Uploading filedata:', fileData);
+    const fileKey = `${Date.now()}-${taskId}`;
     
     const uploadParams = {
       Bucket: BUCKET_NAME,
