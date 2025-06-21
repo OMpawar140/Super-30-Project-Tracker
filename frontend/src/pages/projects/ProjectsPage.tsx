@@ -80,7 +80,6 @@ const ProjectsPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [priorityFilter, setPriorityFilter] = useState<string>('All');
   const [animatedItems, setAnimatedItems] = useState<string[]>([]);
-  const [roleFilter, setRoleFilter] = useState("ALL");
   const { callApi } = useApiCall();
   
   // Fetch projects from API
@@ -380,25 +379,8 @@ const ProjectsPage: React.FC = () => {
               </select>
               <HiFilter className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-4 h-4 pointer-events-none" />
             </div>
-
-            <div className="relative">
-            <select
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
-              className="appearance-none bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 pr-8 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-300"
-            >
-              <option value="ALL">All Roles</option>
-              <option value="ADMIN">Admin</option>
-              <option value="TASK_COMPLETOR">Task Completor</option>
-              <option value="CREATOR">Creator</option>
-            </select>
-            <HiFilter className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-4 h-4 pointer-events-none" />
-            </div>
-
           </div>
         </div>
-
-
 
         {/* Projects List */}
         <div className="space-y-6">
