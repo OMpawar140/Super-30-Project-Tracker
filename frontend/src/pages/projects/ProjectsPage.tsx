@@ -81,16 +81,13 @@ const ProjectsPage: React.FC = () => {
   const [expandedMilestones, setExpandedMilestones] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
+  const [roleFilter, setRoleFilter] = useState<string>('All');
   const [priorityFilter, setPriorityFilter] = useState<string>('All');
   const [animatedItems, setAnimatedItems] = useState<string[]>([]);
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [taskReviewModalOpen, setTaskReviewModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<{id: string, title: string, status: string} | null>(null);
   const { currentUser } = useAuth();
-
-
-  const [roleFilter, setRoleFilter] = useState("ALL");
-
   const { callApi } = useApiCall();
   
   // Fetch projects from API
@@ -301,14 +298,49 @@ const ProjectsPage: React.FC = () => {
     }
   };
 
-  const filteredProjects = projects.filter(project => {
-    const matchesSearch = project.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         project.description?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'All' || project.status === statusFilter;
-    const matchesPriority = priorityFilter === 'All' || (project.priority && project.priority === priorityFilter);
+// Replace the existing filteredProjects logic with this updated version
+
+const filteredProjects = projects.filter(project => {
+  // Search filter - matches project name or description
+  const matchesSearch = project.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                       project.description?.toLowerCase().includes(searchTerm.toLowerCase());
+  
+  // Status filter - matches project status
+  const matchesStatus = statusFilter === 'All' || project.status === statusFilter;
+  
+  // Role filter - checks current user's role in the project
+  const matchesRole = (() => {
+    if (roleFilter === 'All') return true;
+    if (!currentUser?.email) return false;
     
-    return matchesSearch && matchesStatus && matchesPriority;
-  });
+    switch (roleFilter) {
+      case 'ADMIN':
+        // Check if current user is an admin member of this project
+        return project.members.some(member => 
+          member.user.email === currentUser.email && member.role === 'ADMIN'
+        );
+      
+      case 'CREATOR':
+        // Check if current user is the creator of this project
+        return project.creator.email === currentUser.email;
+      
+      case 'TASK COMPLETER':
+        // Check if current user is a task completer member of this project
+        return project.members.some(member => 
+          member.user.email === currentUser.email && member.role === 'TASK COMPLETER'
+        );
+      
+      default:
+        return false;
+    }
+  })();
+  
+  // Priority filter - matches project priority (keeping existing functionality)
+  const matchesPriority = priorityFilter === 'All' || (project.priority && project.priority === priorityFilter);
+  
+  // All filters must match for a project to be displayed
+  return matchesSearch && matchesStatus && matchesRole && matchesPriority;
+});
 
   const formatDate = (dateString: string) => {
     try {
@@ -404,35 +436,38 @@ const ProjectsPage: React.FC = () => {
             </div>
             
             {/* Status Filter */}
-            <div className="relative">
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="appearance-none bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 pr-8 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-300"
-              >
-                <option value="All">All Status</option>
-                <option value="ACTIVE">Active</option>
-                <option value="PLANNING">Planning</option>
-                <option value="COMPLETED">Completed</option>
-                <option value="ON_HOLD">On Hold</option>
-              </select>
-              <HiFilter className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-4 h-4 pointer-events-none" />
-            </div>
+          <div className="flex flex-col sm:flex-row gap-4">
+  {/* Status Filter */}
+  <div className="relative">
+    <select
+      value={statusFilter}
+      onChange={(e) => setStatusFilter(e.target.value)}
+      className="appearance-none bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 pr-8 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-300"
+    >
+      <option value="All">All Status</option>
+      <option value="ACTIVE">Active</option>
+      <option value="PLANNING">Planning</option>
+      <option value="COMPLETED">Completed</option>
+      <option value="ON_HOLD">On Hold</option>
+    </select>
+    <HiFilter className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-4 h-4 pointer-events-none" />
+  </div>
 
-            {/* Role Filter */}
-            <div className="relative">
-              <select
-                value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value)}
-                className="appearance-none bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 pr-8 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-300"
-              >
-                <option value="ALL">All Roles</option>
-                <option value="ADMIN">Admin</option>
-                <option value="TASK_COMPLETOR">Task Completor</option>
-                <option value="CREATOR">Creator</option>
-              </select>
-              <HiFilter className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-4 h-4 pointer-events-none" />
-            </div>
+      {/* Role Filter */}
+      <div className="relative">
+        <select
+          value={roleFilter}
+          onChange={(e) => setRoleFilter(e.target.value)}
+          className="appearance-none bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 pr-8 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-300"
+        >
+          <option value="All">All Roles</option>
+          <option value="ADMIN">Admin</option>
+          <option value="CREATOR">Creator</option>
+          <option value="COMPLETER">Task Completer</option>
+        </select>
+        <HiFilter className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-4 h-4 pointer-events-none" />
+      </div>
+      </div>
 
           </div>
         </div>
@@ -601,40 +636,7 @@ const ProjectsPage: React.FC = () => {
                                 </h5>
                                 <div className="space-y-2">
                                   {milestone.tasks.map((task) => (
-                                    // <div key={task.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-600 p-3 cursor-pointer">
-                                    //   <div className="flex items-start justify-between">
-                                    //     <div className="flex-1">
-                                    //       <div className="flex items-center gap-2 mb-1">
-                                    //         {getTaskIcon(task.status)}
-                                    //         <h6 className="text-sm font-medium text-gray-900 dark:text-white">{task.title}</h6>
-                                    //       </div>
-                                    //       {task.description && (
-                                    //         <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">{task.description}</p>
-                                    //       )}
-                                    //       <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
-                                    //         {task.startDate && task.dueDate && (
-                                    //           <span>{formatDate(task.startDate)} - {formatDate(task.dueDate)}</span>
-                                    //         )}
-                                    //         {task.assigneeId && (
-                                    //           <span className="flex items-center gap-1 text-base">
-                                    //             <HiUser className="w-4 h-4" />
-                                    //             {task.assigneeId}
-                                    //           </span>
-                                    //         )}
-                                    //       </div>
-                                    //     </div>
-                                    //     <div className="flex flex-col items-end gap-1 ml-3">
-                                    //       <span className={`px-2 py-1 rounded text-xs font-medium border ${getStatusColor(task.status, 'task')}`}>
-                                    //         {task.status.replace('_', ' ')}
-                                    //       </span>
-                                    //       {task.priority && (
-                                    //         <span className={`px-2 py-1 rounded text-xs font-medium ${getPriorityColor(task.priority)}`}>
-                                    //           {task.priority}
-                                    //         </span>
-                                    //       )}
-                                    //     </div>
-                                    //   </div>
-                                    // </div>
+                                 
                                     <div key={task.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-600 p-3">
                                       <div className="flex items-start justify-between">
                                         <div className="flex-1">
