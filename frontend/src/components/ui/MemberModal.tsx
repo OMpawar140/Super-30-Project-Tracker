@@ -3,13 +3,14 @@ import { Button } from './button';
 
 interface Member {
   userId: string;
+  email: string;
   role: 'ADMIN' | 'TASK_COMPLETER';
 }
 
 interface MemberModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSaveMembers: (members: Member[]) => void;
+  onSaveMembers: (members: Member[]) => Promise<void>;
 }
 
 const MemberModal: React.FC<MemberModalProps> = ({
@@ -18,12 +19,12 @@ const MemberModal: React.FC<MemberModalProps> = ({
   onSaveMembers,
 }) => {
   const [members, setMembers] = useState<Member[]>([
-    { userId: '', role: 'TASK_COMPLETER' }
+    { userId: '', email: '', role: 'TASK_COMPLETER' }
   ]);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleAddMember = () => {
-    setMembers([...members, { userId: '', role: 'TASK_COMPLETER' }]);
+    setMembers([...members, { userId: '', email: '', role: 'TASK_COMPLETER' }]);
   };
 
   const handleRemoveMember = (index: number) => {

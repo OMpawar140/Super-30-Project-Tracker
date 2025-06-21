@@ -2,8 +2,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState, useEffect } from 'react';
-import { HiClipboardList, HiFlag, HiUser, HiCalendar, HiChevronDown, HiChevronUp, HiSearch, HiFilter, HiCheckCircle, HiClock, HiExclamation } from 'react-icons/hi';
+import { HiClipboardList, HiFlag, HiUser, HiCalendar, HiChevronDown, HiChevronUp, HiSearch, HiFilter, HiCheckCircle, HiClock, HiExclamation, HiUpload, HiEye } from 'react-icons/hi';
 import { apiService, useApiCall } from '@/services/api';
+import TaskFileModal from '../../components/ui/TaskFileModal';
+import { useAuth } from '@/context/AuthContext';
+import TaskReviewModal from '@/components/ui/TaskReviewModal';
 
 // Types for our data (updated to match backend structure)
 interface User {
@@ -80,6 +83,12 @@ const ProjectsPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [priorityFilter, setPriorityFilter] = useState<string>('All');
   const [animatedItems, setAnimatedItems] = useState<string[]>([]);
+  const [taskModalOpen, setTaskModalOpen] = useState(false);
+  const [taskReviewModalOpen, setTaskReviewModalOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<{id: string, title: string, status: string} | null>(null);
+  const { currentUser } = useAuth();
+
+
   const [roleFilter, setRoleFilter] = useState("ALL");
 
   const { callApi } = useApiCall();
@@ -130,6 +139,34 @@ const ProjectsPage: React.FC = () => {
 
     fetchProjects();
   }, []);
+
+  const openTaskModal = (task: Task) => {
+    setSelectedTask({
+      id: task.id,
+      title: task.title,
+      status: task.status
+    });
+    setTaskModalOpen(true);
+  };
+
+  const closeTaskModal = () => {
+    setTaskModalOpen(false);
+    setSelectedTask(null);
+  };
+
+  const openTaskReviewModal = (task: Task) => {
+    setSelectedTask({
+      id: task.id,
+      title: task.title,
+      status: task.status
+    });
+    setTaskReviewModalOpen(true);
+  };
+
+  const closeTaskReviewModal = () => {
+    setTaskReviewModalOpen(false);
+    setSelectedTask(null);
+  };
 
   // Calculate total tasks across all milestones
   const calculateTotalTasks = (project: any): number => {
@@ -564,7 +601,41 @@ const ProjectsPage: React.FC = () => {
                                 </h5>
                                 <div className="space-y-2">
                                   {milestone.tasks.map((task) => (
-                                    <div key={task.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-600 p-3 cursor-pointer">
+                                    // <div key={task.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-600 p-3 cursor-pointer">
+                                    //   <div className="flex items-start justify-between">
+                                    //     <div className="flex-1">
+                                    //       <div className="flex items-center gap-2 mb-1">
+                                    //         {getTaskIcon(task.status)}
+                                    //         <h6 className="text-sm font-medium text-gray-900 dark:text-white">{task.title}</h6>
+                                    //       </div>
+                                    //       {task.description && (
+                                    //         <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">{task.description}</p>
+                                    //       )}
+                                    //       <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+                                    //         {task.startDate && task.dueDate && (
+                                    //           <span>{formatDate(task.startDate)} - {formatDate(task.dueDate)}</span>
+                                    //         )}
+                                    //         {task.assigneeId && (
+                                    //           <span className="flex items-center gap-1 text-base">
+                                    //             <HiUser className="w-4 h-4" />
+                                    //             {task.assigneeId}
+                                    //           </span>
+                                    //         )}
+                                    //       </div>
+                                    //     </div>
+                                    //     <div className="flex flex-col items-end gap-1 ml-3">
+                                    //       <span className={`px-2 py-1 rounded text-xs font-medium border ${getStatusColor(task.status, 'task')}`}>
+                                    //         {task.status.replace('_', ' ')}
+                                    //       </span>
+                                    //       {task.priority && (
+                                    //         <span className={`px-2 py-1 rounded text-xs font-medium ${getPriorityColor(task.priority)}`}>
+                                    //           {task.priority}
+                                    //         </span>
+                                    //       )}
+                                    //     </div>
+                                    //   </div>
+                                    // </div>
+                                    <div key={task.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-600 p-3">
                                       <div className="flex items-start justify-between">
                                         <div className="flex-1">
                                           <div className="flex items-center gap-2 mb-1">
@@ -579,21 +650,51 @@ const ProjectsPage: React.FC = () => {
                                               <span>{formatDate(task.startDate)} - {formatDate(task.dueDate)}</span>
                                             )}
                                             {task.assigneeId && (
-                                              <span className="flex items-center gap-1 text-base">
-                                                <HiUser className="w-4 h-4" />
+                                              <span className="flex items-center gap-1">
+                                                <HiUser className="w-3 h-3" />
                                                 {task.assigneeId}
                                               </span>
                                             )}
                                           </div>
                                         </div>
-                                        <div className="flex flex-col items-end gap-1 ml-3">
-                                          <span className={`px-2 py-1 rounded text-xs font-medium border ${getStatusColor(task.status, 'task')}`}>
-                                            {task.status.replace('_', ' ')}
-                                          </span>
-                                          {task.priority && (
-                                            <span className={`px-2 py-1 rounded text-xs font-medium ${getPriorityColor(task.priority)}`}>
-                                              {task.priority}
+                                        <div className="flex flex-col items-end gap-2 ml-3">
+                                          <div className="flex items-center gap-1">
+                                            <span className={`px-2 py-1 rounded text-xs font-medium border ${getStatusColor(task.status, 'task')}`}>
+                                              {task.status.replace('_', ' ')}
                                             </span>
+                                            {task.priority && (
+                                              <span className={`px-2 py-1 rounded text-xs font-medium ${getPriorityColor(task.priority)}`}>
+                                                {task.priority}
+                                              </span>
+                                            )}
+                                          </div>
+                                          {/* Add Files & Request Review */}
+                                          {currentUser && currentUser.email === task.assigneeId && (
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              openTaskModal(task);
+                                            }}
+                                            className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg transition-colors flex items-center gap-1"
+                                            title="Manage files and request review"
+                                          >
+                                            <HiUpload className="w-3 h-3" />
+                                            Submit Completion Proof
+                                          </button>
+                                          )}
+                                          {/* Review Files & Update Status */}
+                                          {currentUser && currentUser.email === project.creatorId && (
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              openTaskReviewModal(task);
+                                            }}
+                                            className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg transition-colors flex items-center gap-1"
+                                            title="Manage files and request review"
+                                          >
+                                            <HiEye className="w-3 h-3" />
+                                            Review Completion Proof
+                                          </button>
                                           )}
                                         </div>
                                       </div>
@@ -656,6 +757,24 @@ const ProjectsPage: React.FC = () => {
           </div>
         )}
       </div>
+      {selectedTask && (
+        <TaskFileModal
+          isOpen={taskModalOpen}
+          onClose={closeTaskModal}
+          taskId={selectedTask.id}
+          taskTitle={selectedTask.title}
+          taskStatus={selectedTask.status}
+        />
+      )}
+      {selectedTask && (
+        <TaskReviewModal
+          isOpen={taskReviewModalOpen}
+          onClose={closeTaskReviewModal}
+          taskId={selectedTask.id}
+          taskTitle={selectedTask.title}
+          taskStatus={selectedTask.status}
+        />
+      )}
     </div>
   );
 };
