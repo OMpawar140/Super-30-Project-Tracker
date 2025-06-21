@@ -88,8 +88,11 @@ const ProjectsPage: React.FC = () => {
   const [selectedTask, setSelectedTask] = useState<{id: string, title: string, status: string} | null>(null);
   const { currentUser } = useAuth();
 
-
   const { callApi } = useApiCall();
+
+  useEffect(() => {
+    document.title = "Project Panel - Project Tracker";
+  }, []);
   
   // Fetch projects from API
   useEffect(() => {
@@ -431,87 +434,88 @@ const ProjectsPage: React.FC = () => {
               }`}
             >
               {/* Project Header */}
-              <div 
-                className="p-6 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors duration-300"
+                <div 
+                className="p-6 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-300"
                 onClick={() => toggleProjectExpansion(project.id)}
-              >
+                >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                        {project.name}
-                      </h2>
-                      {expandedProjects.includes(project.id) ? 
-                        <HiChevronUp className="w-5 h-5 text-gray-400 dark:text-gray-500" /> : 
-                        <HiChevronDown className="w-5 h-5 text-gray-400 dark:text-gray-500" />
-                      }
+                  <div className="flex items-center gap-3 mb-2">
+                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                    {project.name}
+                    </h2>
+                    {expandedProjects.includes(project.id) ? 
+                    <HiChevronUp className="w-5 h-5 text-gray-400 dark:text-gray-500" /> : 
+                    <HiChevronDown className="w-5 h-5 text-gray-400 dark:text-gray-500" />
+                    }
+                  </div>
+                  <p className="text-gray-600 dark:text-gray-300 mb-3">{project.description}</p>
+                  
+                  {/* Project Meta */}
+                  <div className="flex flex-wrap items-center gap-4 text-sm">
+                    <div className="flex items-center gap-1">
+                    <HiCalendar className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                    <span className="text-gray-600 dark:text-gray-300">
+                      {formatDate(project.startDate)} - {formatDate(project.endDate)}
+                    </span>
                     </div>
-                    <p className="text-gray-600 dark:text-gray-400 mb-3">{project.description}</p>
-                    
-                    {/* Project Meta */}
-                    <div className="flex flex-wrap items-center gap-4 text-sm">
-                      <div className="flex items-center gap-1">
-                        <HiCalendar className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                        <span className="text-gray-600 dark:text-gray-400">
-                          {formatDate(project.startDate)} - {formatDate(project.endDate)}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <HiUser className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                        <span className="text-gray-600 dark:text-gray-400">
-                          {project._count.members} members
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <HiFlag className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                        <span className="text-gray-600 dark:text-gray-400">
-                          {project._count.milestones} milestones
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <HiClipboardList className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                        <span className="text-gray-600 dark:text-gray-400">
-                          {project.completedTasks || 0}/{project.totalTasks || 0} tasks
-                        </span>
-                      </div>
-                      {project.budget && (
-                        <div className="text-gray-600 dark:text-gray-400">
-                          Budget: ${project.budget.toLocaleString()}
-                        </div>
-                      )}
+                    <div className="flex items-center gap-1">
+                    <HiUser className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                    <span className="text-gray-600 dark:text-gray-300">
+                      {project._count.members} members
+                    </span>
                     </div>
+                    <div className="flex items-center gap-1">
+                    <HiFlag className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                    <span className="text-gray-600 dark:text-gray-300">
+                      {project._count.milestones} milestones
+                    </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                    <HiClipboardList className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                    <span className="text-gray-600 dark:text-gray-300">
+                      {project.completedTasks || 0}/{project.totalTasks || 0} tasks
+                    </span>
+                    </div>
+                    {project.budget && (
+                    <div className="text-gray-600 dark:text-gray-300">
+                      Budget: ${project.budget.toLocaleString()}
+                    </div>
+                    )}
+                  </div>
                   </div>
                   
                   <div className="flex flex-col items-end gap-3 ml-6">
-                    <div className="flex gap-2">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(project.status)}`}>
-                        {project.status.replace('_', ' ')}
-                      </span>
+                  <div className="flex gap-2">
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(project.status)}`}>
+                    {project.status.replace('_', ' ')}
+                    </span>
+                  </div>
+                  
+                  {/* Progress Bar */}
+                  <div className="w-32">
+                    <div className="flex justify-between text-xs text-gray-600 dark:text-gray-300 mb-1">
+                    <span>Progress</span>
+                    <span>{project.progress || 0}%</span>
                     </div>
-                    
-                    {/* Progress Bar */}
-                    <div className="w-32">
-                      <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400 mb-1">
-                        <span>Progress</span>
-                        <span>{project.progress || 0}%</span>
-                      </div>
-                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                        <div 
-                          className="bg-blue-600 dark:bg-blue-500 h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${project.progress || 0}%` }}
-                        ></div>
-                      </div>
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                    <div 
+                      className="bg-blue-600 dark:bg-blue-500 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${project.progress || 0}%` }}
+                    ></div>
                     </div>
                   </div>
+                  </div>
                 </div>
-              </div>
+                </div>
 
               {/* Expanded Content */}
               {expandedProjects.includes(project.id) && (
                 <div className="border-t border-gray-200 dark:border-gray-700 animate-slide-down">
                   <div className="p-6 space-y-6">
+                    <div className='flex flex-col md:flex-row gap-6 justify-between'>
                     {/* Creator Info */}
-                    <div>
+                    <div className='md:pl-8 lg:pl-12'>
                       <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3">Project Creator</h3>
                       <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded-lg w-fit">
                         <HiUser className="w-4 h-4 text-gray-500 dark:text-gray-400" />
@@ -526,7 +530,7 @@ const ProjectsPage: React.FC = () => {
 
                     {/* Tags */}
                     {project.tags && project.tags.length > 0 && (
-                      <div>
+                      <div className='md:pr-8 lg:pr-12'>
                         <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3">Tags</h3>
                         <div className="flex flex-wrap gap-2">
                           {project.tags.map((tag, index) => (
@@ -537,6 +541,7 @@ const ProjectsPage: React.FC = () => {
                         </div>
                       </div>
                     )}
+                    </div>
 
                     {/* Milestones Section */}
                     <div>
@@ -561,7 +566,7 @@ const ProjectsPage: React.FC = () => {
                                       <HiChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-500" />
                                     }
                                   </div>
-                                  <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+                                  <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
                                     <span>{formatDate(milestone.startDate)} - {formatDate(milestone.endDate)}</span>
                                     <span>{milestone.tasks ? milestone.tasks.length : 0} tasks</span>
                                   </div>
@@ -616,7 +621,7 @@ const ProjectsPage: React.FC = () => {
                                     //   </div>
                                     // </div>
                                     <div key={task.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-600 p-3">
-                                      <div className="flex items-start justify-between">
+                                      {/* <div className="flex items-start justify-between">
                                         <div className="flex-1">
                                           <div className="flex items-center gap-2 mb-1">
                                             {getTaskIcon(task.status)}
@@ -648,7 +653,7 @@ const ProjectsPage: React.FC = () => {
                                               </span>
                                             )}
                                           </div>
-                                          {/* Add Files & Request Review */}
+
                                           {currentUser && currentUser.email === task.assigneeId && (
                                           <button
                                             onClick={(e) => {
@@ -662,20 +667,102 @@ const ProjectsPage: React.FC = () => {
                                             Submit Completion Proof
                                           </button>
                                           )}
-                                          {/* Review Files & Update Status */}
+                                      
                                           {currentUser && currentUser.email === project.creatorId && (
                                           <button
                                             onClick={(e) => {
                                               e.stopPropagation();
                                               openTaskReviewModal(task);
                                             }}
-                                            className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg transition-colors flex items-center gap-1"
+                                            className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg transition-colors flex items-center gap-1 hover:cursor-pointer"
                                             title="Manage files and request review"
                                           >
                                             <HiEye className="w-3 h-3" />
                                             Review Completion Proof
                                           </button>
                                           )}
+                                        </div>
+                                      </div> */}
+                                      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition-shadow duration-200">
+                                        {/* Header Section */}
+                                        <div className="flex items-start justify-between mb-3">
+                                          <div className="flex items-center gap-2 flex-1">
+                                            {getTaskIcon(task.status)}
+                                            <h6 className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-1">
+                                              {task.title}
+                                            </h6>
+                                          </div>
+                                          
+                                          {/* Status and Priority Badges */}
+                                          <div className="flex items-center gap-2 ml-3">
+                                            <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(task.status, 'task')}`}>
+                                              {task.status.replace('_', ' ')}
+                                            </span>
+                                            {task.priority && (
+                                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(task.priority)}`}>
+                                                {task.priority}
+                                              </span>
+                                            )}
+                                          </div>
+                                        </div>
+
+                                        {/* Description */}
+                                        {task.description && (
+                                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
+                                            {task.description}
+                                          </p>
+                                        )}
+
+                                        {/* Footer Section */}
+                                        <div className="flex items-center justify-between">
+                                          {/* Task Details */}
+                                          <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+                                            {task.startDate && task.dueDate && (
+                                              <div className="flex items-center gap-1">
+                                                <HiCalendar className="w-3 h-3" />
+                                                <span>{formatDate(task.startDate)} - {formatDate(task.dueDate)}</span>
+                                              </div>
+                                            )}
+                                            {task.assigneeId && (
+                                              <div className="flex items-center gap-1">
+                                                <HiUser className="w-3 h-3" />
+                                                <span>{task.assigneeId}</span>
+                                              </div>
+                                            )}
+                                          </div>
+
+                                          {/* Action Buttons */}
+                                          <div className="flex items-center gap-2">
+                                            {/* Submit Completion Proof Button */}
+                                            {currentUser && currentUser.email === task.assigneeId && (
+                                              <button
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  openTaskModal(task);
+                                                }}
+                                                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-md transition-colors flex items-center gap-1.5 font-medium"
+                                                title="Submit completion proof"
+                                              >
+                                                <HiUpload className="w-3 h-3" />
+                                                Submit Proof
+                                              </button>
+                                            )}
+                                            
+                                            {/* Review Completion Proof Button */}
+                                            {currentUser && currentUser.email === project.creatorId && (
+                                              <button
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  openTaskReviewModal(task);
+                                                }}
+                                                className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs rounded-md transition-colors flex items-center gap-1.5 font-medium"
+                                                title="Review completion proof"
+                                              >
+                                                <HiEye className="w-3 h-3" />
+                                                Review
+                                              </button>
+                                            )}
+                                          </div>
                                         </div>
                                       </div>
                                     </div>

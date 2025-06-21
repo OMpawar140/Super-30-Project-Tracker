@@ -8,7 +8,6 @@ class ProjectController {
   async getUserProjects(req, res) {
     try {
       const userEmail = req.user.email;
-      console.log('Getting projects for user:', userEmail);
       const projects = await projectService.getUserProjects(userEmail);
       
       return successResponse(res, 'Projects retrieved successfully', projects);

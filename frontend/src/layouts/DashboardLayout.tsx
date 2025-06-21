@@ -1,4 +1,4 @@
-import  { useState } from 'react';
+import  { useEffect, useState } from 'react';
 import { HiMenu, HiX, HiHome, HiClipboardList, HiCalendar, HiBell, HiLogout } from 'react-icons/hi';
 import ThemeToggle from '../components/ui/ThemeToggle';
 import NotificationOverlay from '@/pages/notifications/NotificationOverlay';
@@ -7,12 +7,14 @@ import { User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { apiService, useApiCall } from '@/services/api';
 import { useNavigation } from '@/hooks/useNavigation';
+import logo from '@/assets/Images/TrackPro-icon-preview.png';
 
 // Import your components
 import Dashboard from '@/components/ui/Dashboard';
 import ProjectsPage from '@/pages/projects/ProjectsPage';
 import Timeline from '@/pages/timeline/TimeLine';
 import NotificationsPage from '@/pages/notifications/NotificationsPage';
+import Profile from '@/pages/profile/Profile';
 
 const DashboardLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -30,6 +32,10 @@ const DashboardLayout = () => {
     }
   };
 
+  useEffect(() => {
+    document.title = 'Dashboard - Project Tracker';
+  });
+
   const navigationItems = [
     { name: 'Dashboard', icon: HiHome, component: Dashboard },
     { name: 'Projects', icon: HiClipboardList, component: ProjectsPage },
@@ -37,13 +43,14 @@ const DashboardLayout = () => {
     { name: 'Notifications', icon: HiBell, component: NotificationsPage },
   ];
 
-  type TabName = 'Dashboard' | 'Projects' | 'Timeline' | 'Notifications';
+  type TabName = 'Dashboard' | 'Projects' | 'Timeline' | 'Notifications' | 'Profile';
 
   const componentMap: Record<TabName, React.FC> = {
     Dashboard: Dashboard,
     Projects: ProjectsPage,
     Timeline: Timeline,
     Notifications: NotificationsPage,
+    Profile: Profile,
   };
 
   const renderContent = () => {
@@ -62,6 +69,7 @@ const DashboardLayout = () => {
         <div className="h-full flex flex-col">
           <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200 dark:border-gray-700">
             <div className="text-xl font-bold text-gray-900 dark:text-white">
+              <img src={logo} alt="TrackPro Logo" className="h-8 w-8 inline-block mr-2" />
               Project Tracker
             </div>
             <button
@@ -90,6 +98,23 @@ const DashboardLayout = () => {
           </nav>
           
           <div className="px-2 py-4 border-t border-gray-200 dark:border-gray-700">
+            <button 
+              onClick={() => {
+                navigateTo('Profile');
+              }}
+              className="flex items-center pb-8 text-center justify-center border-b border-gray-200 dark:border-gray-700 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-200 cursor-pointer group"
+            >
+              {currentUser?.photoURL && (
+                <img
+                  src={currentUser.photoURL}
+                  alt="User avatar"
+                  className="h-6 w-6 rounded-full mr-2 border border-gray-200 group-hover:border-gray-300 transition-colors"
+                />
+              ) || <User className="h-4 w-4 mr-2 text-gray-500 group-hover:text-gray-700 dark:text-gray-400 dark:group-hover:text-gray-200 transition-colors" />}
+              <span className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
+                {currentUser?.displayName || currentUser?.email}
+              </span>
+            </button>
             <Button
               onClick={handleLogout}
               variant="outline"

@@ -93,36 +93,87 @@ class FileController {
     try {
       const { key } = req.params;
 
+      // Validate input
+      if (!key) {
+        return errorResponse(res, 'Task ID is required', 400);
+      }
+
       // Step 1: List all files in the S3 bucket
       const allFiles = await S3Service.listFiles();
 
+      // Check if any files exist at all
+      if (!allFiles || !Array.isArray(allFiles) || allFiles.length === 0) {
+        return errorResponse(res, 'NDo files found for the specified task I', 404);
+      }
+
       // Step 2: Filter files that end with the specified key (taskId)
       const filteredFiles = allFiles
+        .filter(file => file && file.key) // Ensure file object has key property
         .map(file => file.key)
         .filter(filename => {
-        // Remove file extension
-        const baseName = filename.split('.').slice(0, -1).join('.');
-        // Check if ends with key
-        return baseName.endsWith(key);
-      });
+          if (!filename || typeof filename !== 'string') return false;
+          
+          // Remove file extension
+          const baseName = filename.split('.').slice(0, -1).join('.');
+          // Check if ends with key
+          return baseName.endsWith(key);
+        });
+
+      // Check if any matching files were found
+      if (!filteredFiles || filteredFiles.length === 0) {
+        return errorResponse(res, 'No files found for the specified task ID', 404);
+      }
 
       // Step 3: Sort files based on datetime extracted from the filename
       const sortedFiles = filteredFiles.sort((a, b) => {
-        const dateA = new Date(a.split('-')[0]);
-        const dateB = new Date(b.split('-')[0]);
-        return dateB - dateA;
+        try {
+          // More robust date parsing with validation
+          const datePartA = a.split('-')[0];
+          const datePartB = b.split('-')[0];
+          
+          if (!datePartA || !datePartB) return 0;
+          
+          const dateA = new Date(datePartA);
+          const dateB = new Date(datePartB);
+          
+          // Check if dates are valid
+          if (isNaN(dateA.getTime()) || isNaN(dateB.getTime())) {
+            return 0; // Keep original order if dates are invalid
+          }
+          
+          return dateB.getTime() - dateA.getTime();
+        } catch (error) {
+          console.warn('Error parsing dates for sorting:', error);
+          return 0;
+        }
       });
 
       // Step 4: Select the latest file
       const latestFileKey = sortedFiles[0];
-      console.log('Latest file key:', latestFileKey);
+      // console.log('Latest file key:', latestFileKey);
 
+      // This check is redundant now but kept for extra safety
       if (!latestFileKey) {
         return errorResponse(res, 'No files found for the specified task ID', 404);
       }
 
       // Get file metadata for the latest file
-      const headResult = await S3Service.getFileMetadata(latestFileKey);
+      let headResult;
+      try {
+        headResult = await S3Service.getFileMetadata(latestFileKey);
+      } catch (error) {
+        console.error('Error getting file metadata:', error);
+        if (error.code === 'NoSuchKey' || error.message?.includes('not found')) {
+          return errorResponse(res, 'File not found', 404);
+        }
+        throw error; // Re-throw to be caught by outer catch
+      }
+
+      // Validate metadata response
+      if (!headResult) {
+        return errorResponse(res, 'File metadata not available', 404);
+      }
+
       const contentType = headResult.ContentType || 'application/octet-stream';
       const fileSize = headResult.ContentLength || 0;
 
@@ -134,21 +185,46 @@ class FileController {
           metadata: {
             contentType,
             size: fileSize,
-            lastModified: headResult.LastModified
+            lastModified: headResult.LastModified,
+            filename: latestFileKey
           }
         };
         return successResponse(res, 'File preview retrieved successfully', responseData);
       }
 
-      const responseData = await S3Service.getFileObject(latestFileKey);
+      // Get the actual file content
+      let responseData;
+      try {
+        responseData = await S3Service.getFileObject(latestFileKey);
+      } catch (error) {
+        console.error('Error getting file object:', error);
+        if (error.code === 'NoSuchKey' || error.message?.includes('not found')) {
+          return errorResponse(res, 'File not found', 404);
+        }
+        throw error; // Re-throw to be caught by outer catch
+      }
+
+      // Validate file content response
+      if (!responseData) {
+        return errorResponse(res, 'File content not available', 404);
+      }
 
       return successResponse(res, 'File preview retrieved successfully', responseData);
 
     } catch (error) {
       console.error('Preview error:', error);
-      if (error.message === 'File not found') {
+      
+      // Handle specific AWS S3 errors
+      if (error.code === 'NoSuchKey' || error.message?.includes('not found')) {
         return errorResponse(res, 'File not found', 404);
       }
+      if (error.code === 'NoSuchBucket') {
+        return errorResponse(res, 'Storage bucket not found', 404);
+      }
+      if (error.code === 'AccessDenied') {
+        return errorResponse(res, 'Access denied to file', 403);
+      }
+      
       return errorResponse(res, 'Failed to retrieve file preview', 500);
     }
   }

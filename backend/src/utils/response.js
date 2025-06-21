@@ -42,7 +42,8 @@ const errorResponse = (res, message, statusCode = 500, errors = null, meta = nul
   const response = {
     success: false,
     message,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    status: statusCode
   };
 
   // Include detailed errors if provided

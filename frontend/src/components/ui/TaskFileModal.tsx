@@ -64,6 +64,19 @@ const TaskFileModal: React.FC<TaskFileModalProps> = ({
       setLoading(true);
       setError(null);
       const response = await callApi(() => apiService.files.getFileDetails(taskId));
+      console.log('Fetched task files:', response);
+      // Check if response indicates a 404 error
+      if (response?.status === 404 || 
+          (response?.message && response.message.toLowerCase().includes('not found')) ||
+          (!response?.data && response?.status >= 400)) {
+        setError('Task files not found');
+        return;
+      }
+      
+      // Validate response data exists
+      if (!response?.data) {
+        throw new Error('No file data received');
+      }
       setFiles(prevFiles => {
         const currentFiles = Array.isArray(prevFiles) ? prevFiles : [];
         return [...currentFiles, response.data];
@@ -158,7 +171,7 @@ const TaskFileModal: React.FC<TaskFileModalProps> = ({
       setRequestingReview(true);
       setError(null);
 
-      await callApi(() => apiService.tasks.requestReview(taskId));
+      await callApi(() => apiService.tasks.updateTaskStatus(taskId, 'IN_REVIEW'));
       
       // Show success message or update UI as needed
       alert('Review request sent successfully!');
@@ -402,8 +415,8 @@ const TaskFileModal: React.FC<TaskFileModalProps> = ({
               </p>
               <button
                 onClick={requestReview}
-                disabled={requestingReview || files.length === 0}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white py-2 px-4 rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                disabled={requestingReview || files.length === 0 || taskStatus.toLowerCase() === 'in_review' || taskStatus.toLowerCase() === 'in review'}
+                className="w-full bg-blue-600 hover:bg-blue-700 hover:cursor-pointer disabled:bg-gray-400 disabled:cursor-not-allowed text-white py-2 px-4 rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2"
               >
                 {requestingReview ? (
                   <>
@@ -413,7 +426,7 @@ const TaskFileModal: React.FC<TaskFileModalProps> = ({
                 ) : (
                   <>
                     <HiCheckCircle className="w-4 h-4" />
-                    Request Review
+                    {taskStatus.toLowerCase() === 'in_review' || taskStatus.toLowerCase() === 'in review' ? 'Review has already been requested' : 'Request review'}
                   </>
                 )}
               </button>

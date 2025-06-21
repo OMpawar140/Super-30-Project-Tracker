@@ -34,13 +34,6 @@ class S3Service {
       
       // Construct the S3 URL
       const location = `https://${BUCKET_NAME}.s3.amazonaws.com/${fileKey}`;
-
-      console.log('key:', fileKey);
-      console.log('location:', location);
-      console.log('bucket:', BUCKET_NAME);
-      console.log('etag:', result.ETag);
-      console.log('lastModified:', result.LastModified);
-      console.log('size:', result.ContentLength);
       
       return {
         id: fileKey,

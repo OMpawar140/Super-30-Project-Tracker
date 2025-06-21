@@ -12,32 +12,6 @@ const getAuthToken = async (): Promise<string | null> => {
   return null;
 };
 
-// // Generic API call function
-// const apiCall = async (
-//   endpoint: string,
-//   options: RequestInit = {}
-// ): Promise<any> => {
-//   const token = await getAuthToken();
-  
-//   const config: RequestInit = {
-//     headers: {
-//       'Content-Type': 'application/json',
-//       ...(token && { Authorization: `Bearer ${token}` }),
-//       ...options.headers,
-//     },
-//     ...options,
-//   };
-
-//   const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
-  
-//   if (!response.ok) {
-//     const errorData = await response.json().catch(() => ({}));
-//     throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-//   }
-
-//   return await response.json();
-// };
-
 const apiCall = async (
   endpoint: string,
   options: RequestInit = {}
@@ -49,7 +23,7 @@ const apiCall = async (
   
   const config: RequestInit = {
     headers: {
-      ...(!isFormData && { 'Content-Type': 'application/json' }), // Only set for non-FormData
+      ...(!isFormData && { 'Content-Type': 'application/json' }),
       ...(token && { Authorization: `Bearer ${token}` }),
       ...options.headers,
     },
@@ -60,6 +34,7 @@ const apiCall = async (
   
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
+    console.error(errorData);
     throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
   }
 
@@ -70,7 +45,6 @@ const apiCall = async (
 export const apiService = {
   // Auth endpoints
   auth: {
-    
     emailRegister: (email: string) =>
       apiCall('/auth/register', {
         method: 'POST',
@@ -401,6 +375,63 @@ export const apiService = {
     // Health check (maps to GET /api/files/health)
     healthCheck: () => apiCall('/files/health'),
   },
+
+  users: {
+    // Get all users (maps to GET /api/users)
+    getAllUsers: () => apiCall('/users'),
+    
+    // Get user by ID (maps to GET /api/users/:id)
+    getUserById: (id: string) => apiCall(`/users/${id}`),
+    
+    // Get user by email (maps to GET /api/users/email/:email)
+    getUserByEmail: (email: string) => apiCall(`/users/email/${encodeURIComponent(email)}`),
+    
+    // Create new user (maps to POST /api/users)
+    createUser: (userData: { email: string; skillset: string[] }) =>
+      apiCall('/users', {
+        method: 'POST',
+        body: JSON.stringify(userData),
+      }),
+    
+    // Update existing user (maps to PUT /api/users/:id)
+    updateUser: (id: string, userData: { email?: string; skillset?: string[] }) =>
+      apiCall(`/users/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(userData),
+      }),
+    
+    // Delete user (maps to DELETE /api/users/:id)
+    deleteUser: (id: string) =>
+      apiCall(`/users/${id}`, { method: 'DELETE' }),
+
+    // Search users by skillset (maps to GET /api/users/search/skills?skills=skill1,skill2)
+    searchUsersBySkills: (skills: string[]) =>
+      apiCall(`/users/search/skills?skills=${skills.join(',')}`),
+
+    // Add skill to user (maps to POST /api/users/:id/skills)
+    addUserSkill: (id: string, skill: string) =>
+      apiCall(`/users/${id}/skills`, {
+        method: 'POST',
+        body: JSON.stringify({ skill }),
+      }),
+
+    // Remove skill from user (maps to DELETE /api/users/:id/skills/:skill)
+    removeUserSkill: (id: string, skill: string) =>
+      apiCall(`/users/${id}/skills/${encodeURIComponent(skill)}`, { 
+        method: 'DELETE' 
+      }),
+
+    // Update user skillset (maps to PUT /api/users/:id/skills)
+    updateUserSkillset: (id: string, skillset: string[]) =>
+      apiCall(`/users/${id}/skills`, {
+        method: 'PUT',
+        body: JSON.stringify({ skillset }),
+      }),
+
+    // Get users with specific skill (maps to GET /api/users/skill/:skill)
+    getUsersWithSkill: (skill: string) =>
+      apiCall(`/users/skill/${encodeURIComponent(skill)}`),
+  }
 };
 
 // Custom hook for API calls with loading and error states

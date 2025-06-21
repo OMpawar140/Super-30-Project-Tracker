@@ -68,13 +68,27 @@ const TaskReviewModal: React.FC<TaskReviewModalProps> = ({
       setLoading(true);
       setError(null);
       const response = await callApi(() => apiService.files.getFileDetails(taskId));
+      console.log('Fetched task files:', response);
+
+      // Check if response indicates a 404 error
+      if (response?.status === 404 || 
+          (response?.message && response.message.toLowerCase().includes('no files found')) ||
+          (!response?.data && response?.status >= 400)) {
+        setError('Task files not found');
+        return;
+      }
+      
+      // Validate response data exists
+      if (!response?.data) {
+        throw new Error('No file data received');
+      }
       setFiles(prevFiles => {
         const currentFiles = Array.isArray(prevFiles) ? prevFiles : [];
         return [...currentFiles, response.data];
       });
     } catch (err) {
       console.error('Error fetching task files:', err);
-      setError('Failed to load task files');
+      setError('No task files available');
     } finally {
       setLoading(false);
     }
@@ -168,7 +182,7 @@ const TaskReviewModal: React.FC<TaskReviewModalProps> = ({
   };
 
   const canReview = files.length > 0 && 
-    (taskStatus.toLowerCase() === 'pending_review' || taskStatus.toLowerCase() === 'pending review');
+    (taskStatus.toLowerCase() === 'in_review' || taskStatus.toLowerCase() === 'in review');
 
   if (!isOpen) return null;
 
@@ -387,7 +401,7 @@ const TaskReviewModal: React.FC<TaskReviewModalProps> = ({
                   </p>
                 </div>
                 <p className="text-amber-600 dark:text-amber-400 text-xs mt-1">
-                  This task is currently in "{taskStatus}" status and cannot be reviewed at this time.
+                  This task is currently {taskStatus} and cannot be reviewed at this time.
                 </p>
               </div>
             </div>

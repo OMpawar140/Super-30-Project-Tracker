@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Eye, EyeOff, Mail, Lock, User, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { apiService, useApiCall } from '../../services/api';
@@ -25,6 +25,10 @@ const LoginSignupForm: React.FC<LoginSignupFormProps> = ({ onSuccess }) => {
   });
 
   const { login, signup, loginWithGoogle, resetPassword } = useAuth();
+
+  useEffect(() => {
+    document.title = "Project Tracker";
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -308,7 +312,7 @@ const handleGoogleSignIn = async () => {
                 <button
                   type="button"
                   onClick={handleForgotPassword}
-                  className="text-sm text-indigo-600 hover:text-indigo-500 transition-colors"
+                  className="text-sm text-indigo-600 hover:text-indigo-500 transition-colors hover:cursor-pointer hover:underline"
                 >
                   Forgot your password?
                 </button>
