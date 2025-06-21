@@ -89,96 +89,32 @@ class FileController {
     }
   }
 
-  // Preview a file
-  // async previewFile(req, res) {
-  //   try {
-  //     const { key } = req.params;
-      
-  //     // Get file metadata first
-  //     const headResult = await S3Service.getFileMetadata(key);
-  //     const contentType = headResult.ContentType || 'application/octet-stream';
-  //     const fileSize = headResult.ContentLength || 0;
-
-  //     // For large files, return metadata only
-  //     if (fileSize > 10 * 1024 * 1024) { // 10MB limit for preview
-  //       const responseData = {
-  //         preview: false,
-  //         message: 'File too large for preview',
-  //         metadata: {
-  //           contentType,
-  //           size: fileSize,
-  //           lastModified: headResult.LastModified
-  //         }
-  //       };
-  //       return successResponse(res, 'File preview retrieved successfully', responseData);
-  //     }
-
-  //     // Get the file content
-  //     const result = await S3Service.getFileContent(key);
-      
-  //     const isTextFile = S3Service.isTextFile(contentType);
-  //     const isImageFile = S3Service.isImageFile(contentType);
-  //     const isPDFFile = S3Service.isPDFFile(contentType);
-
-  //     let responseData = {
-  //       preview: true,
-  //       metadata: {
-  //         contentType,
-  //         size: fileSize,
-  //         lastModified: headResult.LastModified
-  //       }
-  //     };
-
-  //     if (isTextFile) {
-  //       responseData.type = 'text';
-  //       responseData.content = result.Body.toString('utf-8');
-  //     } else if (isImageFile || isPDFFile) {
-  //       responseData.type = isImageFile ? 'image' : 'pdf';
-  //       responseData.content = `data:${contentType};base64,${result.Body.toString('base64')}`;
-  //     } else {
-  //       responseData.preview = false;
-  //       responseData.message = 'File type not supported for preview';
-  //     }
-
-  //     return successResponse(res, 'File preview retrieved successfully', responseData);
-  //   } catch (error) {
-  //     console.error('Preview error:', error);
-  //     if (error.message === 'File not found') {
-  //       return errorResponse(res, 'File not found', 404);
-  //     }
-  //     return errorResponse(res, 'Failed to retrieve file preview', 500);
-  //   }
-  // }
-
   async previewFile(req, res) {
     try {
       const { key } = req.params;
-      // console.log('Preview request for key:', key);
 
       // Step 1: List all files in the S3 bucket
-      const allFiles = await S3Service.listFiles(); // Assume this method lists all files in the bucket
-      // console.log('All files:', allFiles);
+      const allFiles = await S3Service.listFiles();
 
       // Step 2: Filter files that end with the specified key (taskId)
       const filteredFiles = allFiles
-        .map(file => file.key) // Extract just the Key (filename) from each S3 object
+        .map(file => file.key)
         .filter(filename => {
         // Remove file extension
         const baseName = filename.split('.').slice(0, -1).join('.');
         // Check if ends with key
         return baseName.endsWith(key);
       });
-      console.log('Filtered files:', filteredFiles);
 
       // Step 3: Sort files based on datetime extracted from the filename
       const sortedFiles = filteredFiles.sort((a, b) => {
-        const dateA = new Date(a.split('-')[0]); // Assuming filename format is "datetime-taskId"
+        const dateA = new Date(a.split('-')[0]);
         const dateB = new Date(b.split('-')[0]);
-        return dateB - dateA; // Sort in descending order
+        return dateB - dateA;
       });
 
       // Step 4: Select the latest file
-      const latestFileKey = sortedFiles[0]; // Get the latest file
+      const latestFileKey = sortedFiles[0];
       console.log('Latest file key:', latestFileKey);
 
       if (!latestFileKey) {
@@ -204,39 +140,8 @@ class FileController {
         return successResponse(res, 'File preview retrieved successfully', responseData);
       }
 
-      // Get the file content
-      const result = await S3Service.getFileContent(latestFileKey);
-      
-      const isTextFile = S3Service.isTextFile(contentType);
-      const isImageFile = S3Service.isImageFile(contentType);
-      const isPDFFile = S3Service.isPDFFile(contentType);
-
-      // console.log(isImageFile, isTextFile, isPDFFile);
-
-      // let responseData = {
-      //   preview: true,
-      //   metadata: {
-      //     contentType,
-      //     size: fileSize,
-      //     lastModified: headResult.LastModified
-      //   }
-      // };
-
-      // if (isTextFile) {
-      //   responseData.type = 'text';
-      //   responseData.content = result.Body.toString('utf-8');
-      // } else if (isImageFile || isPDFFile) {
-      //   responseData.type = isImageFile ? 'image' : 'pdf';
-      //   responseData.content = `data:${contentType};base64,${result.Body.toString('base64')}`;
-      // } else {
-      //   responseData.preview = false;
-      //   responseData.message = 'File type not supported for preview';
-      // }
-
       const responseData = await S3Service.getFileObject(latestFileKey);
-      // console.log('Response data from getFileObject:', responseData);
 
-      // console.log('Preview response data:', responseData);
       return successResponse(res, 'File preview retrieved successfully', responseData);
 
     } catch (error) {
