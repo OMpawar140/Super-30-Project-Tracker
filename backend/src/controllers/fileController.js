@@ -213,25 +213,28 @@ class FileController {
 
       // console.log(isImageFile, isTextFile, isPDFFile);
 
-      let responseData = {
-        preview: true,
-        metadata: {
-          contentType,
-          size: fileSize,
-          lastModified: headResult.LastModified
-        }
-      };
+      // let responseData = {
+      //   preview: true,
+      //   metadata: {
+      //     contentType,
+      //     size: fileSize,
+      //     lastModified: headResult.LastModified
+      //   }
+      // };
 
-      if (isTextFile) {
-        responseData.type = 'text';
-        responseData.content = result.Body.toString('utf-8');
-      } else if (isImageFile || isPDFFile) {
-        responseData.type = isImageFile ? 'image' : 'pdf';
-        responseData.content = `data:${contentType};base64,${result.Body.toString('base64')}`;
-      } else {
-        responseData.preview = false;
-        responseData.message = 'File type not supported for preview';
-      }
+      // if (isTextFile) {
+      //   responseData.type = 'text';
+      //   responseData.content = result.Body.toString('utf-8');
+      // } else if (isImageFile || isPDFFile) {
+      //   responseData.type = isImageFile ? 'image' : 'pdf';
+      //   responseData.content = `data:${contentType};base64,${result.Body.toString('base64')}`;
+      // } else {
+      //   responseData.preview = false;
+      //   responseData.message = 'File type not supported for preview';
+      // }
+
+      const responseData = await S3Service.getFileObject(latestFileKey);
+      // console.log('Response data from getFileObject:', responseData);
 
       // console.log('Preview response data:', responseData);
       return successResponse(res, 'File preview retrieved successfully', responseData);

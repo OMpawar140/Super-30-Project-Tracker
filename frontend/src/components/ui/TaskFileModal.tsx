@@ -64,7 +64,10 @@ const TaskFileModal: React.FC<TaskFileModalProps> = ({
       setLoading(true);
       setError(null);
       const response = await callApi(() => apiService.files.getFileDetails(taskId));
-      setFiles(response.data || []);
+      setFiles(prevFiles => {
+        const currentFiles = Array.isArray(prevFiles) ? prevFiles : [];
+        return [...currentFiles, response.data];
+      });
     } catch (err) {
       console.error('Error fetching task files:', err);
       setError('Failed to load task files');
@@ -76,7 +79,6 @@ const TaskFileModal: React.FC<TaskFileModalProps> = ({
   const handleFileSelect = (selectedFiles: FileList | null) => {
     if (selectedFiles && selectedFiles.length > 0) {
       Array.from(selectedFiles).forEach(file => {
-        console.log('Starting upload for file:', file.name);
         uploadFile(file);
       });
     }
@@ -97,7 +99,8 @@ const TaskFileModal: React.FC<TaskFileModalProps> = ({
     const originalName = originalFile.name;
     
     return {
-      id: response.etag.replace(/"/g, ''), // Remove quotes from etag to use as ID
+      // id: response.etag.replace(/"/g, ''),
+      id: response.key,
       filename: response.key, // S3 key as filename
       originalName: originalName,
       url: response.location,
@@ -121,8 +124,6 @@ const TaskFileModal: React.FC<TaskFileModalProps> = ({
         uploadedAt: new Date().toISOString(),
       }));
 
-      console.log('File uploaded successfully 123:', response);
-
       // if (response.data) {
       //   setFiles(prev => [...prev, response.data]);
       // }
@@ -137,8 +138,6 @@ const TaskFileModal: React.FC<TaskFileModalProps> = ({
       if (response && response.data) {
         // Transform the response to match TaskFile interface
         const taskFile: TaskFile = transformUploadResponseToTaskFile(response.data, file);
-        
-        console.log('Transformed file data 123:', taskFile);
         
         // Safely update files array
         setFiles(prevFiles => {

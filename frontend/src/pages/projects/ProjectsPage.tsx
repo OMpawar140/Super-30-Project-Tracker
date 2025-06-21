@@ -2,9 +2,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState, useEffect } from 'react';
-import { HiClipboardList, HiFlag, HiUser, HiCalendar, HiChevronDown, HiChevronUp, HiSearch, HiFilter, HiCheckCircle, HiClock, HiExclamation, HiUpload } from 'react-icons/hi';
+import { HiClipboardList, HiFlag, HiUser, HiCalendar, HiChevronDown, HiChevronUp, HiSearch, HiFilter, HiCheckCircle, HiClock, HiExclamation, HiUpload, HiEye } from 'react-icons/hi';
 import { apiService, useApiCall } from '@/services/api';
 import TaskFileModal from '../../components/ui/TaskFileModal';
+import { useAuth } from '@/context/AuthContext';
+import TaskReviewModal from '@/components/ui/TaskReviewModal';
 
 // Types for our data (updated to match backend structure)
 interface User {
@@ -82,7 +84,10 @@ const ProjectsPage: React.FC = () => {
   const [priorityFilter, setPriorityFilter] = useState<string>('All');
   const [animatedItems, setAnimatedItems] = useState<string[]>([]);
   const [taskModalOpen, setTaskModalOpen] = useState(false);
+  const [taskReviewModalOpen, setTaskReviewModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<{id: string, title: string, status: string} | null>(null);
+  const { currentUser } = useAuth();
+
 
   const { callApi } = useApiCall();
   
@@ -144,6 +149,20 @@ const ProjectsPage: React.FC = () => {
 
   const closeTaskModal = () => {
     setTaskModalOpen(false);
+    setSelectedTask(null);
+  };
+
+  const openTaskReviewModal = (task: Task) => {
+    setSelectedTask({
+      id: task.id,
+      title: task.title,
+      status: task.status
+    });
+    setTaskReviewModalOpen(true);
+  };
+
+  const closeTaskReviewModal = () => {
+    setTaskReviewModalOpen(false);
     setSelectedTask(null);
   };
 
@@ -629,7 +648,8 @@ const ProjectsPage: React.FC = () => {
                                               </span>
                                             )}
                                           </div>
-                                          {/* Add Files & Review Button */}
+                                          {/* Add Files & Request Review */}
+                                          {currentUser && currentUser.email === task.assigneeId && (
                                           <button
                                             onClick={(e) => {
                                               e.stopPropagation();
@@ -639,8 +659,23 @@ const ProjectsPage: React.FC = () => {
                                             title="Manage files and request review"
                                           >
                                             <HiUpload className="w-3 h-3" />
-                                            Files & Review
+                                            Submit Completion Proof
                                           </button>
+                                          )}
+                                          {/* Review Files & Update Status */}
+                                          {currentUser && currentUser.email === project.creatorId && (
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              openTaskReviewModal(task);
+                                            }}
+                                            className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg transition-colors flex items-center gap-1"
+                                            title="Manage files and request review"
+                                          >
+                                            <HiEye className="w-3 h-3" />
+                                            Review Completion Proof
+                                          </button>
+                                          )}
                                         </div>
                                       </div>
                                     </div>
@@ -706,6 +741,15 @@ const ProjectsPage: React.FC = () => {
         <TaskFileModal
           isOpen={taskModalOpen}
           onClose={closeTaskModal}
+          taskId={selectedTask.id}
+          taskTitle={selectedTask.title}
+          taskStatus={selectedTask.status}
+        />
+      )}
+      {selectedTask && (
+        <TaskReviewModal
+          isOpen={taskReviewModalOpen}
+          onClose={closeTaskReviewModal}
           taskId={selectedTask.id}
           taskTitle={selectedTask.title}
           taskStatus={selectedTask.status}

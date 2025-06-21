@@ -2,7 +2,7 @@ const { s3, BUCKET_NAME } = require('../config/aws');
 
 class S3Service {
   static async uploadFile(taskId, fileData) {
-    console.log('Uploading filedata:', fileData);
+    // console.log('Uploading filedata:', fileData);
     const fileKey = `${Date.now()}-${taskId}`;
     
     const uploadParams = {
@@ -21,6 +21,74 @@ class S3Service {
       bucket: result.Bucket,
       etag: result.ETag
     };
+  }
+
+  // static async getFileObject(fileKey) {
+  //   // Check if file exists first
+  //   console.log('Retrieving file object for key:', fileKey);
+  //   await this.checkFileExists(fileKey);
+  //   console.log('File exists, retrieving metadata for key:', fileKey);
+
+  //   // Get file metadata to retrieve ETag
+  //   const metadata = await this.getFileMetadata(fileKey);
+    
+  //   // Construct the S3 URL manually since we don't have it stored
+  //   const location = `https://${BUCKET_NAME}.s3.amazonaws.com/${fileKey}`;
+    
+  //   return {
+  //     key: fileKey,
+  //     location: location,
+  //     bucket: BUCKET_NAME,
+  //     etag: metadata.ETag
+  //   };
+  // }
+
+  static async getFileObject(fileKey) {
+    const params = {
+      Bucket: BUCKET_NAME,
+      Key: fileKey
+    };
+
+    try {
+      // Direct AWS S3 headObject call to get file metadata
+      const result = await s3.headObject(params).promise();
+      // console.log('File metadata retrieved:', result);
+      
+      // Construct the S3 URL
+      const location = `https://${BUCKET_NAME}.s3.amazonaws.com/${fileKey}`;
+
+      console.log('key:', fileKey);
+      console.log('location:', location);
+      console.log('bucket:', BUCKET_NAME);
+      console.log('etag:', result.ETag);
+      console.log('lastModified:', result.LastModified);
+      console.log('size:', result.ContentLength);
+      
+      return {
+        // id: result.ETag.replace(/"/g, ''),
+        id: fileKey,
+        filename: fileKey,
+        originalName: fileKey,
+        url: location,
+        uploadedAt: result.LastModified.toISOString(),
+        size: result.ContentLength,
+        mimeType: result.ContentType || 'application/octet-stream'
+      };
+
+      // return {
+      //   key: fileKey,
+      //   location: location,
+      //   bucket: BUCKET_NAME,
+      //   etag: result.ETag,
+      //   lastModified: result.LastModified,
+      //   size: result.ContentLength,
+      // };
+    } catch (error) {
+      if (error.code === 'NotFound') {
+        throw new Error(`File with key '${fileKey}' not found`);
+      }
+      throw error;
+    }
   }
 
   static async listFiles(maxKeys = 1000) {
