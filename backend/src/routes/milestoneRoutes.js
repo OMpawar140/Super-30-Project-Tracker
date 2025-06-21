@@ -8,7 +8,8 @@ const {
   addMemberValidator,
   projectIdValidator
 } = require('../validators/projectValidator');
-const { createMilestoneValidator } = require('../validators/milestoneValidator');
+const { createTaskValidator } = require('../validators/taskValidator');
+const milestoneController = require('../controllers/milestoneController');
 
 // Apply authentication middleware to all routes
 router.use(authenticateToken);
@@ -28,14 +29,11 @@ router.put('/:id', projectIdValidator, updateProjectValidator, projectController
 // DELETE /api/projects/:id - Delete project
 router.delete('/:id', projectIdValidator, projectController.deleteProject);
 
-// POST /api/projects/:id/milestones - Create new milestone
-router.post('/:id/milestones', createMilestoneValidator, projectController.createMilestone);
-
 // GET /api/projects/:id/members - Get project members
 router.get('/:id/members', projectIdValidator, projectController.getProjectMembers);
 
-// POST /api/projects/:id/members - Add project member
-router.post('/:id/members', projectIdValidator, addMemberValidator, projectController.addProjectMember);
+// POST /api/milestones/:id/tasks - Add milestone task
+router.post('/:id/tasks', createTaskValidator, milestoneController.createTask);
 
 // DELETE /api/projects/:id/members/:userId - Remove member
 router.delete('/:id/members/:userId', projectIdValidator, projectController.removeProjectMember);

@@ -98,7 +98,7 @@ const MemberModal: React.FC<MemberModalProps> = ({
                 <select
                   value={member.role}
                   onChange={(e) => handleMemberChange(index, 'role', e.target.value as Member['role'])}
-                  className="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 hover:cursor-pointer"
                 >
                   <option value="ADMIN">Admin</option>
                   <option value="TASK_COMPLETER">Task Completor</option>
@@ -110,7 +110,7 @@ const MemberModal: React.FC<MemberModalProps> = ({
                   type="button"
                   variant="outline"
                   onClick={() => handleRemoveMember(index)}
-                  className="px-3 py-2 text-red-600 hover:text-red-700 dark:text-red-400"
+                  className="px-3 py-2 text-red-600 hover:text-red-700 dark:text-red-400 hover:cursor-pointer"
                 >
                   Remove
                 </Button>
@@ -124,7 +124,7 @@ const MemberModal: React.FC<MemberModalProps> = ({
             type="button"
             variant="outline"
             onClick={handleAddMember}
-            className="w-full"
+            className="w-full hover:cursor-pointer"
           >
             + Add Another Member
           </Button>
@@ -136,6 +136,7 @@ const MemberModal: React.FC<MemberModalProps> = ({
             variant="outline"
             onClick={handleSkip}
             disabled={isLoading}
+            className='hover:cursor-pointer'
           >
             Skip for Now
           </Button>
@@ -143,6 +144,7 @@ const MemberModal: React.FC<MemberModalProps> = ({
             type="button"
             onClick={handleSave}
             disabled={isLoading}
+            className='hover:cursor-pointer'
           >
             {isLoading ? 'Adding Members...' : 'Add Members'}
           </Button>

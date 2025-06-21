@@ -206,7 +206,7 @@ const Dashboard: React.FC = () => {
           </p>
         </div>
         <Button
-          className="flex items-center"
+          className="flex items-center cursor-pointer"
           onClick={() => setIsCreateModalOpen(true)}
         >
           <HiPlus className="w-5 h-5 mr-2" />
@@ -227,7 +227,7 @@ const Dashboard: React.FC = () => {
                   {project.name}
                 </h3>
                 <button className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300">
-                  <HiDotsVertical className="w-5 h-5" />
+                  <HiDotsVertical className="w-5 h-5 cursor-pointer" />
                 </button>
               </div>
 
@@ -300,7 +300,7 @@ const Dashboard: React.FC = () => {
           <p className="text-gray-500 dark:text-gray-400 mb-4">
             Get started by creating your first project
           </p>
-          <Button onClick={() => setIsCreateModalOpen(true)}>
+          <Button className='cursor-pointer' onClick={() => setIsCreateModalOpen(true)}>
             <HiPlus className="w-5 h-5 mr-2" />
             Create Project
           </Button>
