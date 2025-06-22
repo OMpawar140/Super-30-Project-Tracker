@@ -2,11 +2,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState, useEffect } from 'react';
-import { HiClipboardList, HiFlag, HiUser, HiCalendar, HiChevronDown, HiChevronUp, HiSearch, HiFilter, HiCheckCircle, HiClock, HiExclamation, HiUpload, HiEye } from 'react-icons/hi';
+import { HiClipboardList, HiFlag, HiUser, HiCalendar, HiChevronDown, HiChevronUp, HiSearch, HiFilter, HiCheckCircle, HiClock, HiExclamation, HiUpload, HiEye, HiPencil, HiCheck, HiX } from 'react-icons/hi';
 import { apiService, useApiCall } from '@/services/api';
 import TaskFileModal from '../../components/ui/TaskFileModal';
 import { useAuth } from '@/context/AuthContext';
 import TaskReviewModal from '@/components/ui/TaskReviewModal';
+
 
 // Types for our data (updated to match backend structure)
 interface User {
@@ -89,6 +90,72 @@ const ProjectsPage: React.FC = () => {
   const [selectedTask, setSelectedTask] = useState<{id: string, title: string, status: string} | null>(null);
   const { currentUser } = useAuth();
   const { callApi } = useApiCall();
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
+  const [editingProjectData, setEditingProjectData] = useState<{
+    name: string;
+    description: string;
+    status: string;
+    startDate: string;
+    endDate: string;
+  }>({
+    name: '',
+    description: '',
+    status: '',
+    startDate: '',
+    endDate: ''
+  });
+
+
+  const startEditingProject = (project: Project) => {
+  setEditingProjectId(project.id);
+  setEditingProjectData({
+    name: project.name,
+    description: project.description,
+    status: project.status,
+    startDate: project.startDate.split('T')[0], // Convert to date input format
+    endDate: project.endDate.split('T')[0]
+  });
+};
+
+const cancelEditingProject = () => {
+  setEditingProjectId(null);
+  setEditingProjectData({
+    name: '',
+    description: '',
+    status: '',
+    startDate: '',
+    endDate: ''
+  });
+};
+
+const saveProjectChanges = async () => {
+  if (!editingProjectId) return;
+  
+  try {
+    const updateData = {
+      name: editingProjectData.name,
+      description: editingProjectData.description,
+      status: editingProjectData.status,
+      startDate: new Date(editingProjectData.startDate).toISOString(),
+      endDate: new Date(editingProjectData.endDate).toISOString()
+    };
+
+    await callApi(() => apiService.projects.updateProject(editingProjectId, updateData));
+    
+    // Update the local state
+    setProjects(prev => prev.map(project => 
+      project.id === editingProjectId 
+        ? { ...project, ...updateData }
+        : project
+    ));
+    
+    cancelEditingProject();
+  } catch (error) {
+    console.error('Error updating project:', error);
+    
+  }
+};
+
   
   // Fetch projects from API
   useEffect(() => {
@@ -324,10 +391,10 @@ const filteredProjects = projects.filter(project => {
         // Check if current user is the creator of this project
         return project.creator.email === currentUser.email;
       
-      case 'TASK COMPLETER':
+      case 'TASK_COMPLETER':
         // Check if current user is a task completer member of this project
         return project.members.some(member => 
-          member.user.email === currentUser.email && member.role === 'TASK COMPLETER'
+          member.user.email === currentUser.email && member.role === 'TASK_COMPLETER'
         );
       
       default:
@@ -385,7 +452,7 @@ const filteredProjects = projects.filter(project => {
     );
   }
 
-  return (
+return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
       <style>{`
         @keyframes fade-in-up {
@@ -463,7 +530,7 @@ const filteredProjects = projects.filter(project => {
           <option value="All">All Roles</option>
           <option value="ADMIN">Admin</option>
           <option value="CREATOR">Creator</option>
-          <option value="COMPLETER">Task Completer</option>
+          <option value="TASK_COMPLETER">Task Completer</option>
         </select>
         <HiFilter className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-4 h-4 pointer-events-none" />
       </div>
@@ -485,79 +552,182 @@ const filteredProjects = projects.filter(project => {
                   : 'opacity-0 transform translate-y-4'
               }`}
             >
-              {/* Project Header */}
-              <div 
-                className="p-6 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors duration-300"
-                onClick={() => toggleProjectExpansion(project.id)}
-              >
+              {/* Project Header - Updated with Edit Functionality */}
+              <div className="p-6 transition-colors duration-300">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                        {project.name}
-                      </h2>
-                      {expandedProjects.includes(project.id) ? 
-                        <HiChevronUp className="w-5 h-5 text-gray-400 dark:text-gray-500" /> : 
-                        <HiChevronDown className="w-5 h-5 text-gray-400 dark:text-gray-500" />
-                      }
-                    </div>
-                    <p className="text-gray-600 dark:text-gray-400 mb-3">{project.description}</p>
-                    
-                    {/* Project Meta */}
-                    <div className="flex flex-wrap items-center gap-4 text-sm">
-                      <div className="flex items-center gap-1">
-                        <HiCalendar className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                        <span className="text-gray-600 dark:text-gray-400">
-                          {formatDate(project.startDate)} - {formatDate(project.endDate)}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <HiUser className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                        <span className="text-gray-600 dark:text-gray-400">
-                          {project._count.members} members
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <HiFlag className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                        <span className="text-gray-600 dark:text-gray-400">
-                          {project._count.milestones} milestones
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <HiClipboardList className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                        <span className="text-gray-600 dark:text-gray-400">
-                          {project.completedTasks || 0}/{project.totalTasks || 0} tasks
-                        </span>
-                      </div>
-                      {project.budget && (
-                        <div className="text-gray-600 dark:text-gray-400">
-                          Budget: ${project.budget.toLocaleString()}
+                    {editingProjectId === project.id ? (
+                      // Edit Mode
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Project Name
+                          </label>
+                          <input
+                            type="text"
+                            value={editingProjectData.name}
+                            onChange={(e) => setEditingProjectData(prev => ({ ...prev, name: e.target.value }))}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
                         </div>
-                      )}
-                    </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Description
+                          </label>
+                          <textarea
+                            value={editingProjectData.description}
+                            onChange={(e) => setEditingProjectData(prev => ({ ...prev, description: e.target.value }))}
+                            rows={3}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              Status
+                            </label>
+                            <select
+                              value={editingProjectData.status}
+                              onChange={(e) => setEditingProjectData(prev => ({ ...prev, status: e.target.value }))}
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            >
+                              <option value="ACTIVE">Active</option>
+                              <option value="PLANNING">Planning</option>
+                              <option value="COMPLETED">Completed</option>
+                              <option value="ON_HOLD">On Hold</option>
+                            </select>
+                          </div>
+                          
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              Start Date
+                            </label>
+                            <input
+                              type="date"
+                              value={editingProjectData.startDate}
+                              onChange={(e) => setEditingProjectData(prev => ({ ...prev, startDate: e.target.value }))}
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            />
+                          </div>
+                          
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              End Date
+                            </label>
+                            <input
+                              type="date"
+                              value={editingProjectData.endDate}
+                              onChange={(e) => setEditingProjectData(prev => ({ ...prev, endDate: e.target.value }))}
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="flex gap-2 pt-2">
+                          <button
+                            onClick={saveProjectChanges}
+                            className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                          >
+                            <HiCheck className="w-4 h-4" />
+                            Save Changes
+                          </button>
+                          <button
+                            onClick={cancelEditingProject}
+                            className="flex items-center gap-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                          >
+                            <HiX className="w-4 h-4" />
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      // View Mode
+                      <div>
+                        <div className="flex items-center gap-3 mb-2">
+                          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                            {project.name}
+                          </h2>
+                          <button
+                            onClick={() => startEditingProject(project)}
+                            className="flex items-center gap-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
+                            title="Edit project"
+                          >
+                            <HiPencil className="w-4 h-4" />
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => toggleProjectExpansion(project.id)}
+                            className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                          >
+                            {expandedProjects.includes(project.id) ? 
+                              <HiChevronUp className="w-5 h-5 text-gray-400 dark:text-gray-500" /> : 
+                              <HiChevronDown className="w-5 h-5 text-gray-400 dark:text-gray-500" />
+                            }
+                          </button>
+                        </div>
+                        <p className="text-gray-600 dark:text-gray-400 mb-3">{project.description}</p>
+                        
+                        {/* Project Meta */}
+                        <div className="flex flex-wrap items-center gap-4 text-sm">
+                          <div className="flex items-center gap-1">
+                            <HiCalendar className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                            <span className="text-gray-600 dark:text-gray-400">
+                              {formatDate(project.startDate)} - {formatDate(project.endDate)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <HiUser className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                            <span className="text-gray-600 dark:text-gray-400">
+                              {project._count.members} members
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <HiFlag className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                            <span className="text-gray-600 dark:text-gray-400">
+                              {project._count.milestones} milestones
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <HiClipboardList className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                            <span className="text-gray-600 dark:text-gray-400">
+                              {project.completedTasks || 0}/{project.totalTasks || 0} tasks
+                            </span>
+                          </div>
+                          {project.budget && (
+                            <div className="text-gray-600 dark:text-gray-400">
+                              Budget: ${project.budget.toLocaleString()}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                   
-                  <div className="flex flex-col items-end gap-3 ml-6">
-                    <div className="flex gap-2">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(project.status)}`}>
-                        {project.status.replace('_', ' ')}
-                      </span>
-                    </div>
-                    
-                    {/* Progress Bar */}
-                    <div className="w-32">
-                      <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400 mb-1">
-                        <span>Progress</span>
-                        <span>{project.progress || 0}%</span>
+                  {editingProjectId !== project.id && (
+                    <div className="flex flex-col items-end gap-3 ml-6">
+                      <div className="flex gap-2">
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(project.status)}`}>
+                          {project.status.replace('_', ' ')}
+                        </span>
                       </div>
-                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                        <div 
-                          className="bg-blue-600 dark:bg-blue-500 h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${project.progress || 0}%` }}
-                        ></div>
+                      
+                      {/* Progress Bar */}
+                      <div className="w-32">
+                        <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400 mb-1">
+                          <span>Progress</span>
+                          <span>{project.progress || 0}%</span>
+                        </div>
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                          <div 
+                            className="bg-blue-600 dark:bg-blue-500 h-2 rounded-full transition-all duration-300"
+                            style={{ width: `${project.progress || 0}%` }}
+                          ></div>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
 
