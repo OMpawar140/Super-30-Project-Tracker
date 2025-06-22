@@ -4,7 +4,8 @@ import { HiPlus, HiDotsVertical, HiClock, HiUsers, HiCheck } from 'react-icons/h
 import Card from './Card';
 import Button from './Button type 2';
 import Modal from './Modal';
-import ProjectForm, { type ProjectFormData } from './ProjectForm';
+import { type ProjectFormData } from '@/types/project';
+import ProjectForm from './ProjectForm';
 import { apiService, useApiCall } from '@/services/api';
 
 // Types for backend data (reusing from your Projects page)
@@ -117,7 +118,7 @@ const Dashboard: React.FC = () => {
       try {
         setLoading(true);
         setError(null);
-        const response = await callApi(() => apiService.projects.getAllProjects());
+        const response = await callApi(() => apiService.projects.getNProjects(3));
         
         if (response.data) {
           const transformedProjects = response.data.map(transformProjectForDashboard);

@@ -16,6 +16,9 @@ router.use(authenticateToken);
 // GET /api/projects - List user's projects
 router.get('/', projectController.getUserProjects);
 
+// GET /api/projects/n/:count - List user's N projects
+router.get('/n/:count', projectController.getNUserProjects);
+
 // POST /api/projects - Create new project
 router.post('/', createProjectValidator, projectController.createProject);
 

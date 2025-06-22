@@ -322,6 +322,79 @@ class TaskService {
     }
   }
 
+  async submitTaskReview(taskId, userEmail, reviewData) {
+    try {
+      // Check if user has permission to review tasks in this milestone
+      const task = await prisma.task.findUnique({
+        where: { id: taskId },
+        include: {
+          milestone: {
+            select: {
+              id: true,
+              projectId: true
+            }
+          }
+        }
+      });
+
+      if (!task) {
+        return null; // Task not found
+      }
+
+      const hasPermission = await this.checkMilestonePermission(
+        task.milestone.id, 
+        userEmail, 
+        ['CREATOR', 'ADMIN']
+      );
+      
+      if (!hasPermission) {
+        return null;
+      }
+
+      const taskReview = await prisma.taskReview.create({
+        data: {
+          status: reviewData.status,
+          comment: reviewData.comment || null,
+          taskId,
+          reviewerId: userEmail,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        },
+        include: {
+          task: {
+            select: {
+              id: true,
+              title: true,
+              milestone: {
+                select: {
+                  id: true,
+                  name: true,
+                  project: {
+                    select: {
+                      id: true,
+                      name: true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          reviewer: {
+            select: {
+              email: true,
+              skillset: true
+            }
+          }
+        }
+      });
+
+      return taskReview;
+    } catch (error) {
+      console.error('Error in submitTaskReview:', error);
+      throw error;
+    }
+  }
+
   // Update task status
   async updateTaskStatus(taskId, userEmail, status) {
     try {

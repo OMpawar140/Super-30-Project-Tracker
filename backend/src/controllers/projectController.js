@@ -17,6 +17,20 @@ class ProjectController {
     }
   }
 
+  // Get N projects for authenticated user
+  async getNUserProjects(req, res) {
+    try {
+      const userEmail = req.user.email;
+      const { count } = req.params;
+      const projects = await projectService.getNUserProjects(userEmail, count);
+      
+      return successResponse(res, 'Projects retrieved successfully', projects);
+    } catch (error) {
+      console.error('Error getting user projects:', error);
+      return errorResponse(res, 'Failed to retrieve projects', 500);
+    }
+  }
+
   // Create a new project
   async createProject(req, res) {
     try {

@@ -140,6 +140,12 @@ router.delete('/:id',
   taskController.deleteTask
 );
 
+// POST /api/tasks/:id/review - Submit review
+router.post('/:id/review',
+  validateTaskId,
+  taskController.submitReview
+);
+
 // PATCH /api/tasks/:id/status - Update task status
 router.patch('/:id/status', 
   validateTaskId,

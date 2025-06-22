@@ -296,7 +296,7 @@ const TaskFileModal: React.FC<TaskFileModalProps> = ({
           )}
 
           {/* File Upload Area */}
-          <div className="mb-6">
+          { taskStatus.toLowerCase() !== 'completed' && (<div className="mb-6">
             <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
               Upload Files
             </h4>
@@ -344,7 +344,7 @@ const TaskFileModal: React.FC<TaskFileModalProps> = ({
                 </div>
               )}
             </div>
-          </div>
+          </div>)}
 
           {/* Uploaded Files */}
           <div className="mb-6">

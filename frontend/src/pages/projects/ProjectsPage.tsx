@@ -407,6 +407,7 @@ const ProjectsPage: React.FC = () => {
             {/* Status Filter */}
             <div className="relative">
               <select
+                title='StatusFilter'
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="appearance-none bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 pr-8 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-300"
@@ -586,103 +587,7 @@ const ProjectsPage: React.FC = () => {
                                 </h5>
                                 <div className="space-y-2">
                                   {milestone.tasks.map((task) => (
-                                    // <div key={task.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-600 p-3 cursor-pointer">
-                                    //   <div className="flex items-start justify-between">
-                                    //     <div className="flex-1">
-                                    //       <div className="flex items-center gap-2 mb-1">
-                                    //         {getTaskIcon(task.status)}
-                                    //         <h6 className="text-sm font-medium text-gray-900 dark:text-white">{task.title}</h6>
-                                    //       </div>
-                                    //       {task.description && (
-                                    //         <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">{task.description}</p>
-                                    //       )}
-                                    //       <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
-                                    //         {task.startDate && task.dueDate && (
-                                    //           <span>{formatDate(task.startDate)} - {formatDate(task.dueDate)}</span>
-                                    //         )}
-                                    //         {task.assigneeId && (
-                                    //           <span className="flex items-center gap-1 text-base">
-                                    //             <HiUser className="w-4 h-4" />
-                                    //             {task.assigneeId}
-                                    //           </span>
-                                    //         )}
-                                    //       </div>
-                                    //     </div>
-                                    //     <div className="flex flex-col items-end gap-1 ml-3">
-                                    //       <span className={`px-2 py-1 rounded text-xs font-medium border ${getStatusColor(task.status, 'task')}`}>
-                                    //         {task.status.replace('_', ' ')}
-                                    //       </span>
-                                    //       {task.priority && (
-                                    //         <span className={`px-2 py-1 rounded text-xs font-medium ${getPriorityColor(task.priority)}`}>
-                                    //           {task.priority}
-                                    //         </span>
-                                    //       )}
-                                    //     </div>
-                                    //   </div>
-                                    // </div>
                                     <div key={task.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-600 p-3">
-                                      {/* <div className="flex items-start justify-between">
-                                        <div className="flex-1">
-                                          <div className="flex items-center gap-2 mb-1">
-                                            {getTaskIcon(task.status)}
-                                            <h6 className="text-sm font-medium text-gray-900 dark:text-white">{task.title}</h6>
-                                          </div>
-                                          {task.description && (
-                                            <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">{task.description}</p>
-                                          )}
-                                          <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
-                                            {task.startDate && task.dueDate && (
-                                              <span>{formatDate(task.startDate)} - {formatDate(task.dueDate)}</span>
-                                            )}
-                                            {task.assigneeId && (
-                                              <span className="flex items-center gap-1">
-                                                <HiUser className="w-3 h-3" />
-                                                {task.assigneeId}
-                                              </span>
-                                            )}
-                                          </div>
-                                        </div>
-                                        <div className="flex flex-col items-end gap-2 ml-3">
-                                          <div className="flex items-center gap-1">
-                                            <span className={`px-2 py-1 rounded text-xs font-medium border ${getStatusColor(task.status, 'task')}`}>
-                                              {task.status.replace('_', ' ')}
-                                            </span>
-                                            {task.priority && (
-                                              <span className={`px-2 py-1 rounded text-xs font-medium ${getPriorityColor(task.priority)}`}>
-                                                {task.priority}
-                                              </span>
-                                            )}
-                                          </div>
-
-                                          {currentUser && currentUser.email === task.assigneeId && (
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              openTaskModal(task);
-                                            }}
-                                            className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg transition-colors flex items-center gap-1"
-                                            title="Manage files and request review"
-                                          >
-                                            <HiUpload className="w-3 h-3" />
-                                            Submit Completion Proof
-                                          </button>
-                                          )}
-                                      
-                                          {currentUser && currentUser.email === project.creatorId && (
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              openTaskReviewModal(task);
-                                            }}
-                                            className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg transition-colors flex items-center gap-1 hover:cursor-pointer"
-                                            title="Manage files and request review"
-                                          >
-                                            <HiEye className="w-3 h-3" />
-                                            Review Completion Proof
-                                          </button>
-                                          )}
-                                        </div>
-                                      </div> */}
                                       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition-shadow duration-200">
                                         {/* Header Section */}
                                         <div className="flex items-start justify-between mb-3">
@@ -744,7 +649,7 @@ const ProjectsPage: React.FC = () => {
                                                 title="Submit completion proof"
                                               >
                                                 <HiUpload className="w-3 h-3" />
-                                                Submit Proof
+                                                {task.status.toLowerCase() !== 'completed' ? 'Submit Proof' : 'Submitted Proof'}
                                               </button>
                                             )}
                                             

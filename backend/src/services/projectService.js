@@ -59,6 +59,64 @@ class ProjectService {
     }
   }
 
+  // Get N projects where user is creator or member
+  async getNUserProjects(userEmail, limit = 3) {
+    try {
+      const projects = await prisma.project.findMany({
+        where: {
+          OR: [
+            { creatorId: userEmail },
+            {
+              members: {
+                some: {
+                  userId: userEmail
+                }
+              }
+            }
+          ]
+        },
+        include: {
+          creator: {
+            select: {
+              email: true,
+              skillset: true
+            }
+          },
+          members: {
+            include: {
+              user: {
+                select: {
+                  email: true,
+                  skillset: true
+                }
+              }
+            }
+          },
+          milestones: {
+            include: {
+              tasks: true
+            }
+          },
+          _count: {
+            select: {
+              milestones: true,
+              members: true
+            }
+          }
+        },
+        orderBy: {
+          updatedAt: 'desc'
+        },
+        take: parseInt(limit)
+      });
+
+      return projects;
+    } catch (error) {
+      console.error('Error in getUserProjects:', error);
+      throw error;
+    }
+  }
+
   // Create a new project
   async createProject(projectData) {
     try {

@@ -137,6 +137,35 @@ class TaskController {
     }
   }
 
+  // Submit Task Review
+  async submitReview(req, res) {
+    try {
+      // Check validation errors
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return errorResponse(res, 'Validation failed', 400, errors.array());
+      }
+
+      const { id } = req.params;
+      const userEmail = req.user.email;
+      const reviewData = {
+        ...req.body,
+        reviewerId: userEmail
+      };
+
+      const task = await taskService.submitTaskReview(id, userEmail, reviewData);
+      
+      if (!task) {
+        return errorResponse(res, 'Task not found or access denied', 404);
+      }
+
+      return successResponse(res, 'Task status updated successfully', task);
+    } catch (error) {
+      console.error('Error updating task status:', error);
+      return errorResponse(res, 'Failed to update task status', 500);
+    }
+  }
+
   // Update task status
   async updateTaskStatus(req, res) {
     try {

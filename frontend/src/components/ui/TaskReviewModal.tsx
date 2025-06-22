@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   HiX, 
   HiDocumentText, 
@@ -106,10 +106,19 @@ const TaskReviewModal: React.FC<TaskReviewModalProps> = ({
       setSubmittingReview(true);
       setError(null);
 
+      let newTaskStatus = "COMPLETED";
+
+      if(reviewDecision === 'rejected'){
+        newTaskStatus = "IN_PROGRESS";
+      }
+      
+      await callApi(() => apiService.tasks.updateTaskStatus(taskId, newTaskStatus));
+
       await callApi(() => apiService.tasks.submitReview(taskId, {
-        decision: reviewDecision,
-        feedback: feedback.trim(),
-        reviewedAt: new Date().toISOString()
+        status: reviewDecision.toUpperCase(),
+        comment: feedback.trim(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       }));
       
       // Show success message

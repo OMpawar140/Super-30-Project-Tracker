@@ -103,6 +103,9 @@ export const apiService = {
   projects: {
     // Get all projects (maps to GET /api/projects)
     getAllProjects: () => apiCall('/projects'),
+
+    // Get exactly N projects if available (maps to GET /api/projects/n/:count)
+    getNProjects: (count: number) => apiCall(`/projects/n/${count}`),
     
     // Get project by ID (maps to GET /api/projects/:id)
     getProjectById: (id: string) => apiCall(`/projects/${id}`),
@@ -213,6 +216,14 @@ export const apiService = {
     // Delete task (maps to DELETE /api/tasks/:id)
     deleteTask: (id: string) =>
       apiCall(`/tasks/${id}`, { method: 'DELETE' }),
+
+    // Review task completion (maps to POST /api/tasks/:id/review)
+    submitReview: (id: string, reviewData: Record<string, any>) => 
+      apiCall(`/tasks/${id}/review`, {
+        method: 'POST',
+        body: JSON.stringify(reviewData)
+        }
+      ),
 
     // Update task status (maps to PATCH /api/tasks/:id/status)
     updateTaskStatus: (id: string, status: string) =>
