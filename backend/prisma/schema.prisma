@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,43 +8,29 @@ datasource db {
 }
 
 model User {
-  email String @id
-  skillset String?
-
-  // Projects created by this user
-  createdProjects Project[] @relation("ProjectCreator")
-  
-  // Project memberships with roles
-  projectMembers ProjectMember[]
-  
-  // Tasks assigned to this user
-  assignedTasks Task[] @relation("TaskAssignee")
-  
-  // Task reviews performed by this user
-  taskReviews TaskReview[]
+  email           String          @id
+  skillset        String?
+  projectMembers  ProjectMember[]
+  createdProjects Project[]       @relation("ProjectCreator")
+  taskReviews     TaskReview[]
+  assignedTasks   Task[]          @relation("TaskAssignee")
 
   @@map("users")
 }
 
 model Project {
-  id          String   @id @default(cuid())
+  id          String          @id @default(cuid())
   name        String
   description String?
-  status      ProjectStatus @default(ACTIVE)
+  status      ProjectStatus   @default(ACTIVE)
   startDate   DateTime?
   endDate     DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Project creator
-  creatorId String
-  creator   User   @relation("ProjectCreator", fields: [creatorId], references: [email], onDelete: Cascade)
-
-  // Project members (admins and task completers)
-  members    ProjectMember[]
-  
-  // Milestones within this project
-  milestones Milestone[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  creatorId   String
+  milestones  Milestone[]
+  members     ProjectMember[]
+  creator     User            @relation("ProjectCreator", fields: [creatorId], references: [email], onDelete: Cascade)
 
   @@map("projects")
 }
@@ -57,81 +40,61 @@ model ProjectMember {
   role      ProjectRole
   joinedAt  DateTime    @default(now())
   updatedAt DateTime    @updatedAt
-
-  // User and Project relationships
   userId    String
-  user      User    @relation(fields: [userId], references: [email], onDelete: Cascade)
-  
   projectId String
-  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [email], onDelete: Cascade)
 
-  // Unique constraint to prevent duplicate memberships
   @@unique([userId, projectId])
   @@map("project_members")
 }
 
 model Milestone {
-  id          String   @id @default(cuid())
+  id          String          @id @default(cuid())
   name        String
   description String?
   startDate   DateTime?
   endDate     DateTime?
   status      MilestoneStatus @default(PLANNED)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Project relationship
-  projectId String
-  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  // Tasks within this milestone
-  tasks Task[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  projectId   String
+  project     Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks       Task[]
 
   @@map("milestones")
 }
 
 model Task {
-  id          String     @id @default(cuid())
+  id          String           @id @default(cuid())
   title       String
   description String?
-  priority    TaskPriority @default(MEDIUM)
-  status      TaskStatus @default(UPCOMING)
+  priority    TaskPriority     @default(MEDIUM)
+  status      TaskStatus       @default(UPCOMING)
   startDate   DateTime?
   dueDate     DateTime?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-
-  // Milestone relationship
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
   milestoneId String
-  milestone   Milestone @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
-
-  // Task assignee
-  assigneeId String?
-  assignee   User?   @relation("TaskAssignee", fields: [assigneeId], references: [email], onDelete: SetNull)
-
-  // Task reviews/submissions
-  reviews TaskReview[]
-
-  // Task attachments/proof of completion
+  assigneeId  String?
   attachments TaskAttachment[]
+  reviews     TaskReview[]
+  assignee    User?            @relation("TaskAssignee", fields: [assigneeId], references: [email])
+  milestone   Milestone        @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
 
   @@map("tasks")
 }
 
 model TaskReview {
-  id        String           @id @default(cuid())
-  status    TaskReviewStatus
-  comment   String?
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
-
-  // Task relationship
-  taskId String
-  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
-
-  // Reviewer (Creator or Admin)
+  id         String           @id @default(cuid())
+  status     TaskReviewStatus
+  comment    String?
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  taskId     String
   reviewerId String
-  reviewer   User   @relation(fields: [reviewerId], references: [email], onDelete: Cascade)
+  reviewer   User             @relation(fields: [reviewerId], references: [email], onDelete: Cascade)
+  task       Task             @relation(fields: [taskId], references: [id], onDelete: Cascade)
 
   @@map("task_reviews")
 }
@@ -143,15 +106,12 @@ model TaskAttachment {
   fileSize  Int?
   mimeType  String?
   createdAt DateTime @default(now())
-
-  // Task relationship
-  taskId String
-  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
 
   @@map("task_attachments")
 }
 
-// Enums
 enum ProjectStatus {
   ACTIVE
   COMPLETED
@@ -160,9 +120,9 @@ enum ProjectStatus {
 }
 
 enum ProjectRole {
-  CREATOR
   ADMIN
   TASK_COMPLETER
+  CREATOR
 }
 
 enum MilestoneStatus {

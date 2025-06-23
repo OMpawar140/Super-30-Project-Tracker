@@ -2,11 +2,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState, useEffect } from 'react';
-import { HiClipboardList, HiFlag, HiUser, HiCalendar, HiChevronDown, HiChevronUp, HiSearch, HiFilter, HiCheckCircle, HiClock, HiExclamation, HiUpload, HiEye } from 'react-icons/hi';
+import { HiClipboardList, HiFlag, HiUser, HiCalendar, HiChevronDown, HiChevronUp, HiSearch, HiFilter, HiCheckCircle, HiClock, HiExclamation, HiUpload, HiEye, HiPencil, HiCheck, HiX } from 'react-icons/hi';
 import { apiService, useApiCall } from '@/services/api';
 import TaskFileModal from '../../components/ui/TaskFileModal';
 import { useAuth } from '@/context/AuthContext';
 import TaskReviewModal from '@/components/ui/TaskReviewModal';
+
 
 // Types for our data (updated to match backend structure)
 interface User {
@@ -40,6 +41,7 @@ interface Task {
 interface Milestone {
   id: string;
   name: string;
+  description?: string;
   status: string;
   startDate: string;
   endDate: string;
@@ -81,18 +83,227 @@ const ProjectsPage: React.FC = () => {
   const [expandedMilestones, setExpandedMilestones] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
+  const [roleFilter, setRoleFilter] = useState<string>('All');
   const [priorityFilter, setPriorityFilter] = useState<string>('All');
   const [animatedItems, setAnimatedItems] = useState<string[]>([]);
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [taskReviewModalOpen, setTaskReviewModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<{id: string, title: string, status: string} | null>(null);
   const { currentUser } = useAuth();
-
   const { callApi } = useApiCall();
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
+  const [editingProjectData, setEditingProjectData] = useState<{
+    name: string;
+    description: string;
+    status: string;
+    startDate: string;
+    endDate: string;
+  }>({
+    name: '',
+    description: '',
+    status: '',
+    startDate: '',
+    endDate: ''
+  });
+  const [editingMilestoneId, setEditingMilestoneId] = useState<string | null>(null);
+  const [editingMilestoneData, setEditingMilestoneData] = useState<{
+    name: string;
+    description: string;
+    status: string;
+    startDate: string;
+    endDate: string;
+  }>({
+    name: '',
+    description: '',
+    status: '',
+    startDate: '',
+    endDate: ''
+  });
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+const [editingTaskData, setEditingTaskData] = useState<{
+  title: string;
+  description: string;
+  status: string;
+  priority: string;
+  startDate: string;
+  dueDate: string;
+  assigneeId: string;
+}>({
+  title: '',
+  description: '',
+  status: '',
+  priority: '',
+  startDate: '',
+  dueDate: '',
+  assigneeId: '' 
+});
 
-  useEffect(() => {
+useEffect(() => {
     document.title = "Project Panel - Project Tracker";
   }, []);
+
+
+  const startEditingProject = (project: Project) => {
+  setEditingProjectId(project.id);
+  setEditingProjectData({
+    name: project.name,
+    description: project.description,
+    status: project.status,
+    startDate: project.startDate.split('T')[0], // Convert to date input format
+    endDate: project.endDate.split('T')[0]
+  });
+};
+
+const cancelEditingProject = () => {
+  setEditingProjectId(null);
+  setEditingProjectData({
+    name: '',
+    description: '',
+    status: '',
+    startDate: '',
+    endDate: ''
+  });
+};
+
+const saveProjectChanges = async () => {
+  if (!editingProjectId) return;
+  
+  try {
+    const updateData = {
+      name: editingProjectData.name,
+      description: editingProjectData.description,
+      status: editingProjectData.status,
+      startDate: new Date(editingProjectData.startDate).toISOString(),
+      endDate: new Date(editingProjectData.endDate).toISOString()
+    };
+
+    await callApi(() => apiService.projects.updateProject(editingProjectId, updateData));
+    
+    // Update the local state
+    setProjects(prev => prev.map(project => 
+      project.id === editingProjectId 
+        ? { ...project, ...updateData }
+        : project
+    ));
+    
+    cancelEditingProject();
+  } catch (error) {
+    console.error('Error updating project:', error);
+    
+  }
+};
+
+const startEditingMilestone = (milestone: Milestone) => {
+  setEditingMilestoneId(milestone.id);
+  setEditingMilestoneData({
+    name: milestone.name,
+    description: milestone.description ?? '',
+    status: milestone.status,
+    startDate: milestone.startDate.split('T')[0], // Convert to date input format
+    endDate: milestone.endDate.split('T')[0]
+  });
+};
+
+const cancelEditingMilestone = () => {
+  setEditingMilestoneId(null);
+  setEditingMilestoneData({
+    name: '',
+    description: '',
+    status: '',
+    startDate: '',
+    endDate: ''
+  });
+};
+
+const saveMilestoneChanges = async () => {
+  if (!editingMilestoneId) return;
+  
+  try {
+    const updateData = {
+      name: editingMilestoneData.name,
+      status: editingMilestoneData.status,
+      startDate: new Date(editingMilestoneData.startDate).toISOString(),
+      endDate: new Date(editingMilestoneData.endDate).toISOString()
+    };
+
+    await callApi(() => apiService.milestones.updateMilestone(editingMilestoneId, updateData));
+    
+    // Update the local state
+    setProjects(prev => prev.map(project => ({
+      ...project,
+      milestones: project.milestones.map(milestone => 
+        milestone.id === editingMilestoneId 
+          ? { ...milestone, ...updateData }
+          : milestone
+      )
+    })));
+    
+    cancelEditingMilestone();
+  } catch (error) {
+    console.error('Error updating milestone:', error);
+  }
+};
+
+const startEditingTask = (task: Task) => {
+  setEditingTaskId(task.id);
+  setEditingTaskData({
+    title: task.title,
+    description: task.description || '',
+    status: task.status,
+    priority: task.priority || 'medium',
+    startDate: task.startDate ? task.startDate.split('T')[0] : '',
+    dueDate: task.dueDate ? task.dueDate.split('T')[0] : '',
+    assigneeId: task.assigneeId || '' 
+  });
+};
+
+const cancelEditingTask = () => {
+  setEditingTaskId(null);
+  setEditingTaskData({
+    title: '',
+    description: '',
+    status: '',
+    priority: '',
+    startDate: '',
+    dueDate: '',
+    assigneeId: ''
+  });
+};
+
+const saveTaskChanges = async () => {
+  if (!editingTaskId) return;
+  
+  try {
+    const updateData = {
+      title: editingTaskData.title,
+      description: editingTaskData.description,
+      status: editingTaskData.status,
+      priority: editingTaskData.priority,
+      startDate: editingTaskData.startDate ? new Date(editingTaskData.startDate).toISOString() : undefined,
+      dueDate: editingTaskData.dueDate ? new Date(editingTaskData.dueDate).toISOString() : undefined,
+      assigneeId: editingTaskData.assigneeId || undefined
+    };
+
+    await callApi(() => apiService.tasks.updateTask(editingTaskId, updateData));
+    
+    // Update the local state
+    setProjects(prev => prev.map(project => ({
+      ...project,
+      milestones: project.milestones.map(milestone => ({
+        ...milestone,
+        tasks: milestone.tasks.map(task => 
+          task.id === editingTaskId 
+            ? { ...task, ...updateData }
+            : task
+        )
+      }))
+    })));
+    
+    cancelEditingTask();
+  } catch (error) {
+    console.error('Error updating task:', error);
+  }
+};
   
   // Fetch projects from API
   useEffect(() => {
@@ -302,14 +513,49 @@ const ProjectsPage: React.FC = () => {
     }
   };
 
-  const filteredProjects = projects.filter(project => {
-    const matchesSearch = project.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         project.description?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'All' || project.status === statusFilter;
-    const matchesPriority = priorityFilter === 'All' || (project.priority && project.priority === priorityFilter);
+// Replace the existing filteredProjects logic with this updated version
+
+const filteredProjects = projects.filter(project => {
+  // Search filter - matches project name or description
+  const matchesSearch = project.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                       project.description?.toLowerCase().includes(searchTerm.toLowerCase());
+  
+  // Status filter - matches project status
+  const matchesStatus = statusFilter === 'All' || project.status === statusFilter;
+  
+  // Role filter - checks current user's role in the project
+  const matchesRole = (() => {
+    if (roleFilter === 'All') return true;
+    if (!currentUser?.email) return false;
     
-    return matchesSearch && matchesStatus && matchesPriority;
-  });
+    switch (roleFilter) {
+      case 'ADMIN':
+        // Check if current user is an admin member of this project
+        return project.members.some(member => 
+          member.user.email === currentUser.email && member.role === 'ADMIN'
+        );
+      
+      case 'CREATOR':
+        // Check if current user is the creator of this project
+        return project.creator.email === currentUser.email;
+      
+      case 'TASK_COMPLETER':
+        // Check if current user is a task completer member of this project
+        return project.members.some(member => 
+          member.user.email === currentUser.email && member.role === 'TASK_COMPLETER'
+        );
+      
+      default:
+        return false;
+    }
+  })();
+  
+  // Priority filter - matches project priority (keeping existing functionality)
+  const matchesPriority = priorityFilter === 'All' || (project.priority && project.priority === priorityFilter);
+  
+  // All filters must match for a project to be displayed
+  return matchesSearch && matchesStatus && matchesRole && matchesPriority;
+});
 
   const formatDate = (dateString: string) => {
     try {
@@ -354,7 +600,7 @@ const ProjectsPage: React.FC = () => {
     );
   }
 
-  return (
+return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
       <style>{`
         @keyframes fade-in-up {
@@ -407,7 +653,6 @@ const ProjectsPage: React.FC = () => {
             {/* Status Filter */}
             <div className="relative">
               <select
-                title='StatusFilter'
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="appearance-none bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 pr-8 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-300"
@@ -435,77 +680,77 @@ const ProjectsPage: React.FC = () => {
               }`}
             >
               {/* Project Header */}
-                <div 
-                className="p-6 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-300"
+              <div 
+                className="p-6 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors duration-300"
                 onClick={() => toggleProjectExpansion(project.id)}
-                >
+              >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                    {project.name}
-                    </h2>
-                    {expandedProjects.includes(project.id) ? 
-                    <HiChevronUp className="w-5 h-5 text-gray-400 dark:text-gray-500" /> : 
-                    <HiChevronDown className="w-5 h-5 text-gray-400 dark:text-gray-500" />
-                    }
-                  </div>
-                  <p className="text-gray-600 dark:text-gray-300 mb-3">{project.description}</p>
-                  
-                  {/* Project Meta */}
-                  <div className="flex flex-wrap items-center gap-4 text-sm">
-                    <div className="flex items-center gap-1">
-                    <HiCalendar className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                    <span className="text-gray-600 dark:text-gray-300">
-                      {formatDate(project.startDate)} - {formatDate(project.endDate)}
-                    </span>
+                    <div className="flex items-center gap-3 mb-2">
+                      <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                        {project.name}
+                      </h2>
+                      {expandedProjects.includes(project.id) ? 
+                        <HiChevronUp className="w-5 h-5 text-gray-400 dark:text-gray-500" /> : 
+                        <HiChevronDown className="w-5 h-5 text-gray-400 dark:text-gray-500" />
+                      }
                     </div>
-                    <div className="flex items-center gap-1">
-                    <HiUser className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                    <span className="text-gray-600 dark:text-gray-300">
-                      {project._count.members} members
-                    </span>
+                    <p className="text-gray-600 dark:text-gray-400 mb-3">{project.description}</p>
+                    
+                    {/* Project Meta */}
+                    <div className="flex flex-wrap items-center gap-4 text-sm">
+                      <div className="flex items-center gap-1">
+                        <HiCalendar className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                        <span className="text-gray-600 dark:text-gray-400">
+                          {formatDate(project.startDate)} - {formatDate(project.endDate)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <HiUser className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                        <span className="text-gray-600 dark:text-gray-400">
+                          {project._count.members} members
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <HiFlag className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                        <span className="text-gray-600 dark:text-gray-400">
+                          {project._count.milestones} milestones
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <HiClipboardList className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                        <span className="text-gray-600 dark:text-gray-400">
+                          {project.completedTasks || 0}/{project.totalTasks || 0} tasks
+                        </span>
+                      </div>
+                      {project.budget && (
+                        <div className="text-gray-600 dark:text-gray-400">
+                          Budget: ${project.budget.toLocaleString()}
+                        </div>
+                      )}
                     </div>
-                    <div className="flex items-center gap-1">
-                    <HiFlag className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                    <span className="text-gray-600 dark:text-gray-300">
-                      {project._count.milestones} milestones
-                    </span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                    <HiClipboardList className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                    <span className="text-gray-600 dark:text-gray-300">
-                      {project.completedTasks || 0}/{project.totalTasks || 0} tasks
-                    </span>
-                    </div>
-                    {project.budget && (
-                    <div className="text-gray-600 dark:text-gray-300">
-                      Budget: ${project.budget.toLocaleString()}
-                    </div>
-                    )}
-                  </div>
                   </div>
                   
                   <div className="flex flex-col items-end gap-3 ml-6">
-                  <div className="flex gap-2">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(project.status)}`}>
-                    {project.status.replace('_', ' ')}
-                    </span>
-                  </div>
-                  
-                  {/* Progress Bar */}
-                  <div className="w-32">
-                    <div className="flex justify-between text-xs text-gray-600 dark:text-gray-300 mb-1">
-                    <span>Progress</span>
-                    <span>{project.progress || 0}%</span>
+                    <div className="flex gap-2">
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(project.status)}`}>
+                        {project.status.replace('_', ' ')}
+                      </span>
                     </div>
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                    <div 
-                      className="bg-blue-600 dark:bg-blue-500 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${project.progress || 0}%` }}
-                    ></div>
+                    
+                    {/* Progress Bar */}
+                    <div className="w-32">
+                      <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400 mb-1">
+                        <span>Progress</span>
+                        <span>{project.progress || 0}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                        <div 
+                          className="bg-blue-600 dark:bg-blue-500 h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${project.progress || 0}%` }}
+                        ></div>
+                      </div>
                     </div>
-                  </div>
                   </div>
                 </div>
                 </div>
@@ -567,7 +812,7 @@ const ProjectsPage: React.FC = () => {
                                       <HiChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-500" />
                                     }
                                   </div>
-                                  <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+                                  <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
                                     <span>{formatDate(milestone.startDate)} - {formatDate(milestone.endDate)}</span>
                                     <span>{milestone.tasks ? milestone.tasks.length : 0} tasks</span>
                                   </div>
@@ -587,87 +832,101 @@ const ProjectsPage: React.FC = () => {
                                 </h5>
                                 <div className="space-y-2">
                                   {milestone.tasks.map((task) => (
+                                    // <div key={task.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-600 p-3 cursor-pointer">
+                                    //   <div className="flex items-start justify-between">
+                                    //     <div className="flex-1">
+                                    //       <div className="flex items-center gap-2 mb-1">
+                                    //         {getTaskIcon(task.status)}
+                                    //         <h6 className="text-sm font-medium text-gray-900 dark:text-white">{task.title}</h6>
+                                    //       </div>
+                                    //       {task.description && (
+                                    //         <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">{task.description}</p>
+                                    //       )}
+                                    //       <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+                                    //         {task.startDate && task.dueDate && (
+                                    //           <span>{formatDate(task.startDate)} - {formatDate(task.dueDate)}</span>
+                                    //         )}
+                                    //         {task.assigneeId && (
+                                    //           <span className="flex items-center gap-1 text-base">
+                                    //             <HiUser className="w-4 h-4" />
+                                    //             {task.assigneeId}
+                                    //           </span>
+                                    //         )}
+                                    //       </div>
+                                    //     </div>
+                                    //     <div className="flex flex-col items-end gap-1 ml-3">
+                                    //       <span className={`px-2 py-1 rounded text-xs font-medium border ${getStatusColor(task.status, 'task')}`}>
+                                    //         {task.status.replace('_', ' ')}
+                                    //       </span>
+                                    //       {task.priority && (
+                                    //         <span className={`px-2 py-1 rounded text-xs font-medium ${getPriorityColor(task.priority)}`}>
+                                    //           {task.priority}
+                                    //         </span>
+                                    //       )}
+                                    //     </div>
+                                    //   </div>
+                                    // </div>
                                     <div key={task.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-600 p-3">
-                                      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition-shadow duration-200">
-                                        {/* Header Section */}
-                                        <div className="flex items-start justify-between mb-3">
-                                          <div className="flex items-center gap-2 flex-1">
+                                      <div className="flex items-start justify-between">
+                                        <div className="flex-1">
+                                          <div className="flex items-center gap-2 mb-1">
                                             {getTaskIcon(task.status)}
-                                            <h6 className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-1">
-                                              {task.title}
-                                            </h6>
+                                            <h6 className="text-sm font-medium text-gray-900 dark:text-white">{task.title}</h6>
                                           </div>
-                                          
-                                          {/* Status and Priority Badges */}
-                                          <div className="flex items-center gap-2 ml-3">
-                                            <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(task.status, 'task')}`}>
-                                              {task.status.replace('_', ' ')}
-                                            </span>
-                                            {task.priority && (
-                                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(task.priority)}`}>
-                                                {task.priority}
+                                          {task.description && (
+                                            <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">{task.description}</p>
+                                          )}
+                                          <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+                                            {task.startDate && task.dueDate && (
+                                              <span>{formatDate(task.startDate)} - {formatDate(task.dueDate)}</span>
+                                            )}
+                                            {task.assigneeId && (
+                                              <span className="flex items-center gap-1">
+                                                <HiUser className="w-3 h-3" />
+                                                {task.assigneeId}
                                               </span>
                                             )}
                                           </div>
                                         </div>
-
-                                        {/* Description */}
-                                        {task.description && (
-                                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
-                                            {task.description}
-                                          </p>
-                                        )}
-
-                                        {/* Footer Section */}
-                                        <div className="flex items-center justify-between">
-                                          {/* Task Details */}
-                                          <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
-                                            {task.startDate && task.dueDate && (
-                                              <div className="flex items-center gap-1">
-                                                <HiCalendar className="w-3 h-3" />
-                                                <span>{formatDate(task.startDate)} - {formatDate(task.dueDate)}</span>
-                                              </div>
-                                            )}
-                                            {task.assigneeId && (
-                                              <div className="flex items-center gap-1">
-                                                <HiUser className="w-3 h-3" />
-                                                <span>{task.assigneeId}</span>
-                                              </div>
+                                        <div className="flex flex-col items-end gap-2 ml-3">
+                                          <div className="flex items-center gap-1">
+                                            <span className={`px-2 py-1 rounded text-xs font-medium border ${getStatusColor(task.status, 'task')}`}>
+                                              {task.status.replace('_', ' ')}
+                                            </span>
+                                            {task.priority && (
+                                              <span className={`px-2 py-1 rounded text-xs font-medium ${getPriorityColor(task.priority)}`}>
+                                                {task.priority}
+                                              </span>
                                             )}
                                           </div>
-
-                                          {/* Action Buttons */}
-                                          <div className="flex items-center gap-2">
-                                            {/* Submit Completion Proof Button */}
-                                            {currentUser && currentUser.email === task.assigneeId && (
-                                              <button
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  openTaskModal(task);
-                                                }}
-                                                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-md transition-colors flex items-center gap-1.5 font-medium"
-                                                title="Submit completion proof"
-                                              >
-                                                <HiUpload className="w-3 h-3" />
-                                                {task.status.toLowerCase() !== 'completed' ? 'Submit Proof' : 'Submitted Proof'}
-                                              </button>
-                                            )}
-                                            
-                                            {/* Review Completion Proof Button */}
-                                            {currentUser && currentUser.email === project.creatorId && (
-                                              <button
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  openTaskReviewModal(task);
-                                                }}
-                                                className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs rounded-md transition-colors flex items-center gap-1.5 font-medium"
-                                                title="Review completion proof"
-                                              >
-                                                <HiEye className="w-3 h-3" />
-                                                Review
-                                              </button>
-                                            )}
-                                          </div>
+                                          {/* Add Files & Request Review */}
+                                          {currentUser && currentUser.email === task.assigneeId && (
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              openTaskModal(task);
+                                            }}
+                                            className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg transition-colors flex items-center gap-1"
+                                            title="Manage files and request review"
+                                          >
+                                            <HiUpload className="w-3 h-3" />
+                                            Submit Completion Proof
+                                          </button>
+                                          )}
+                                          {/* Review Files & Update Status */}
+                                          {currentUser && currentUser.email === project.creatorId && (
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              openTaskReviewModal(task);
+                                            }}
+                                            className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg transition-colors flex items-center gap-1"
+                                            title="Manage files and request review"
+                                          >
+                                            <HiEye className="w-3 h-3" />
+                                            Review Completion Proof
+                                          </button>
+                                          )}
                                         </div>
                                       </div>
                                     </div>

@@ -5,22 +5,7 @@ const { validationResult } = require('express-validator');
 const emailService = require('../services/emailService');
 
 class MilestoneController {
-  // Get all milestones for a project
-  async getProjectMilestones(req, res) {
-    try {
-      const { id } = req.params;
-      const userEmail = req.user.email;
-
-      const milestones = await projectService.getProjectMilestones(id, userEmail);
-      
-      return successResponse(res, 'Milestones retrieved successfully', milestones);
-    } catch (error) {
-      console.error('Error getting project milestones:', error);
-      return errorResponse(res, 'Failed to retrieve milestones', 500);
-    }
-  }
-
-  // Create a new milestone
+  // Create a new milestone for a project
   async createMilestone(req, res) {
     try {
       // Check validation errors
@@ -29,14 +14,18 @@ class MilestoneController {
         return errorResponse(res, 'Validation failed', 400, errors.array());
       }
 
+      const { projectId } = req.params;
       const userEmail = req.user.email;
-      const milestoneData = {
-        ...req.body,
-        projectId: req.params.id,
-        creatorId: userEmail
-      };
+      const milestoneData = req.body;
 
-      const milestone = await projectService.createMilestone(milestoneData);
+      console.log('Creating milestone for project:', projectId, 'by user:', userEmail);
+
+      const milestone = await milestoneService.createMilestone(projectId, userEmail, milestoneData);
+      
+      if (!milestone) {
+        return errorResponse(res, 'Project not found or access denied', 404);
+      }
+
       return successResponse(res, 'Milestone created successfully', milestone, 201);
     } catch (error) {
       console.error('Error creating milestone:', error);
@@ -44,14 +33,16 @@ class MilestoneController {
     }
   }
 
-  // Get project by ID
+  // Get milestone by ID
   async getMilestone(req, res) {
     try {
       const { id } = req.params;
       const userEmail = req.user.email;
 
-      const milestone = await projectService.getMilestoneById(id, userEmail);
+      console.log('Getting milestone:', id, 'for user:', userEmail);
 
+      const milestone = await milestoneService.getMilestoneById(id, userEmail);
+      
       if (!milestone) {
         return errorResponse(res, 'Milestone not found or access denied', 404);
       }
@@ -60,6 +51,27 @@ class MilestoneController {
     } catch (error) {
       console.error('Error getting milestone:', error);
       return errorResponse(res, 'Failed to retrieve milestone', 500);
+    }
+  }
+
+  // Get all milestones for a project
+  async getProjectMilestones(req, res) {
+    try {
+      const { projectId } = req.params;
+      const userEmail = req.user.email;
+
+      console.log('Getting milestones for project:', projectId, 'for user:', userEmail);
+
+      const milestones = await milestoneService.getProjectMilestones(projectId, userEmail);
+      
+      if (milestones === null) {
+        return errorResponse(res, 'Project not found or access denied', 404);
+      }
+
+      return successResponse(res, 'Project milestones retrieved successfully', milestones);
+    } catch (error) {
+      console.error('Error getting project milestones:', error);
+      return errorResponse(res, 'Failed to retrieve project milestones', 500);
     }
   }
 
@@ -76,39 +88,191 @@ class MilestoneController {
       const userEmail = req.user.email;
       const updateData = req.body;
 
-      const project = await projectService.updateProject(id, userEmail, updateData);
+      console.log('Updating milestone:', id, 'by user:', userEmail);
+
+      const milestone = await milestoneService.updateMilestone(id, userEmail, updateData);
       
-      if (!project) {
-        return errorResponse(res, 'Project not found or access denied', 404);
+      if (!milestone) {
+        return errorResponse(res, 'Milestone not found or access denied', 404);
       }
 
-      return successResponse(res, 'Project updated successfully', project);
+      return successResponse(res, 'Milestone updated successfully', milestone);
     } catch (error) {
-      console.error('Error updating project:', error);
-      return errorResponse(res, 'Failed to update project', 500);
+      console.error('Error updating milestone:', error);
+      return errorResponse(res, 'Failed to update milestone', 500);
     }
   }
 
-  // Delete project
-  async deleteProject(req, res) {
+  // Delete milestone
+  async deleteMilestone(req, res) {
     try {
       const { id } = req.params;
       const userEmail = req.user.email;
 
-      const deleted = await projectService.deleteProject(id, userEmail);
+      console.log('Deleting milestone:', id, 'by user:', userEmail);
+
+      const deleted = await milestoneService.deleteMilestone(id, userEmail);
       
       if (!deleted) {
-        return errorResponse(res, 'Project not found or access denied', 404);
+        return errorResponse(res, 'Milestone not found or access denied', 404);
       }
 
-      return successResponse(res, 'Project deleted successfully');
+      return successResponse(res, 'Milestone deleted successfully');
     } catch (error) {
-      console.error('Error deleting project:', error);
-      return errorResponse(res, 'Failed to delete project', 500);
+      console.error('Error deleting milestone:', error);
+      return errorResponse(res, 'Failed to delete milestone', 500);
     }
   }
 
-  // Create a new task under a milestone
+  // Get milestones by status for a project
+  async getMilestonesByStatus(req, res) {
+    try {
+      const { projectId } = req.params;
+      const { status } = req.query;
+      const userEmail = req.user.email;
+
+      if (!status) {
+        return errorResponse(res, 'Status parameter is required', 400);
+      }
+
+      console.log('Getting milestones by status:', status, 'for project:', projectId, 'for user:', userEmail);
+
+      const milestones = await milestoneService.getMilestonesByStatus(projectId, userEmail, status);
+      
+      if (milestones === null) {
+        return errorResponse(res, 'Project not found or access denied', 404);
+      }
+
+      return successResponse(res, `Milestones with status '${status}' retrieved successfully`, milestones);
+    } catch (error) {
+      console.error('Error getting milestones by status:', error);
+      return errorResponse(res, 'Failed to retrieve milestones by status', 500);
+    }
+  }
+
+  // Get upcoming milestones for a project
+  async getUpcomingMilestones(req, res) {
+    try {
+      const { projectId } = req.params;
+      const userEmail = req.user.email;
+
+      console.log('Getting upcoming milestones for project:', projectId, 'for user:', userEmail);
+
+      const milestones = await milestoneService.getUpcomingMilestones(projectId, userEmail);
+      
+      if (milestones === null) {
+        return errorResponse(res, 'Project not found or access denied', 404);
+      }
+
+      return successResponse(res, 'Upcoming milestones retrieved successfully', milestones);
+    } catch (error) {
+      console.error('Error getting upcoming milestones:', error);
+      return errorResponse(res, 'Failed to retrieve upcoming milestones', 500);
+    }
+  }
+
+  // Get overdue milestones for a project
+  async getOverdueMilestones(req, res) {
+    try {
+      const { projectId } = req.params;
+      const userEmail = req.user.email;
+
+      console.log('Getting overdue milestones for project:', projectId, 'for user:', userEmail);
+
+      // You'll need to add this method to your milestone service
+      const milestones = await milestoneService.getOverdueMilestones(projectId, userEmail);
+      
+      if (milestones === null) {
+        return errorResponse(res, 'Project not found or access denied', 404);
+      }
+
+      return successResponse(res, 'Overdue milestones retrieved successfully', milestones);
+    } catch (error) {
+      console.error('Error getting overdue milestones:', error);
+      return errorResponse(res, 'Failed to retrieve overdue milestones', 500);
+    }
+  }
+
+  // Get milestone statistics for a project
+  async getMilestoneStats(req, res) {
+    try {
+      const { projectId } = req.params;
+      const userEmail = req.user.email;
+
+      console.log('Getting milestone statistics for project:', projectId, 'for user:', userEmail);
+
+      // You'll need to add this method to your milestone service
+      const stats = await milestoneService.getMilestoneStats(projectId, userEmail);
+      
+      if (stats === null) {
+        return errorResponse(res, 'Project not found or access denied', 404);
+      }
+
+      return successResponse(res, 'Milestone statistics retrieved successfully', stats);
+    } catch (error) {
+      console.error('Error getting milestone statistics:', error);
+      return errorResponse(res, 'Failed to retrieve milestone statistics', 500);
+    }
+  }
+
+  // Bulk update milestone status
+  async bulkUpdateMilestoneStatus(req, res) {
+    try {
+      // Check validation errors
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return errorResponse(res, 'Validation failed', 400, errors.array());
+      }
+
+      const { projectId } = req.params;
+      const { milestoneIds, status } = req.body;
+      const userEmail = req.user.email;
+
+      if (!Array.isArray(milestoneIds) || milestoneIds.length === 0) {
+        return errorResponse(res, 'milestoneIds must be a non-empty array', 400);
+      }
+
+      if (!status) {
+        return errorResponse(res, 'Status is required', 400);
+      }
+
+      console.log('Bulk updating milestone status for project:', projectId, 'by user:', userEmail);
+
+      const results = [];
+      
+      for (const milestoneId of milestoneIds) {
+        try {
+          const milestone = await milestoneService.updateMilestone(milestoneId, userEmail, { status });
+          if (milestone) {
+            results.push({ 
+              success: true, 
+              milestoneId,
+              milestone
+            });
+          } else {
+            results.push({ 
+              success: false, 
+              milestoneId,
+              error: 'Milestone not found or access denied'
+            });
+          }
+        } catch (error) {
+          results.push({ 
+            success: false, 
+            milestoneId,
+            error: error.message
+          });
+        }
+      }
+
+      return successResponse(res, 'Milestone status updates processed', results);
+    } catch (error) {
+      console.error('Error bulk updating milestone status:', error);
+      return errorResponse(res, 'Failed to bulk update milestone status', 500);
+    }
+  }
+
+    // Create a new task under a milestone
   async createTask(req, res) {
     try {
       // Check validation errors
@@ -131,175 +295,6 @@ class MilestoneController {
       return errorResponse(res, 'Failed to create task', 500);
     }
   }
-
-  // Add project member
-  async addProjectMember(req, res) {
-    try {
-      // Check validation errors
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return errorResponse(res, 'Validation failed', 400, errors.array());
-      }
-      
-      const { id } = req.params;
-      const userEmail = req.user.email;
-      const members = Array.isArray(req.body) ? req.body : [req.body];
-      console.log('Adding members to project:', id, 'by user:', userEmail, 'Members:', members);
-      
-      const results = [];
-      
-      // Get project details first for email context
-      const projectDetails = await projectService.getProjectById(id, userEmail);
-      if (!projectDetails) {
-        return errorResponse(res, 'Project not found or access denied', 404);
-      }
-
-      console.log('Project details retrieved:', projectDetails);
-      
-      const inviterUser = await projectService.getUserByEmail(userEmail);
-
-      console.log('Inviter user details:', inviterUser);
-      
-      for (const { userId, role } of members) {
-        try {
-          const member = await projectService.addProjectMember(id, userEmail, userId, role);
-          if (member) {
-            // Send welcome email
-            try {
-              await emailService.sendProjectWelcomeEmail(
-                member.user.email,
-                projectDetails.name,
-                id,
-                role || 'TASK_COMPLETER',
-                inviterUser.name || inviterUser.email,
-                userEmail
-              );
-              
-              results.push({ 
-                success: true, 
-                member,
-                emailSent: true
-              });
-            } catch (emailError) {
-              console.error('Failed to send welcome email:', emailError);
-              results.push({ 
-                success: true, 
-                member,
-                emailSent: false,
-                emailError: emailError.message
-              });
-            }
-          } else {
-            results.push({ 
-              success: false, 
-              error: 'Project not found, access denied, or user already a member', 
-              userId 
-            });
-          }
-        } catch (error) {
-          results.push({ 
-            success: false, 
-            error: error.message, 
-            userId 
-          });
-        }
-      }
-      
-      return successResponse(res, 'Members processed', results, 201);
-    } catch (error) {
-      console.error('Error adding project member:', error);
-      if (error.message === 'User not found') {
-        return errorResponse(res, 'User not found', 404);
-      }
-      if (error.message === 'User already a member') {
-        return errorResponse(res, 'User is already a member of this project', 409);
-      }
-      return errorResponse(res, 'Failed to add project member', 500);
-    }
-  }
-
-  // Remove project member
-  async removeProjectMember(req, res) {
-    try {
-      const { id, userId } = req.params;
-      const userEmail = req.user.email;
-
-      const removed = await projectService.removeProjectMember(id, userEmail, userId);
-      
-      if (!removed) {
-        return errorResponse(res, 'Project not found, access denied, or member not found', 404);
-      }
-
-      return successResponse(res, 'Member removed successfully');
-    } catch (error) {
-      console.error('Error removing project member:', error);
-      return errorResponse(res, 'Failed to remove project member', 500);
-    }
-  }
-
-  // Get project members
-  async getProjectMembers(req, res) {
-    try {
-      const { id } = req.params;
-      const userEmail = req.user.email;
-
-      const members = await projectService.getProjectMembers(id, userEmail);
-      
-      if (members === null) {
-        return errorResponse(res, 'Project not found or access denied', 404);
-      }
-
-      return successResponse(res, 'Project members retrieved successfully', members);
-    } catch (error) {
-      console.error('Error getting project members:', error);
-      return errorResponse(res, 'Failed to retrieve project members', 500);
-    }
-  }
-
-  // Check a user's project permissions
-  async checkProjectPermission(req, res) {
-    try {
-      const { id } = req.params;
-      const allowedRoles = req.body;
-      console.log('Checking project permissions for ID:', id, 'with roles:', allowedRoles);
-      const userEmail = req.user.email;
-
-      const hasPermission = await projectService.checkProjectPermission(id, userEmail, allowedRoles);
-
-      console.log(`Checking permissions for user ${userEmail} on project ${id}`);
-      
-      console.log('Has permission:', hasPermission);
-      if (!hasPermission) {
-        return errorResponse(res, 'Project not found or access denied', 404);
-      }
-
-      return successResponse(res, 'User has access to project');
-    } catch (error) {
-      console.error('Error checking user project permissions:', error);
-      return errorResponse(res, 'Failed to check user project permissions', 500);
-    }
-  }
-  
-
-  // Check project access
-  async checkProjectAccess(req, res) {
-    try {
-      const { id } = req.params;
-      const userEmail = req.user.email;
-
-      const hasAccess = await projectService.checkProjectAccess(id, userEmail);
-      
-      if (!hasAccess) {
-        return errorResponse(res, 'Project not found or access denied', 404);
-      }
-
-      return successResponse(res, 'Access granted to project');
-    } catch (error) {
-      console.error('Error checking project access:', error);
-      return errorResponse(res, 'Failed to check project access', 500);
-    }
-  }
-
 }
 
 module.exports = new MilestoneController();
