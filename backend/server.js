@@ -14,6 +14,7 @@ const projectRoutes = require('./src/routes/projectRoutes');
 const protectedRoutes = require('./src/routes/protectedRoutes');
 const milestoneRoutes = require('./src/routes/milestoneRoutes');
 const fileRoutes = require('./src/routes/fileRoutes');
+const taskRoutes = require('./src/routes/taskRoutes');
 
 // Initialize Express app
 const app = express();
@@ -65,6 +66,7 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/milestones', milestoneRoutes);
 app.use('/api', protectedRoutes);
 app.use('/api/files', fileRoutes);
+app.use('/api/tasks',taskRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {

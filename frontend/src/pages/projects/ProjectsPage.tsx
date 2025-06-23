@@ -41,6 +41,7 @@ interface Task {
 interface Milestone {
   id: string;
   name: string;
+  description?: string;
   status: string;
   startDate: string;
   endDate: string;
@@ -104,6 +105,38 @@ const ProjectsPage: React.FC = () => {
     startDate: '',
     endDate: ''
   });
+  const [editingMilestoneId, setEditingMilestoneId] = useState<string | null>(null);
+  const [editingMilestoneData, setEditingMilestoneData] = useState<{
+    name: string;
+    description: string;
+    status: string;
+    startDate: string;
+    endDate: string;
+  }>({
+    name: '',
+    description: '',
+    status: '',
+    startDate: '',
+    endDate: ''
+  });
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+const [editingTaskData, setEditingTaskData] = useState<{
+  title: string;
+  description: string;
+  status: string;
+  priority: string;
+  startDate: string;
+  dueDate: string;
+  assigneeId: string;
+}>({
+  title: '',
+  description: '',
+  status: '',
+  priority: '',
+  startDate: '',
+  dueDate: '',
+  assigneeId: '' 
+});
 
 
   const startEditingProject = (project: Project) => {
@@ -156,7 +189,118 @@ const saveProjectChanges = async () => {
   }
 };
 
+const startEditingMilestone = (milestone: Milestone) => {
+  setEditingMilestoneId(milestone.id);
+  setEditingMilestoneData({
+    name: milestone.name,
+    description: milestone.description ?? '',
+    status: milestone.status,
+    startDate: milestone.startDate.split('T')[0], // Convert to date input format
+    endDate: milestone.endDate.split('T')[0]
+  });
+};
+
+const cancelEditingMilestone = () => {
+  setEditingMilestoneId(null);
+  setEditingMilestoneData({
+    name: '',
+    description: '',
+    status: '',
+    startDate: '',
+    endDate: ''
+  });
+};
+
+const saveMilestoneChanges = async () => {
+  if (!editingMilestoneId) return;
   
+  try {
+    const updateData = {
+      name: editingMilestoneData.name,
+      status: editingMilestoneData.status,
+      startDate: new Date(editingMilestoneData.startDate).toISOString(),
+      endDate: new Date(editingMilestoneData.endDate).toISOString()
+    };
+
+    await callApi(() => apiService.milestones.updateMilestone(editingMilestoneId, updateData));
+    
+    // Update the local state
+    setProjects(prev => prev.map(project => ({
+      ...project,
+      milestones: project.milestones.map(milestone => 
+        milestone.id === editingMilestoneId 
+          ? { ...milestone, ...updateData }
+          : milestone
+      )
+    })));
+    
+    cancelEditingMilestone();
+  } catch (error) {
+    console.error('Error updating milestone:', error);
+  }
+};
+
+const startEditingTask = (task: Task) => {
+  setEditingTaskId(task.id);
+  setEditingTaskData({
+    title: task.title,
+    description: task.description || '',
+    status: task.status,
+    priority: task.priority || 'medium',
+    startDate: task.startDate ? task.startDate.split('T')[0] : '',
+    dueDate: task.dueDate ? task.dueDate.split('T')[0] : '',
+    assigneeId: task.assigneeId || '' 
+  });
+};
+
+const cancelEditingTask = () => {
+  setEditingTaskId(null);
+  setEditingTaskData({
+    title: '',
+    description: '',
+    status: '',
+    priority: '',
+    startDate: '',
+    dueDate: '',
+    assigneeId: ''
+  });
+};
+
+const saveTaskChanges = async () => {
+  if (!editingTaskId) return;
+  
+  try {
+    const updateData = {
+      title: editingTaskData.title,
+      description: editingTaskData.description,
+      status: editingTaskData.status,
+      priority: editingTaskData.priority,
+      startDate: editingTaskData.startDate ? new Date(editingTaskData.startDate).toISOString() : undefined,
+      dueDate: editingTaskData.dueDate ? new Date(editingTaskData.dueDate).toISOString() : undefined,
+      assigneeId: editingTaskData.assigneeId || undefined
+    };
+
+    await callApi(() => apiService.tasks.updateTask(editingTaskId, updateData));
+    
+    // Update the local state
+    setProjects(prev => prev.map(project => ({
+      ...project,
+      milestones: project.milestones.map(milestone => ({
+        ...milestone,
+        tasks: milestone.tasks.map(task => 
+          task.id === editingTaskId 
+            ? { ...task, ...updateData }
+            : task
+        )
+      }))
+    })));
+    
+    cancelEditingTask();
+  } catch (error) {
+    console.error('Error updating task:', error);
+  }
+};
+
   // Fetch projects from API
   useEffect(() => {
     const fetchProjects = async () => {
@@ -780,29 +924,139 @@ return (
                         {project.milestones.map((milestone) => (
                           <div key={milestone.id} className="bg-gray-50 dark:bg-gray-750 rounded-lg border border-gray-200 dark:border-gray-600">
                             {/* Milestone Header */}
-                            <div 
-                              className="p-4 cursor-pointer hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-900 transition-colors duration-200"
-                              onClick={() => toggleMilestoneExpansion(milestone.id)}
-                            >
-                              <div className="flex items-start justify-between">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <h4 className="font-medium text-gray-900 dark:text-white">{milestone.name}</h4>
-                                    {expandedMilestones.includes(milestone.id) ? 
-                                      <HiChevronUp className="w-4 h-4 text-gray-400 dark:text-gray-500" /> : 
-                                      <HiChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                                    }
-                                  </div>
-                                  <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
-                                    <span>{formatDate(milestone.startDate)} - {formatDate(milestone.endDate)}</span>
-                                    <span>{milestone.tasks ? milestone.tasks.length : 0} tasks</span>
-                                  </div>
-                                </div>
-                                <span className={`px-2 py-1 rounded text-xs font-medium border ${getStatusColor(milestone.status, 'milestone')}`}>
-                                  {milestone.status.replace('_', ' ')}
-                                </span>
-                              </div>
-                            </div>
+                           <div className="p-4 transition-colors duration-200">
+  <div className="flex items-start justify-between">
+    <div className="flex-1">
+      {editingMilestoneId === milestone.id ? (
+        // Edit Mode
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Milestone Name
+            </label>
+            <input
+              type="text"
+              value={editingMilestoneData.name}
+              onChange={(e) => setEditingMilestoneData(prev => ({ ...prev, name: e.target.value }))}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Description
+            </label>
+            <textarea
+              value={editingMilestoneData.description}
+              onChange={(e) => setEditingMilestoneData(prev => ({ ...prev, description: e.target.value }))}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Status
+              </label>
+              <select
+                value={editingMilestoneData.status}
+                onChange={(e) => setEditingMilestoneData(prev => ({ ...prev, status: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="IN_PROGRESS">Active</option>
+                <option value="PLANNED">Planning</option>
+                <option value="COMPLETED">Completed</option>
+                <option value="OVERDUE">Overdue</option>
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Start Date
+              </label>
+              <input
+                type="date"
+                value={editingMilestoneData.startDate}
+                onChange={(e) => setEditingMilestoneData(prev => ({ ...prev, startDate: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                End Date
+              </label>
+              <input
+                type="date"
+                value={editingMilestoneData.endDate}
+                onChange={(e) => setEditingMilestoneData(prev => ({ ...prev, endDate: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+          
+          <div className="flex gap-2 pt-2">
+            <button
+              onClick={saveMilestoneChanges}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+            >
+              <HiCheck className="w-4 h-4" />
+              Save Changes
+            </button>
+            <button
+              onClick={cancelEditingMilestone}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+            >
+              <HiX className="w-4 h-4" />
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        // View Mode
+        <div 
+          className="cursor-pointer hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-900 transition-colors duration-200"
+          onClick={() => toggleMilestoneExpansion(milestone.id)}
+        >
+          <div className="flex items-center gap-2 mb-1">
+            <h4 className="font-medium text-gray-900 dark:text-white">{milestone.name}</h4>
+            {currentUser && (
+              currentUser.email === project.creator.email || 
+              project.members.some(member => 
+                member.user.email === currentUser.email && (member.role === 'ADMIN' || member.role === 'CREATOR')
+              )
+            ) && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  startEditingMilestone(milestone);
+                }}
+                className="flex items-center gap-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg transition-colors"
+                title="Edit milestone"
+              >
+                <HiPencil className="w-3 h-3" />
+                Edit
+              </button>
+            )}
+            {expandedMilestones.includes(milestone.id) ? 
+              <HiChevronUp className="w-4 h-4 text-gray-400 dark:text-gray-500" /> : 
+              <HiChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+            }
+          </div>
+          <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+            <span>{formatDate(milestone.startDate)} - {formatDate(milestone.endDate)}</span>
+            <span>{milestone.tasks ? milestone.tasks.length : 0} tasks</span>
+          </div>
+        </div>
+      )}
+    </div>
+    {editingMilestoneId !== milestone.id && (
+      <span className={`px-2 py-1 rounded text-xs font-medium border ${getStatusColor(milestone.status, 'milestone')}`}>
+        {milestone.status.replace('_', ' ')}
+      </span>
+    )}
+  </div>
+</div>
 
                             {/* Tasks Section */}
                             {expandedMilestones.includes(milestone.id) && milestone.tasks && (
@@ -814,70 +1068,214 @@ return (
                                 <div className="space-y-2">
                                   {milestone.tasks.map((task) => (
                                  
-                                    <div key={task.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-600 p-3">
-                                      <div className="flex items-start justify-between">
-                                        <div className="flex-1">
-                                          <div className="flex items-center gap-2 mb-1">
-                                            {getTaskIcon(task.status)}
-                                            <h6 className="text-sm font-medium text-gray-900 dark:text-white">{task.title}</h6>
-                                          </div>
-                                          {task.description && (
-                                            <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">{task.description}</p>
-                                          )}
-                                          <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
-                                            {task.startDate && task.dueDate && (
-                                              <span>{formatDate(task.startDate)} - {formatDate(task.dueDate)}</span>
-                                            )}
-                                            {task.assigneeId && (
-                                              <span className="flex items-center gap-1">
-                                                <HiUser className="w-3 h-3" />
-                                                {task.assigneeId}
-                                              </span>
-                                            )}
-                                          </div>
-                                        </div>
-                                        <div className="flex flex-col items-end gap-2 ml-3">
-                                          <div className="flex items-center gap-1">
-                                            <span className={`px-2 py-1 rounded text-xs font-medium border ${getStatusColor(task.status, 'task')}`}>
-                                              {task.status.replace('_', ' ')}
-                                            </span>
-                                            {task.priority && (
-                                              <span className={`px-2 py-1 rounded text-xs font-medium ${getPriorityColor(task.priority)}`}>
-                                                {task.priority}
-                                              </span>
-                                            )}
-                                          </div>
-                                          {/* Add Files & Request Review */}
-                                          {currentUser && currentUser.email === task.assigneeId && (
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              openTaskModal(task);
-                                            }}
-                                            className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg transition-colors flex items-center gap-1"
-                                            title="Manage files and request review"
-                                          >
-                                            <HiUpload className="w-3 h-3" />
-                                            Submit Completion Proof
-                                          </button>
-                                          )}
-                                          {/* Review Files & Update Status */}
-                                          {currentUser && currentUser.email === project.creatorId && (
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              openTaskReviewModal(task);
-                                            }}
-                                            className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg transition-colors flex items-center gap-1"
-                                            title="Manage files and request review"
-                                          >
-                                            <HiEye className="w-3 h-3" />
-                                            Review Completion Proof
-                                          </button>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </div>
+                                   <div key={task.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-600 p-3">
+  {editingTaskId === task.id ? (
+    // Edit Mode
+    <div className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          Task Title
+        </label>
+        <input
+          type="text"
+          value={editingTaskData.title}
+          onChange={(e) => setEditingTaskData(prev => ({ ...prev, title: e.target.value }))}
+          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          Description
+        </label>
+        <textarea
+          value={editingTaskData.description}
+          onChange={(e) => setEditingTaskData(prev => ({ ...prev, description: e.target.value }))}
+          rows={2}
+          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        />
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Status
+          </label>
+          <select
+            value={editingTaskData.status}
+            onChange={(e) => setEditingTaskData(prev => ({ ...prev, status: e.target.value }))}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="UPCOMING">Upcoming</option>
+            <option value="IN_PROGRESS">In Progress</option>
+            <option value="IN_REVIEW">In review</option>
+            <option value="COMPLETED">Completed</option>
+            <option value="OVERDUE">Overdue</option>
+          </select>
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Priority
+          </label>
+          <select
+            value={editingTaskData.priority}
+            onChange={(e) => setEditingTaskData(prev => ({ ...prev, priority: e.target.value }))}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+            <option value="critical">Critical</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+    Assignee
+  </label>
+    <select
+      value={editingTaskData.assigneeId}
+      onChange={(e) => setEditingTaskData(prev => ({ ...prev, assigneeId: e.target.value }))}
+      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+    >
+      {project.members
+        .filter(member => member.role === 'TASK_COMPLETER')
+        .map(member => (
+          <option key={member.userId} value={member.user.email}>
+            {member.user.email}
+          </option>
+        ))}
+    </select>
+</div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Start Date
+          </label>
+          <input
+            type="date"
+            value={editingTaskData.startDate}
+            onChange={(e) => setEditingTaskData(prev => ({ ...prev, startDate: e.target.value }))}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Due Date
+          </label>
+          <input
+            type="date"
+            value={editingTaskData.dueDate}
+            onChange={(e) => setEditingTaskData(prev => ({ ...prev, dueDate: e.target.value }))}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+      </div>
+      
+      <div className="flex gap-2 pt-2">
+        <button
+          onClick={saveTaskChanges}
+          className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+        >
+          <HiCheck className="w-4 h-4" />
+          Save Changes
+        </button>
+        <button
+          onClick={cancelEditingTask}
+          className="flex items-center gap-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+        >
+          <HiX className="w-4 h-4" />
+          Cancel
+        </button>
+      </div>
+    </div>
+  ) : (
+    // View Mode
+    <div className="flex items-start justify-between">
+      <div className="flex-1">
+       <div className="flex items-center gap-2 mb-1">
+  {getTaskIcon(task.status)}
+  <h6 className="text-sm font-medium text-gray-900 dark:text-white">{task.title}</h6>
+  {currentUser && (
+    currentUser.email === project.creator.email || 
+    project.members.some(member => 
+      member.user.email === currentUser.email && (member.role === 'ADMIN' || member.role === 'CREATOR')
+    )
+  ) && task.status !== 'IN_REVIEW' && task.status !== 'COMPLETED' && (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        startEditingTask(task);
+      }}
+      className="flex items-center gap-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg transition-colors"
+      title="Edit task"
+    >
+      <HiPencil className="w-3 h-3" />
+      Edit
+    </button>
+  )}
+</div>
+        {task.description && (
+          <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">{task.description}</p>
+        )}
+        <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+          {task.startDate && task.dueDate && (
+            <span>{formatDate(task.startDate)} - {formatDate(task.dueDate)}</span>
+          )}
+          {task.assigneeId && (
+            <span className="flex items-center gap-1">
+              <HiUser className="w-3 h-3" />
+              {task.assigneeId}
+            </span>
+          )}
+        </div>
+      </div>
+      <div className="flex flex-col items-end gap-2 ml-3">
+        <div className="flex items-center gap-1">
+          <span className={`px-2 py-1 rounded text-xs font-medium border ${getStatusColor(task.status, 'task')}`}>
+            {task.status.replace('_', ' ')}
+          </span>
+          {task.priority && (
+            <span className={`px-2 py-1 rounded text-xs font-medium ${getPriorityColor(task.priority)}`}>
+              {task.priority}
+            </span>
+          )}
+        </div>
+        {/* Keep existing Submit/Review buttons */}
+        {currentUser && currentUser.email === task.assigneeId && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            openTaskModal(task);
+          }}
+          className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg transition-colors flex items-center gap-1"
+          title="Manage files and request review"
+        >
+          <HiUpload className="w-3 h-3" />
+          Submit Completion Proof
+        </button>
+        )}
+        {currentUser && currentUser.email === project.creatorId && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            openTaskReviewModal(task);
+          }}
+          className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg transition-colors flex items-center gap-1"
+          title="Manage files and request review"
+        >
+          <HiEye className="w-3 h-3" />
+          Review Completion Proof
+        </button>
+        )}
+      </div>
+    </div>
+  )}
+</div>
                                   ))}
                                   {milestone.tasks.length === 0 && (
                                     <p className="text-gray-500 dark:text-gray-400 text-sm py-2">No tasks defined for this milestone.</p>
