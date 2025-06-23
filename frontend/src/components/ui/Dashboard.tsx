@@ -1,267 +1,325 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../context/AuthContext';
-import { apiService, useApiCall } from '../../services/api';
-import { User , Shield, LogOut, RefreshCw } from 'lucide-react';
+import { HiPlus, HiDotsVertical, HiClock, HiUsers, HiCheck } from 'react-icons/hi';
+import Card from './Card';
+import Button from './Button type 2';
+import Modal from './Modal';
+import { type ProjectFormData } from '@/types/project';
+import ProjectForm from './ProjectForm';
+import { apiService, useApiCall } from '@/services/api';
+
+// Types for backend data (reusing from your Projects page)
+interface User {
+  email: string;
+  skillset?: string | null;
+}
+
+interface ProjectMember {
+  id: string;
+  userId: string;
+  role: string;
+  joinedAt: string;
+  updatedAt: string;
+  projectId: string;
+  user: User;
+}
+
+interface Milestone {
+  id: string;
+  name: string;
+  status: string;
+  startDate: string;
+  endDate: string;
+}
+
+interface BackendProject {
+  id: string;
+  name: string;
+  description: string;
+  status: string;
+  startDate: string;
+  endDate: string;
+  createdAt: string;
+  updatedAt: string;
+  creatorId: string;
+  creator: User;
+  members: ProjectMember[];
+  milestones: Milestone[];
+  _count: {
+    milestones: number;
+    members: number;
+  };
+}
+
+// Transformed project type for UI
+interface DashboardProject {
+  id: string;
+  name: string;
+  progress: number;
+  tasks: number;
+  completedTasks: number;
+  team: number;
+  dueDate: string;
+  status: string;
+}
 
 const Dashboard: React.FC = () => {
-  const { currentUser, logout } = useAuth();
-  const { callApi, loading, error } = useApiCall();
-  
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [dashboardData, setDashboardData] = useState<any>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [userSettings, setUserSettings] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [projects, setProjects] = useState<DashboardProject[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { callApi } = useApiCall();
 
-  // Load dashboard data on component mount
+  // Transform backend project data to dashboard format
+  const transformProjectForDashboard = (project: BackendProject): DashboardProject => {
+    // Calculate progress based on milestones
+    const completedMilestones = project.milestones.filter(
+      milestone => milestone.status.toLowerCase() === 'completed'
+    ).length;
+    const progress = project.milestones.length > 0 
+      ? Math.round((completedMilestones / project.milestones.length) * 100)
+      : 0;
+
+    // Map backend status to dashboard status
+    const mapStatus = (backendStatus: string): string => {
+      switch (backendStatus.toLowerCase()) {
+        case 'active':
+        case 'in_progress':
+          return 'on-track';
+        case 'planning':
+        case 'not_started':
+          return 'at-risk';
+        case 'completed':
+          return 'completed';
+        case 'on_hold':
+        case 'delayed':
+          return 'at-risk';
+        default:
+          return 'on-track';
+      }
+    };
+
+    return {
+      id: project.id,
+      name: project.name,
+      progress,
+      tasks: project._count.milestones,
+      completedTasks: completedMilestones,
+      team: project._count.members ,
+      dueDate: project.endDate,
+      status: mapStatus(project.status),
+    };
+  };
+
+  // Fetch projects from backend
   useEffect(() => {
-    loadDashboardData();
-    loadUserSettings();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    const fetchProjects = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await callApi(() => apiService.projects.getNProjects(3));
+        
+        if (response.data) {
+          const transformedProjects = response.data.map(transformProjectForDashboard);
+          setProjects(transformedProjects);
+        }
+      } catch (err) {
+        console.error('Error fetching projects:', err);
+        setError('Failed to load projects. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProjects();
   }, []);
 
-  const loadDashboardData = async () => {
+  const handleCreateProject = async (data: ProjectFormData) => {
+    setIsLoading(true);
     try {
-      const data = await callApi(() => apiService.protected.getDashboard());
-      setDashboardData(data);
+      // Call your backend API to create project
+      const response = await callApi(() => apiService.projects.createProject(data));
+      
+      if (response.data) {
+        // Transform and add the new project to the list
+        const newProject = transformProjectForDashboard(response.data);
+        setProjects(prev => [...prev, newProject]);
+        setIsCreateModalOpen(false);
+      }
     } catch (err) {
-      console.error('Failed to load dashboard data:', err);
-    }
-  };
-
-  const loadUserSettings = async () => {
-    try {
-      const settings = await callApi(() => apiService.protected.getUserSettings());
-      setUserSettings(settings);
-    } catch (err) {
-      console.error('Failed to load user settings:', err);
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      // Call backend logout endpoint first
-      await callApi(() => apiService.auth.logout());
-    } catch (err) {
-      console.error('Backend logout failed:', err);
+      console.error('Error creating project:', err);
+      // You might want to show an error message to the user here
     } finally {
-      // Always call Firebase logout
-      await logout();
+      setIsLoading(false);
     }
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const updateSettings = async (newSettings: any) => {
-    try {
-      const updated = await callApi(() => 
-        apiService.protected.updateUserSettings(newSettings)
-      );
-      setUserSettings(updated);
-    } catch (err) {
-      console.error('Failed to update settings:', err);
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'on-track':
+        return 'bg-green-400';
+      case 'at-risk':
+        return 'bg-yellow-400';
+      case 'completed':
+        return 'bg-blue-400';
+      default:
+        return 'bg-gray-400';
     }
   };
 
-  if (loading && !dashboardData) {
+  // Loading state
+  if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <RefreshCw className="h-8 w-8 animate-spin text-indigo-600 mx-auto mb-4" />
-          <p className="text-gray-600">Loading dashboard...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Loading projects...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="text-red-500 text-xl mb-4">⚠️</div>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">{error}</p>
+          <Button onClick={() => window.location.reload()}>
+            Try Again
+          </Button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <Shield className="h-8 w-8 text-indigo-600 mr-3" />
-              <h1 className="text-xl font-semibold text-gray-900">Dashboard</h1>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center text-sm text-gray-700">
-                {currentUser?.photoURL && (
-                    <img
-                        src={currentUser.photoURL}
-                        alt="User avatar"
-                        className="h-6 w-6 rounded-full mr-2 border border-gray-200"
-                    />
-                ) || <User className="h-4 w-4 mr-2" />}
-                <span>{currentUser?.displayName || currentUser?.email}</span>
-              </div>
-              
-              <button
-                onClick={handleLogout}
-                className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              >
-                <LogOut className="h-4 w-4 mr-2" />
-                Logout
-              </button>
-            </div>
-          </div>
+    <>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            Project Overview
+          </h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Track and manage your ongoing projects ({projects.length} total)
+          </p>
         </div>
-      </header>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Error Display */}
-        {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-sm text-red-600">{error}</p>
-          </div>
-        )}
-
-        {/* Tab Navigation */}
-        <div className="mb-8">
-          <nav className="flex space-x-8">
-            <button
-              onClick={() => setActiveTab('dashboard')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'dashboard'
-                  ? 'border-indigo-500 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Dashboard
-            </button>
-            <button
-              onClick={() => setActiveTab('settings')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'settings'
-                  ? 'border-indigo-500 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Settings
-            </button>
-          </nav>
-        </div>
-
-        {/* Dashboard Tab */}
-        {activeTab === 'dashboard' && (
-          <div className="space-y-6">
-            {/* Welcome Card */}
-            <div className="bg-white overflow-hidden shadow rounded-lg">
-              <div className="p-6">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <User className="h-8 w-8 text-gray-400" />
-                  </div>
-                  <div className="ml-5 w-0 flex-1">
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">
-                        Welcome back
-                      </dt>
-                      <dd className="text-lg font-medium text-gray-900">
-                        {currentUser?.displayName || 'User'}
-                      </dd>
-                    </dl>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Dashboard Data */}
-            {dashboardData && (
-              <div className="bg-white overflow-hidden shadow rounded-lg">
-                <div className="p-6">
-                  <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-                    Dashboard Information
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <p className="text-sm text-gray-600">User ID</p>
-                      <p className="text-sm font-medium text-gray-900">{dashboardData.user?.uid}</p>
-                    </div>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <p className="text-sm text-gray-600">Email</p>
-                      <p className="text-sm font-medium text-gray-900">{dashboardData.user?.email}</p>
-                    </div>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <p className="text-sm text-gray-600">Last Updated</p>
-                      <p className="text-sm font-medium text-gray-900">{dashboardData.timestamp}</p>
-                    </div>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <p className="text-sm text-gray-600">Status</p>
-                      <p className="text-sm font-medium text-green-600">Active</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* API Test Buttons */}
-            <div className="bg-white overflow-hidden shadow rounded-lg">
-              <div className="p-6">
-                <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-                  API Test
-                </h3>
-                <div className="space-y-3">
-                  <button
-                    onClick={loadDashboardData}
-                    disabled={loading}
-                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-                  >
-                    {loading ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : null}
-                    Refresh Dashboard
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Settings Tab */}
-        {activeTab === 'settings' && (
-          <div className="space-y-6">
-            <div className="bg-white overflow-hidden shadow rounded-lg">
-              <div className="p-6">
-                <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-                  User Settings
-                </h3>
-                
-                {userSettings && (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">Notifications</p>
-                        <p className="text-sm text-gray-500">Receive email notifications</p>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={userSettings.settings?.notifications || false}
-                        onChange={(e) => updateSettings({ notifications: e.target.checked })}
-                        className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-900 mb-2">
-                        Theme
-                      </label>
-                      <select
-                        value={userSettings.settings?.theme || 'light'}
-                        onChange={(e) => updateSettings({ theme: e.target.value })}
-                        className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                      >
-                        <option value="light">Light</option>
-                        <option value="dark">Dark</option>
-                        <option value="auto">Auto</option>
-                      </select>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
+        <Button
+          className="flex items-center cursor-pointer"
+          onClick={() => setIsCreateModalOpen(true)}
+        >
+          <HiPlus className="w-5 h-5 mr-2" />
+          New Project
+        </Button>
       </div>
-    </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {projects.map((project) => (
+          <Card
+            key={project.id}
+            variant="hover"
+            className="transform transition-all duration-200 hover:-translate-y-1"
+          >
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {project.name}
+                </h3>
+                <button className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300">
+                  <HiDotsVertical className="w-5 h-5 cursor-pointer" />
+                </button>
+              </div>
+
+              <div className="mb-4">
+                <div className="flex justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                    Progress
+                  </span>
+                  <span className="text-sm font-medium text-gray-900 dark:text-white">
+                    {project.progress}%
+                  </span>
+                </div>
+                <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-blue-500 transition-all duration-300 ease-in-out"
+                    style={{ width: `${project.progress}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="flex items-center">
+                  <HiCheck className="w-5 h-5 text-gray-400 mr-2" />
+                  <div>
+                    <div className="text-sm font-medium text-gray-900 dark:text-white">
+                      {project.completedTasks}/{project.tasks}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      Tasks
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center">
+                  <HiUsers className="w-5 h-5 text-gray-400 mr-2" />
+                  <div>
+                    <div className="text-sm font-medium text-gray-900 dark:text-white">
+                      {project.team}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      Team Members
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex items-center">
+                  <HiClock className="w-5 h-5 text-gray-400 mr-2" />
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    Due {new Date(project.dueDate).toLocaleDateString()}
+                  </span>
+                </div>
+                <div
+                  className={`h-2.5 w-2.5 rounded-full ${getStatusColor(
+                    project.status
+                  )}`}
+                />
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      {projects.length === 0 && !loading && (
+        <div className="text-center py-12">
+          <div className="text-gray-400 text-6xl mb-4">📊</div>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+            No projects yet
+          </h3>
+          <p className="text-gray-500 dark:text-gray-400 mb-4">
+            Get started by creating your first project
+          </p>
+          <Button className='cursor-pointer' onClick={() => setIsCreateModalOpen(true)}>
+            <HiPlus className="w-5 h-5 mr-2" />
+            Create Project
+          </Button>
+        </div>
+      )}
+
+      <Modal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        title="Create New Project"
+      >
+        <ProjectForm
+          onSubmit={handleCreateProject}
+          onCancel={() => setIsCreateModalOpen(false)}
+          isLoading={isLoading}
+        />
+      </Modal>
+    </>
   );
 };
 
