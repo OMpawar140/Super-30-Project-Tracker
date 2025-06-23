@@ -649,14 +649,21 @@ return (
                           <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
                             {project.name}
                           </h2>
-                          <button
-                            onClick={() => startEditingProject(project)}
-                            className="flex items-center gap-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
-                            title="Edit project"
-                          >
-                            <HiPencil className="w-4 h-4" />
-                            Edit
-                          </button>
+                          {currentUser && (
+                            currentUser.email === project.creator.email || 
+                            project.members.some(member => 
+                              member.user.email === currentUser.email && (member.role === 'ADMIN' || member.role === 'CREATOR')
+                            )
+                          ) && (
+                            <button
+                              onClick={() => startEditingProject(project)}
+                              className="flex items-center gap-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
+                              title="Edit project"
+                            >
+                              <HiPencil className="w-4 h-4" />
+                              Edit
+                            </button>
+                          )}
                           <button
                             onClick={() => toggleProjectExpansion(project.id)}
                             className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
