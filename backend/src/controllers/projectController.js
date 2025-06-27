@@ -156,7 +156,7 @@ class ProjectController {
       const userEmail = req.user.email;
       const members = Array.isArray(req.body) ? req.body : [req.body];
       console.log('Adding members to project:', id, 'by user:', userEmail, 'Members:', members);
-      
+          
       const results = [];
       
       // Get project details first for email context

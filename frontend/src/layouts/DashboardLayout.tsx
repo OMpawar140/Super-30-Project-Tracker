@@ -1,7 +1,6 @@
-import  { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { HiMenu, HiX, HiHome, HiClipboardList, HiCalendar, HiBell, HiLogout } from 'react-icons/hi';
 import ThemeToggle from '../components/ui/ThemeToggle';
-import NotificationOverlay from '@/pages/notifications/NotificationOverlay';
 import { useAuth } from '@/context/AuthContext';
 import { User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -13,8 +12,9 @@ import logo from '@/assets/Images/TrackPro-icon-preview.png';
 import Dashboard from '@/components/ui/Dashboard';
 import ProjectsPage from '@/pages/projects/ProjectsPage';
 import Timeline from '@/pages/timeline/TimeLine';
-import NotificationsPage from '@/pages/notifications/NotificationsPage';
+import NotificationsPage from '@/pages/notifications/index';
 import Profile from '@/pages/profile/Profile';
+import { NotificationBell } from '@/pages/notifications/NotificationBell';
 
 const DashboardLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -34,7 +34,7 @@ const DashboardLayout = () => {
 
   useEffect(() => {
     document.title = 'Dashboard - Project Tracker';
-  });
+  }, []);
 
   const navigationItems = [
     { name: 'Dashboard', icon: HiHome, component: Dashboard },
@@ -56,6 +56,10 @@ const DashboardLayout = () => {
   const renderContent = () => {
     const Component = componentMap[activeTab as TabName] || Dashboard;
     return <Component />;
+  };
+
+  const handleNotificationClick = () => {
+    navigateTo('Notifications');
   };
 
   return (
@@ -141,7 +145,7 @@ const DashboardLayout = () => {
 
             <div className="flex items-center space-x-4">
               <ThemeToggle />
-              <NotificationOverlay />
+              <NotificationBell onNotificationClick={handleNotificationClick} />
               <div className="flex items-center">
                 {currentUser?.photoURL && (
                   <img

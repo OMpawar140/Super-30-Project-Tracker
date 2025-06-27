@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState } from 'react';
 import { HiCalendar } from 'react-icons/hi';
 import { Button } from './button';
@@ -17,7 +18,6 @@ import type {
 const MySwal = withReactContent(Swal);
 
 const ProjectForm: React.FC<ProjectFormProps> = ({
-  onSubmit,
   onCancel,
   initialData,
   isLoading = false,
@@ -37,6 +37,8 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
   const [createdProjectId, setCreatedProjectId] = useState<string | null>(null);
   const [projectMembers, setProjectMembers] = useState<Member[]>([]);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
+   
+
   
   // Modal states
   const [showMemberModal, setShowMemberModal] = useState(false);
@@ -59,13 +61,15 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
     try {
       // Call the API to create the project
       const response = await callApi(() => apiService.projects.createProject(formData));
+      console.log('form data:', formData);
+      console.log('Project created:', response);
       
       // Assuming the API returns the created project with an ID
       const projectId = response?.data?.id || response?.id;
       setCreatedProjectId(projectId);
 
       // Call the parent's onSubmit callback
-      onSubmit(formData);
+      // onSubmit(formData);
 
       // Show success message
       await MySwal.fire({

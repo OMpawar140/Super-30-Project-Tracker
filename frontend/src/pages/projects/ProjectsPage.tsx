@@ -81,7 +81,7 @@ const ProjectsPage: React.FC = () => {
   const [expandedMilestones, setExpandedMilestones] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
-  const [priorityFilter, setPriorityFilter] = useState<string>('All');
+  const [priorityFilter] = useState<string>('All');
   const [animatedItems, setAnimatedItems] = useState<string[]>([]);
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [taskReviewModalOpen, setTaskReviewModalOpen] = useState(false);

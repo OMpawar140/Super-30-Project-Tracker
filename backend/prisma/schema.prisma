@@ -26,6 +26,9 @@ model User {
   // Task reviews performed by this user
   taskReviews TaskReview[]
 
+  // Notifications received by this user
+  notifications Notification[]
+
   @@map("users")
 }
 
@@ -48,6 +51,9 @@ model Project {
   
   // Milestones within this project
   milestones Milestone[]
+
+  // Notifications related to this project
+  notifications Notification[]
 
   @@map("projects")
 }
@@ -115,6 +121,9 @@ model Task {
   // Task attachments/proof of completion
   attachments TaskAttachment[]
 
+  // Notifications related to this task
+  notifications Notification[]
+
   @@map("tasks")
 }
 
@@ -133,6 +142,9 @@ model TaskReview {
   reviewerId String
   reviewer   User   @relation(fields: [reviewerId], references: [email], onDelete: Cascade)
 
+  // Notifications related to this task review
+  notifications Notification[]
+
   @@map("task_reviews")
 }
 
@@ -149,6 +161,35 @@ model TaskAttachment {
   task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
 
   @@map("task_attachments")
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  type      NotificationType
+  title     String
+  message   String
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  // User who receives the notification
+  userId String
+  user   User   @relation(fields: [userId], references: [email], onDelete: Cascade)
+
+  // Optional relationships to relevant entities
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  taskId String?
+  task   Task?   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  taskReviewId String?
+  taskReview   TaskReview? @relation(fields: [taskReviewId], references: [id], onDelete: Cascade)
+
+  // Additional metadata for notifications
+  metadata Json? // For storing additional context-specific data
+
+  @@map("notifications")
 }
 
 // Enums
@@ -191,4 +232,14 @@ enum TaskReviewStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+enum NotificationType {
+  PROJECT_MEMBER_ADDED     // You have been added to a new project
+  TASK_APPROVED           // Your task has been approved
+  TASK_REJECTED           // Your task has been rejected
+  TASK_REVIEW_REQUESTED   // Task document submitted for review
+  TASK_STARTED            // Task has been started
+  TASK_OVERDUE            // Task is overdue
+  TASK_DUE_REMINDER       // Task due date reminder (3 days before)
 }
