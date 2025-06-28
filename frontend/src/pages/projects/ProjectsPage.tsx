@@ -8,6 +8,7 @@ import { apiService, useApiCall } from '@/services/api';
 import TaskFileModal from '../../components/ui/TaskFileModal';
 import { useAuth } from '@/context/AuthContext';
 import TaskReviewModal from '@/components/ui/TaskReviewModal';
+import ProjectReportPDF from '@/components/ui/ProjectReportPDF';
 
 // Types for our data (updated to match backend structure)
 interface User {
@@ -801,6 +802,15 @@ const ProjectsPage: React.FC = () => {
                       <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(project.status)}`}>
                         {project.status.replace('_', ' ')}
                       </span>
+                    </div>
+
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <ProjectReportPDF 
+                        project={project}
+                        onDownload={() => {
+                          console.log(`PDF report downloaded for project: ${project.name}`);
+                        }}
+                      />
                     </div>
                     
                     {/* Progress Bar */}
