@@ -71,7 +71,7 @@ router.put('/milestones/:id', milestoneIdValidator, updateMilestoneValidator, mi
 router.delete('/milestones/:id', milestoneIdValidator, milestoneController.deleteMilestone);
 
 // POST /api/milestones/:id/tasks - Add milestone task
-router.post('/milestones/:id/tasks', milestoneIdValidator, createTaskValidator, milestoneController.createTask);
+router.post('/:id/tasks', milestoneIdValidator, createTaskValidator, milestoneController.createTask);
 
 // POST /api/projects/:id/permission - Check project permission
 router.post('/:id/permission', projectIdValidator, projectController.checkProjectPermission);

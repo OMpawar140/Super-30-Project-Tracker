@@ -3,6 +3,7 @@ const { successResponse, errorResponse } = require('../utils/response');
 const { validationResult } = require('express-validator');
 
 class TaskController {
+
   // Get all tasks for a milestone
   async getMilestoneTasks(req, res) {
     try {
@@ -62,13 +63,6 @@ class TaskController {
     }
   }
 
-  // Create new task
-const milestoneService = require('../services/milestoneService');
-const { successResponse, errorResponse } = require('../utils/response');
-const { validationResult } = require('express-validator');
-const emailService = require('../services/emailService');
-
-class TaskController {
   // Create a new task for a milestone
   async createTask(req, res) {
     try {
@@ -85,7 +79,6 @@ class TaskController {
         milestoneId,
         createdBy: userEmail
       };
-      const taskData = req.body;
 
       console.log('Creating task for milestone:', milestoneId, 'by user:', userEmail);
 
@@ -101,8 +94,7 @@ class TaskController {
       return errorResponse(res, 'Failed to create task', 500);
     }
   }
-
-  // Update existing task
+  
   // Get task by ID
   async getTask(req, res) {
     try {
@@ -124,27 +116,6 @@ class TaskController {
     }
   }
 
-  // Get all tasks for a milestone
-  async getMilestoneTasks(req, res) {
-    try {
-      const { milestoneId } = req.params;
-      const userEmail = req.user.email;
-
-      console.log('Getting tasks for milestone:', milestoneId, 'for user:', userEmail);
-
-      const tasks = await taskService.getMilestoneTasks(milestoneId, userEmail);
-      
-      if (tasks === null) {
-        return errorResponse(res, 'Milestone not found or access denied', 404);
-      }
-
-      return successResponse(res, 'Milestone tasks retrieved successfully', tasks);
-    } catch (error) {
-      console.error('Error getting milestone tasks:', error);
-      return errorResponse(res, 'Failed to retrieve milestone tasks', 500);
-    }
-  }
-
   // Get tasks assigned to the current user
   async getMyTasks(req, res) {
     try {
@@ -152,7 +123,6 @@ class TaskController {
       const userEmail = req.user.email;
 
       console.log('Getting assigned tasks for user:', userEmail, 'project:', projectId);
-
       const tasks = await taskService.getAssignedTasks(userEmail, projectId || null);
 
       return successResponse(res, 'Assigned tasks retrieved successfully', tasks);
@@ -277,7 +247,6 @@ class TaskController {
       }
 
       console.log('Getting tasks by status:', status, 'for milestone:', milestoneId, 'for user:', userEmail);
-
       const tasks = await taskService.getTasksByStatus(milestoneId, userEmail, status);
       
       if (tasks === null) {
@@ -324,7 +293,6 @@ class TaskController {
       const userEmail = req.user.email;
 
       console.log('Getting overdue tasks for milestone:', milestoneId, 'for user:', userEmail);
-
       const tasks = await taskService.getOverdueTasks(milestoneId, userEmail);
       
       if (tasks === null) {
@@ -370,15 +338,12 @@ class TaskController {
 
       const task = await taskService.assignTask(id, userEmail, userId);
       const { assigneeId } = req.body;
-      const userEmail = req.user.email;
 
       if (!assigneeId) {
         return errorResponse(res, 'Assignee ID is required', 400);
       }
 
       console.log('Assigning task:', id, 'to user:', assigneeId, 'by user:', userEmail);
-
-      const task = await taskService.assignTask(id, userEmail, assigneeId);
       
       if (!task) {
         return errorResponse(res, 'Task not found or access denied', 404);
@@ -402,17 +367,11 @@ class TaskController {
 
       const task = await taskService.unassignTask(id, userEmail);
       console.log('Completing task:', id, 'by user:', userEmail);
-
-      const task = await taskService.completeTask(id, userEmail);
       
       if (!task) {
         return errorResponse(res, 'Task not found or access denied', 404);
       }
 
-      return successResponse(res, 'Task unassigned successfully', task);
-    } catch (error) {
-      console.error('Error unassigning task:', error);
-      return errorResponse(res, 'Failed to unassign task', 500);
       return successResponse(res, 'Task completed successfully', task);
     } catch (error) {
       console.error('Error completing task:', error);
@@ -445,120 +404,6 @@ class TaskController {
     } catch (error) {
       console.error('Error getting task statistics:', error);
       return errorResponse(res, 'Failed to retrieve task statistics', 500);
-    }
-  }
-
-  // Bulk update task status
-  async bulkUpdateTaskStatus(req, res) {
-    try {
-      // Check validation errors
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return errorResponse(res, 'Validation failed', 400, errors.array());
-      }
-
-      const { milestoneId } = req.params;
-      const { taskIds, status } = req.body;
-      const userEmail = req.user.email;
-
-      if (!Array.isArray(taskIds) || taskIds.length === 0) {
-        return errorResponse(res, 'taskIds must be a non-empty array', 400);
-      }
-
-      if (!status) {
-        return errorResponse(res, 'Status is required', 400);
-      }
-
-      console.log('Bulk updating task status for milestone:', milestoneId, 'by user:', userEmail);
-
-      const results = [];
-      
-      for (const taskId of taskIds) {
-        try {
-          const task = await taskService.updateTask(taskId, userEmail, { status });
-          if (task) {
-            results.push({ 
-              success: true, 
-              taskId,
-              task
-            });
-          } else {
-            results.push({ 
-              success: false, 
-              taskId,
-              error: 'Task not found or access denied'
-            });
-          }
-        } catch (error) {
-          results.push({ 
-            success: false, 
-            taskId,
-            error: error.message
-          });
-        }
-      }
-
-      return successResponse(res, 'Task status updates processed', results);
-    } catch (error) {
-      console.error('Error bulk updating task status:', error);
-      return errorResponse(res, 'Failed to bulk update task status', 500);
-    }
-  }
-
-  // Bulk assign tasks
-  async bulkAssignTasks(req, res) {
-    try {
-      // Check validation errors
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return errorResponse(res, 'Validation failed', 400, errors.array());
-      }
-
-      const { milestoneId } = req.params;
-      const { taskIds, assigneeId } = req.body;
-      const userEmail = req.user.email;
-
-      if (!Array.isArray(taskIds) || taskIds.length === 0) {
-        return errorResponse(res, 'taskIds must be a non-empty array', 400);
-      }
-
-      if (!assigneeId) {
-        return errorResponse(res, 'Assignee ID is required', 400);
-      }
-
-      console.log('Bulk assigning tasks for milestone:', milestoneId, 'by user:', userEmail);
-
-      const results = [];
-      
-      for (const taskId of taskIds) {
-        try {
-          const task = await taskService.assignTask(taskId, userEmail, assigneeId);
-          if (task) {
-            results.push({ 
-              success: true, 
-              taskId,
-              task
-            });
-          } else {
-            results.push({ 
-              success: false, 
-              taskId,
-              error: 'Task not found or access denied'
-            });
-          }
-        } catch (error) {
-          results.push({ 
-            success: false, 
-            taskId,
-            error: error.message
-          });
-        }
-      }
-
-      return successResponse(res, 'Task assignments processed', results);
-    } catch (error) {
-      console.error('Error bulk assigning tasks:', error);
-      return errorResponse(res, 'Failed to bulk assign tasks', 500);
     }
   }
 
@@ -616,8 +461,6 @@ class TaskController {
       }
 
       console.log('Updating task priority:', id, 'to:', priority, 'by user:', userEmail);
-
-      const task = await taskService.updateTask(id, userEmail, { priority });
       
       if (!task) {
         return errorResponse(res, 'Task not found or access denied', 404);
@@ -627,51 +470,6 @@ class TaskController {
     } catch (error) {
       console.error('Error updating task priority:', error);
       return errorResponse(res, 'Failed to update task priority', 500);
-    }
-  }
-
-  // Add comment to task
-  async addTaskComment(req, res) {
-    try {
-      // Check validation errors
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return errorResponse(res, 'Validation failed', 400, errors.array());
-      }
-
-      const { id } = req.params;
-      const { comment } = req.body;
-      const userEmail = req.user.email;
-
-      const taskComment = await taskService.addTaskComment(id, userEmail, comment);
-      
-      if (!taskComment) {
-        return errorResponse(res, 'Task not found or access denied', 404);
-      }
-
-      return successResponse(res, 'Comment added successfully', taskComment, 201);
-    } catch (error) {
-      console.error('Error adding task comment:', error);
-      return errorResponse(res, 'Failed to add comment', 500);
-    }
-  }
-
-  // Get task comments
-  async getTaskComments(req, res) {
-    try {
-      const { id } = req.params;
-      const userEmail = req.user.email;
-
-      const comments = await taskService.getTaskComments(id, userEmail);
-      
-      if (comments === null) {
-        return errorResponse(res, 'Task not found or access denied', 404);
-      }
-
-      return successResponse(res, 'Task comments retrieved successfully', comments);
-    } catch (error) {
-      console.error('Error getting task comments:', error);
-      return errorResponse(res, 'Failed to retrieve task comments', 500);
     }
   }
 
@@ -700,166 +498,6 @@ class TaskController {
       return errorResponse(res, 'Failed to update task due date', 500);
     }
   }
-
-  // Get tasks assigned to current user
-  async getMyTasks(req, res) {
-    try {
-      const userEmail = req.user.email;
-      const { projectId } = req.query;
-      
-      console.log('Getting tasks assigned to user:', userEmail);
-      const tasks = await taskService.getMyTasks(userEmail, projectId);
-      
-      return successResponse(res, 'Assigned tasks retrieved successfully', tasks);
-    } catch (error) {
-      console.error('Error getting assigned tasks:', error);
-      return errorResponse(res, 'Failed to retrieve assigned tasks', 500);
-    }
-  }
-
-  // Get tasks by status
-  async getTasksByStatus(req, res) {
-    try {
-      const { status } = req.query;
-      const { projectId } = req.query;
-      const userEmail = req.user.email;
-
-      if (!status) {
-        return errorResponse(res, 'Status parameter is required', 400);
-      }
-
-      console.log('Getting tasks by status:', status, 'for project:', projectId, 'by user:', userEmail);
-      const tasks = await taskService.getTasksByStatus(userEmail, status, projectId);
-      
-      return successResponse(res, 'Tasks retrieved successfully', tasks);
-    } catch (error) {
-      console.error('Error getting tasks by status:', error);
-      return errorResponse(res, 'Failed to retrieve tasks by status', 500);
-    }
-  }
-
-  // Get overdue tasks
-  async getOverdueTasks(req, res) {
-    try {
-      const { projectId } = req.query;
-      const userEmail = req.user.email;
-      
-      console.log('Getting overdue tasks for project:', projectId, 'by user:', userEmail);
-      const tasks = await taskService.getOverdueTasks(userEmail, projectId);
-      
-      return successResponse(res, 'Overdue tasks retrieved successfully', tasks);
-    } catch (error) {
-      console.error('Error getting overdue tasks:', error);
-      return errorResponse(res, 'Failed to retrieve overdue tasks', 500);
-    }
-  }
-
-  // Reorder tasks within a milestone
-  async reorderTasks(req, res) {
-    try {
-      // Check validation errors
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return errorResponse(res, 'Validation failed', 400, errors.array());
-      }
-
-      const { milestoneId } = req.params;
-      const { taskIds } = req.body;
-      const userEmail = req.user.email;
-
-      if (!Array.isArray(taskIds)) {
-        return errorResponse(res, 'taskIds must be an array', 400);
-      }
-
-      const result = await taskService.reorderTasks(milestoneId, userEmail, taskIds);
-      
-      if (!result) {
-        return errorResponse(res, 'Milestone not found or access denied', 404);
-      }
-
-      return successResponse(res, 'Tasks reordered successfully', result);
-    } catch (error) {
-      console.error('Error reordering tasks:', error);
-      return errorResponse(res, 'Failed to reorder tasks', 500);
-    }
-  }
-
-  // Move task to different milestone
-  async moveTask(req, res) {
-    try {
-      // Check validation errors
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return errorResponse(res, 'Validation failed', 400, errors.array());
-      }
-
-      const { id } = req.params;
-      const { milestoneId } = req.body;
-      const userEmail = req.user.email;
-
-      const task = await taskService.moveTask(id, userEmail, milestoneId);
-      
-      if (!task) {
-        return errorResponse(res, 'Task or milestone not found, or access denied', 404);
-      }
-      const { newMilestoneId } = req.body;
-      const userEmail = req.user.email;
-
-      if (!newMilestoneId) {
-        return errorResponse(res, 'New milestone ID is required', 400);
-      }
-
-      console.log('Moving task:', id, 'to milestone:', newMilestoneId, 'by user:', userEmail);
-
-      // Check permission for both old and new milestone
-      const [oldTaskPermission, newMilestonePermission] = await Promise.all([
-        taskService.checkTaskPermission(id, userEmail, ['CREATOR', 'ADMIN']),
-        taskService.checkMilestonePermission(newMilestoneId, userEmail, ['CREATOR', 'ADMIN'])
-      ]);
-
-      if (!oldTaskPermission || !newMilestonePermission) {
-        return errorResponse(res, 'Access denied for task or milestone', 404);
-      }
-
-      const task = await taskService.updateTask(id, userEmail, { milestoneId: newMilestoneId });
-      
-      if (!task) {
-        return errorResponse(res, 'Failed to move task', 500);
-      }
-
-      return successResponse(res, 'Task moved successfully', task);
-    } catch (error) {
-      console.error('Error moving task:', error);
-      return errorResponse(res, 'Failed to move task', 500);
-    }
-  }
-
-  // Bulk update tasks
-  async bulkUpdateTasks(req, res) {
-    try {
-      // Check validation errors
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return errorResponse(res, 'Validation failed', 400, errors.array());
-      }
-
-      const { updates } = req.body;
-      const userEmail = req.user.email;
-
-      if (!Array.isArray(updates)) {
-        return errorResponse(res, 'updates must be an array', 400);
-      }
-
-      console.log('Bulk updating tasks:', updates.length, 'tasks by user:', userEmail);
-      const results = await taskService.bulkUpdateTasks(userEmail, updates);
-      
-      return successResponse(res, 'Bulk update completed', results);
-    } catch (error) {
-      console.error('Error bulk updating tasks:', error);
-      return errorResponse(res, 'Failed to bulk update tasks', 500);
-    }
-  }
-}
 }
 
 module.exports = new TaskController();

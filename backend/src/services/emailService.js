@@ -19,6 +19,9 @@ class EmailService {
       auth: {
         user: "otp@students.coredecimal.com",
         pass: "JwalaKranti@2025"
+      },
+      tls: {
+        rejectUnauthorized: false
       }
     });
   }

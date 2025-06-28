@@ -200,11 +200,12 @@ export const apiService = {
     getTaskById: (id: string) => apiCall(`/tasks/${id}`),
     
     // Create new task (maps to POST /api/milestones/:milestoneId/tasks)
-    createTask: (milestoneId: string, taskData: Record<string, any>) =>
+    createTask: (milestoneId: string, taskData: Record<string, any>) => {
+      console.log(taskData);
       apiCall(`/milestones/${milestoneId}/tasks`, {
         method: 'POST',
         body: JSON.stringify(taskData),
-      }),
+      })},
     
     // Update existing task (maps to PUT /api/tasks/:id)
     updateTask: (id: string, taskData: Record<string, any>) =>

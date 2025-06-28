@@ -5,41 +5,57 @@ class TaskService {
   // Get all tasks for a milestone
   async getMilestoneTasks(milestoneId, userEmail) {
     try {
-      // First check if user has access to the milestone's project
-      const milestone = await prisma.milestone.findFirst({
-        where: { id: milestoneId },
-        include: {
-          project: {
-            include: {
-              members: {
-                where: { userId: userEmail }
-              }
-            }
-          }
-        }
-      });
-
-      if (!milestone || 
-          (milestone.project.creatorId !== userEmail && 
-           milestone.project.members.length === 0)) {
+      // Use dedicated permission checking method for better role-based access control
+      const hasPermission = await this.checkMilestonePermission(
+        milestoneId, 
+        userEmail, 
+        ['CREATOR', 'ADMIN', 'TASK_COMPLETER', 'VIEWER']
+      );
+      
+      if (!hasPermission) {
         return null;
       }
 
       const tasks = await prisma.task.findMany({
         where: { milestoneId },
         include: {
+          // Task assignee information
           assignee: {
             select: {
               email: true,
               skillset: true
             }
           },
+          // Task creator information
           creator: {
             select: {
               email: true,
               skillset: true
             }
           },
+          // Milestone and project context for better hierarchy understanding
+          milestone: {
+            select: {
+              id: true,
+              name: true,
+              dueDate: true,
+              status: true,
+              project: {
+                select: {
+                  id: true,
+                  name: true,
+                  status: true,
+                  creator: {
+                    select: {
+                      email: true,
+                      skillset: true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          // Complete comment information with author details
           comments: {
             include: {
               author: {
@@ -53,6 +69,7 @@ class TaskService {
               createdAt: 'desc'
             }
           },
+          // Comment count for quick reference
           _count: {
             select: {
               comments: true
@@ -60,12 +77,33 @@ class TaskService {
           }
         },
         orderBy: [
+          // Priority-based ordering (high priority first)
+          { priority: 'desc' },
+          // Due date ordering (urgent tasks first)
+          { dueDate: 'asc' },
+          // Fallback to custom order if available
           { order: 'asc' },
+          // Final fallback to creation time
           { createdAt: 'asc' }
         ]
       });
 
-      return tasks;
+      // Optional: Transform data to include computed fields
+      const enrichedTasks = tasks.map(task => ({
+        ...task,
+        // Add computed fields for better client-side handling
+        isOverdue: task.dueDate && new Date(task.dueDate) < new Date(),
+        hasComments: task._count.comments > 0,
+        projectContext: {
+          projectId: task.milestone.project.id,
+          projectName: task.milestone.project.name,
+          projectStatus: task.milestone.project.status,
+          milestoneName: task.milestone.name,
+          milestoneStatus: task.milestone.status
+        }
+      }));
+
+      return enrichedTasks;
     } catch (error) {
       console.error('Error in getMilestoneTasks:', error);
       throw error;
@@ -126,56 +164,157 @@ class TaskService {
     }
   }
 
-  // Get task by ID
+  // Get task by ID with comprehensive details and proper permission checking
   async getTaskById(taskId, userEmail) {
     try {
-      const task = await prisma.task.findFirst({
-        where: {
-          id: taskId,
-          milestone: {
-            project: {
-              OR: [
-                { creatorId: userEmail },
-                {
-                  members: {
-                    some: {
-                      userId: userEmail
-                    }
-                  }
-                }
-              ]
-            }
-          }
-        },
+      // Use dedicated permission checking method for better role-based access control
+      const hasPermission = await this.checkTaskPermission(
+        taskId, 
+        userEmail, 
+        ['CREATOR', 'ADMIN', 'TASK_COMPLETER', 'MEMBER', 'VIEWER']
+      );
+      
+      if (!hasPermission) {
+        return null;
+      }
+
+      const task = await prisma.task.findUnique({
+        where: { id: taskId },
         include: {
+          // Task assignee information
+          assignee: {
+            select: {
+              email: true,
+              skillset: true,
+            }
+          },
+          // Task creator information
+          creator: {
+            select: {
+              email: true,
+              skillset: true,
+              
+            }
+          },
+          // Complete milestone and project hierarchy
           milestone: {
             select: {
               id: true,
               name: true,
+              description: true,
+              dueDate: true,
+              status: true,
               project: {
                 select: {
                   id: true,
-                  name: true
+                  name: true,
+                  description: true,
+                  status: true,
+                  creator: {
+                    select: {
+                      email: true,
+                      skillset: true,
+                      name: true
+                    }
+                  }
                 }
               }
             }
           },
-          assignee: {
-            select: {
-              email: true,
-              skillset: true
+          // Task comments with full author details
+          comments: {
+            include: {
+              author: {
+                select: {
+                  email: true,
+                  skillset: true,
+                  name: true
+                }
+              }
+            },
+            orderBy: {
+              createdAt: 'desc'
             }
           },
+          // Task dependencies (if any)
+          dependencies: {
+            select: {
+              id: true,
+              title: true,
+              status: true,
+              priority: true
+            }
+          },
+          // Tasks that depend on this task
+          dependents: {
+            select: {
+              id: true,
+              title: true,
+              status: true,
+              priority: true
+            }
+          },
+          // Comment count for quick reference
+          _count: {
+            select: {
+              comments: true,
+              dependencies: true,
+              dependents: true
+            }
+          }
         }
       });
 
-      return task;
+      if (!task) {
+        return null;
+      }
+
+      // Enrich task data with computed fields for better client-side handling
+      const enrichedTask = {
+        ...task,
+        // Computed status fields
+        isOverdue: task.dueDate && new Date(task.dueDate) < new Date(),
+        isAssignedToCurrentUser: task.assignee?.email === userEmail,
+        isCreatedByCurrentUser: task.creator?.email === userEmail,
+        
+        // Quick access flags
+        hasComments: task._count.comments > 0,
+        hasDependencies: task._count.dependencies > 0,
+        hasDependents: task._count.dependents > 0,
+        
+        // Contextual information
+        projectContext: {
+          projectId: task.milestone.project.id,
+          projectName: task.milestone.project.name,
+          projectStatus: task.milestone.project.status,
+          projectCreator: task.milestone.project.creator,
+          milestoneId: task.milestone.id,
+          milestoneName: task.milestone.name,
+          milestoneStatus: task.milestone.status,
+          milestoneDueDate: task.milestone.dueDate
+        },
+        
+        // Permission context for UI rendering
+        userPermissions: {
+          canEdit: ['CREATOR', 'ADMIN'].some(role => 
+            this.checkTaskPermission(taskId, userEmail, [role])
+          ),
+          canComment: ['CREATOR', 'ADMIN', 'TASK_COMPLETER', 'MEMBER'].some(role => 
+            this.checkTaskPermission(taskId, userEmail, [role])
+          ),
+          canAssign: ['CREATOR', 'ADMIN'].some(role => 
+            this.checkTaskPermission(taskId, userEmail, [role])
+          )
+        }
+      };
+
+      return enrichedTask;
     } catch (error) {
       console.error('Error in getTaskById:', error);
       throw error;
     }
   }
-
+  
   // Create new task
   async createTask(milestoneId, userEmail, taskData) {
     try {
@@ -183,6 +322,16 @@ class TaskService {
       const hasPermission = await this.checkMilestonePermission(milestoneId, userEmail, ['CREATOR', 'ADMIN', 'TASK_MANAGER']);
       if (!hasPermission) {
         return null;
+      }
+
+      // Validate assignee exists if provided
+      if (taskData.assigneeId) {
+        const assigneeExists = await prisma.user.findUnique({
+          where: { id: taskData.assigneeId }
+        });
+        if (!assigneeExists) {
+          throw new Error('Assigned user not found');
+        }
       }
 
       // Get the next order number for the milestone
@@ -196,30 +345,19 @@ class TaskService {
       const task = await prisma.task.create({
         data: {
           title: taskData.title,
-          description: taskData.description,
+          description: taskData.description || null,
           status: taskData.status || 'TODO',
           priority: taskData.priority || 'MEDIUM',
+          startDate: taskData.startDate ? new Date(taskData.startDate) : null,
           dueDate: taskData.dueDate ? new Date(taskData.dueDate) : null,
           estimatedHours: taskData.estimatedHours || null,
-          assigneeId: taskData.assignedTo || null,
+          assigneeId: taskData.assigneeId || null,
           milestoneId,
           createdBy: userEmail,
           order: nextOrder,
           tags: taskData.tags || []
         },
         include: {
-          milestone: {
-            select: {
-              id: true,
-              name: true,
-              project: {
-                select: {
-                  id: true,
-                  name: true
-                }
-              }
-            }
-          },
           assignee: {
             select: {
               email: true,
@@ -230,6 +368,24 @@ class TaskService {
             select: {
               email: true,
               skillset: true
+            }
+          },
+          milestone: {
+            select: {
+              id: true,
+              name: true,
+              project: {
+                select: {
+                  id: true,
+                  name: true,
+                  creator: {
+                    select: {
+                      email: true,
+                      skillset: true
+                    }
+                  }
+                }
+              }
             }
           }
         }
@@ -245,8 +401,13 @@ class TaskService {
   // Update existing task
   async updateTask(taskId, userEmail, updateData) {
     try {
+      // Dynamic permission checking - allow task completers for status updates
+      const allowedRoles = updateData.status ? 
+        ['CREATOR', 'ADMIN', 'TASK_COMPLETER'] : 
+        ['CREATOR', 'ADMIN'];
+      
       // Check if user has permission to update this task
-      const hasPermission = await this.checkTaskPermission(taskId, userEmail, ['CREATOR', 'ADMIN', 'TASK_MANAGER']);
+      const hasPermission = await this.checkTaskPermission(taskId, userEmail, allowedRoles);
       if (!hasPermission) {
         return null;
       }
@@ -258,16 +419,31 @@ class TaskService {
           ...(updateData.description !== undefined && { description: updateData.description }),
           ...(updateData.status && { status: updateData.status }),
           ...(updateData.priority && { priority: updateData.priority }),
+          ...(updateData.startDate !== undefined && { 
+            startDate: updateData.startDate ? new Date(updateData.startDate) : null 
+          }),
           ...(updateData.dueDate !== undefined && { 
             dueDate: updateData.dueDate ? new Date(updateData.dueDate) : null 
           }),
           ...(updateData.estimatedHours !== undefined && { estimatedHours: updateData.estimatedHours }),
           ...(updateData.actualHours !== undefined && { actualHours: updateData.actualHours }),
-          ...(updateData.assignedTo !== undefined && { assigneeId: updateData.assignedTo }),
+          ...(updateData.assigneeId !== undefined && { assigneeId: updateData.assigneeId }),
           ...(updateData.tags && { tags: updateData.tags }),
           updatedAt: new Date()
         },
         include: {
+          assignee: {
+            select: {
+              email: true,
+              skillset: true
+            }
+          },
+          // creator: {
+          //   select: {
+          //     email: true,
+          //     skillset: true
+          //   }
+          // },
           milestone: {
             select: {
               id: true,
@@ -275,21 +451,15 @@ class TaskService {
               project: {
                 select: {
                   id: true,
-                  name: true
+                  name: true,
+                  creator: {
+                    select: {
+                      email: true,
+                      skillset: true
+                    }
+                  }
                 }
               }
-            }
-          },
-          assignee: {
-            select: {
-              email: true,
-              skillset: true
-            }
-          },
-          creator: {
-            select: {
-              email: true,
-              skillset: true
             }
           }
         }
@@ -308,14 +478,40 @@ class TaskService {
       // Check if user has permission to delete this task
       const hasPermission = await this.checkTaskPermission(taskId, userEmail, ['CREATOR', 'ADMIN', 'TASK_MANAGER']);
       if (!hasPermission) {
-        return false;
+        return null;
       }
 
-      await prisma.task.delete({
-        where: { id: taskId }
+      const task = await prisma.task.delete({
+        where: { id: taskId },
+        include: {
+          assignee: {
+            select: {
+              email: true,
+              skillset: true
+            }
+          },
+          milestone: {
+            select: {
+              id: true,
+              name: true,
+              project: {
+                select: {
+                  id: true,
+                  name: true,
+                  creator: {
+                    select: {
+                      email: true,
+                      skillset: true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       });
 
-      return true;
+      return task;
     } catch (error) {
       console.error('Error in deleteTask:', error);
       throw error;
@@ -442,7 +638,7 @@ class TaskService {
   }
 
   // Assign task to user
-  async assignTask(taskId, userEmail, userId) {
+  async assignTask(taskId, userEmail, assigneeId) {
     try {
       // Check if user has permission to assign tasks
       const hasPermission = await this.checkTaskPermission(taskId, userEmail, ['CREATOR', 'ADMIN', 'TASK_MANAGER']);
@@ -457,7 +653,7 @@ class TaskService {
       }
 
       const projectId = task.milestone.project.id;
-      const isProjectMember = await this.checkProjectMembership(projectId, userId);
+      const isProjectMember = await this.checkProjectMembership(projectId, assigneeId);
       if (!isProjectMember) {
         throw new Error('User not a project member');
       }
@@ -465,20 +661,32 @@ class TaskService {
       const updatedTask = await prisma.task.update({
         where: { id: taskId },
         data: { 
-          assigneeId: userId,
+          assigneeId: assigneeId,
           updatedAt: new Date()
         },
         include: {
-          milestone: {
-            select: {
-              id: true,
-              name: true
-            }
-          },
           assignee: {
             select: {
               email: true,
               skillset: true
+            }
+          },
+          milestone: {
+            select: {
+              id: true,
+              name: true,
+              project: {
+                select: {
+                  id: true,
+                  name: true,
+                  creator: {
+                    select: {
+                      email: true,
+                      skillset: true
+                    }
+                  }
+                }
+              }
             }
           }
         }
@@ -487,38 +695,6 @@ class TaskService {
       return updatedTask;
     } catch (error) {
       console.error('Error in assignTask:', error);
-      throw error;
-    }
-  }
-
-  // Unassign task
-  async unassignTask(taskId, userEmail) {
-    try {
-      // Check if user has permission to unassign tasks
-      const hasPermission = await this.checkTaskPermission(taskId, userEmail, ['CREATOR', 'ADMIN', 'TASK_MANAGER']);
-      if (!hasPermission) {
-        return null;
-      }
-
-      const updatedTask = await prisma.task.update({
-        where: { id: taskId },
-        data: { 
-          assigneeId: null,
-          updatedAt: new Date()
-        },
-        include: {
-          milestone: {
-            select: {
-              id: true,
-              name: true
-            }
-          }
-        }
-      });
-
-      return updatedTask;
-    } catch (error) {
-      console.error('Error in unassignTask:', error);
       throw error;
     }
   }
@@ -712,8 +888,16 @@ class TaskService {
   }
 
   // Get tasks by status
-  async getTasksByStatus(userEmail, status, projectId = null) {
+  async getTasksByStatus(userEmail, status, milestoneId = null, projectId = null) {
     try {
+      // If milestoneId is provided, check milestone permission
+      if (milestoneId) {
+        const hasPermission = await this.checkMilestonePermission(milestoneId, userEmail, ['CREATOR', 'ADMIN', 'MEMBER']);
+        if (!hasPermission) {
+          return null;
+        }
+      }
+
       const whereClause = {
         status,
         milestone: {
@@ -732,13 +916,25 @@ class TaskService {
         }
       };
 
+      // Add milestone filter if specified
+      if (milestoneId) {
+        whereClause.milestoneId = milestoneId;
+      }
+
+      // Add project filter if specified
       if (projectId) {
-        whereClause.milestone.projectId = projectId;
+        whereClause.milestone.project.id = projectId;
       }
 
       const tasks = await prisma.task.findMany({
         where: whereClause,
         include: {
+          assignee: {
+            select: {
+              email: true,
+              skillset: true
+            }
+          },
           milestone: {
             select: {
               id: true,
@@ -746,15 +942,15 @@ class TaskService {
               project: {
                 select: {
                   id: true,
-                  name: true
+                  name: true,
+                  creator: {
+                    select: {
+                      email: true,
+                      skillset: true
+                    }
+                  }
                 }
               }
-            }
-          },
-          assignee: {
-            select: {
-              email: true,
-              skillset: true
             }
           }
         },
@@ -773,33 +969,54 @@ class TaskService {
   }
 
   // Get overdue tasks
-  async getOverdueTasks(userEmail, projectId = null) {
+  async getOverdueTasks(userEmail, projectId = null, milestoneId = null) {
     try {
-      const whereClause = {
-        dueDate: {
-          lt: new Date()
-        },
-        status: {
-          not: 'DONE'
-        },
-        milestone: {
-          project: {
-            OR: [
-              { creatorId: userEmail },
-              {
-                members: {
-                  some: {
-                    userId: userEmail
+      let whereClause;
+      let hasPermission = true;
+
+      if (milestoneId) {
+        // Check if user has permission to view milestone tasks
+        hasPermission = await this.checkMilestonePermission(milestoneId, userEmail, ['CREATOR', 'ADMIN', 'MEMBER']);
+        if (!hasPermission) {
+          return null;
+        }
+
+        whereClause = {
+          milestoneId: milestoneId,
+          dueDate: {
+            lt: new Date()
+          },
+          status: {
+            not: 'COMPLETED'
+          }
+        };
+      } else {
+        whereClause = {
+          dueDate: {
+            lt: new Date()
+          },
+          status: {
+            not: 'DONE'
+          },
+          milestone: {
+            project: {
+              OR: [
+                { creatorId: userEmail },
+                {
+                  members: {
+                    some: {
+                      userId: userEmail
+                    }
                   }
                 }
-              }
-            ]
+              ]
+            }
           }
-        }
-      };
+        };
 
-      if (projectId) {
-        whereClause.milestone.projectId = projectId;
+        if (projectId) {
+          whereClause.milestone.projectId = projectId;
+        }
       }
 
       const tasks = await prisma.task.findMany({
@@ -812,7 +1029,13 @@ class TaskService {
               project: {
                 select: {
                   id: true,
-                  name: true
+                  name: true,
+                  creator: {
+                    select: {
+                      email: true,
+                      skillset: true
+                    }
+                  }
                 }
               }
             }
@@ -832,138 +1055,6 @@ class TaskService {
       return tasks;
     } catch (error) {
       console.error('Error in getOverdueTasks:', error);
-      throw error;
-    }
-  }
-
-  // Reorder tasks within a milestone
-  async reorderTasks(milestoneId, userEmail, taskIds) {
-    try {
-      // Check if user has permission to reorder tasks
-      const hasPermission = await this.checkMilestonePermission(milestoneId, userEmail, ['CREATOR', 'ADMIN', 'TASK_MANAGER']);
-      if (!hasPermission) {
-        return null;
-      }
-
-      // Update the order of each task
-      const updatePromises = taskIds.map((taskId, index) => 
-        prisma.task.update({
-          where: { id: taskId },
-          data: { order: index + 1 }
-        })
-      );
-
-      await Promise.all(updatePromises);
-
-      // Return the updated tasks
-      const tasks = await this.getMilestoneTasks(milestoneId, userEmail);
-      return tasks;
-    } catch (error) {
-      console.error('Error in reorderTasks:', error);
-      throw error;
-    }
-  }
-
-  // Move task to different milestone
-  async moveTask(taskId, userEmail, newMilestoneId) {
-    try {
-      // Check if user has permission for both milestones
-      const hasPermissionOld = await this.checkTaskPermission(taskId, userEmail, ['CREATOR', 'ADMIN', 'TASK_MANAGER']);
-      const hasPermissionNew = await this.checkMilestonePermission(newMilestoneId, userEmail, ['CREATOR', 'ADMIN', 'TASK_MANAGER']);
-      
-      if (!hasPermissionOld || !hasPermissionNew) {
-        return null;
-      }
-
-      // Get the next order number for the new milestone
-      const lastTask = await prisma.task.findFirst({
-        where: { milestoneId: newMilestoneId },
-        orderBy: { order: 'desc' }
-      });
-
-      const nextOrder = lastTask ? lastTask.order + 1 : 1;
-
-      const updatedTask = await prisma.task.update({
-        where: { id: taskId },
-        data: { 
-          milestoneId: newMilestoneId,
-          order: nextOrder,
-          updatedAt: new Date()
-        },
-        include: {
-          milestone: {
-            select: {
-              id: true,
-              name: true,
-              project: {
-                select: {
-                  id: true,
-                  name: true
-                }
-              }
-            }
-          },
-          assignee: {
-            select: {
-              email: true,
-              skillset: true
-            }
-          }
-        }
-      });
-
-      return updatedTask;
-    } catch (error) {
-      console.error('Error in moveTask:', error);
-      throw error;
-    }
-  }
-
-  // Bulk update tasks
-  async bulkUpdateTasks(userEmail, updates) {
-    try {
-      const results = [];
-
-      for (const update of updates) {
-        try {
-          const { taskId, updates: taskUpdates } = update;
-          
-          // Check permission for each task
-          const hasPermission = await this.checkTaskPermission(taskId, userEmail, ['CREATOR', 'ADMIN', 'TASK_MANAGER']);
-          if (!hasPermission) {
-            results.push({
-              taskId,
-              success: false,
-              error: 'Access denied'
-            });
-            continue;
-          }
-
-          const updatedTask = await prisma.task.update({
-            where: { id: taskId },
-            data: {
-              ...taskUpdates,
-              updatedAt: new Date()
-            }
-          });
-
-          results.push({
-            taskId,
-            success: true,
-            task: updatedTask
-          });
-        } catch (error) {
-          results.push({
-            taskId: update.taskId,
-            success: false,
-            error: error.message
-          });
-        }
-      }
-
-      return results;
-    } catch (error) {
-      console.error('Error in bulkUpdateTasks:', error);
       throw error;
     }
   }
@@ -995,15 +1086,18 @@ class TaskService {
   }
 
   // Helper method to check milestone permission
-  async checkMilestonePermission(milestoneId, userEmail, allowedRoles) {
+  async checkMilestonePermission(milestoneId, userEmail, allowedRoles = ['CREATOR', 'ADMIN']) {
     try {
-      const milestone = await prisma.milestone.findFirst({
+      const milestone = await prisma.milestone.findUnique({
         where: { id: milestoneId },
         include: {
           project: {
             include: {
+              creator: true,
               members: {
-                where: { userId: userEmail }
+                include: {
+                  user: true
+                }
               }
             }
           }
@@ -1012,99 +1106,38 @@ class TaskService {
 
       if (!milestone) return false;
 
-      // Check if user is creator
-      if (allowedRoles.includes('CREATOR') && milestone.project.creatorId === userEmail) {
+      const project = milestone.project;
+      
+      // Check if user is project creator
+      if (allowedRoles.includes('CREATOR') && project.creator.email === userEmail) {
         return true;
       }
 
-      // Check if user is member with required role
-      if (milestone.project.members.length > 0) {
-        const memberRole = milestone.project.members[0].role;
-        return allowedRoles.includes(memberRole);
+      // Check if user is admin member
+      if (allowedRoles.includes('ADMIN')) {
+        const adminMember = project.members.find(
+          member => member.user.email === userEmail && member.role === 'ADMIN'
+        );
+        if (adminMember) return true;
+      }
+
+      // Check if user is regular member (for read operations)
+      if (allowedRoles.includes('MEMBER')) {
+        const member = project.members.find(
+          member => member.user.email === userEmail
+        );
+        if (member) return true;
       }
 
       return false;
     } catch (error) {
-      console.error('Error in checkMilestonePermission:', error);
+      console.error('Error checking milestone permission:', error);
       return false;
     }
   }
-
+  
   // Helper method to check task permission
-  async checkTaskPermission(taskId, userEmail, allowedRoles) {
-    try {
-      const task = await prisma.task.findFirst({
-        where: { id: taskId },
-        include: {
-          milestone: {
-            include: {
-              project: {
-                include: {
-                  members: {
-                    where: { userId: userEmail }
-                  }
-                }
-              }
-            }
-          }
-        }
-      });
-
-      if (!task) return false;
-
-      const project = task.milestone.project;
-
-      // Check if user is creator
-      if (allowedRoles.includes('CREATOR') && project.creatorId === userEmail) {
-        return true;
-      }
-
-      // Check if user is member with required role
-      if (project.members.length > 0) {
-        const memberRole = project.members[0].role;
-        return allowedRoles.includes(memberRole);
-      }
-
-      return false;
-    } catch (error) {
-      console.error('Error in checkTaskPermission:', error);
-      return false;
-    }
-  }
-
-  // Helper method to check project membership
-  async checkProjectMembership(projectId, userEmail) {
-    try {
-      const project = await prisma.project.findFirst({
-        where: {
-          id: projectId,
-          OR: [
-            { creatorId: userEmail },
-            {
-              members: {
-                some: {
-                  userId: userEmail
-                }
-              }
-            }
-          ]
-        }
-      });
-
-      return !!project;
-    } catch (error) {
-      console.error('Error in checkProjectMembership:', error);
-      return false;
-    }
-  }
-}
-
-module.exports = new TaskService();const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
-
-class TaskService {
-  // Check if user has permission to manage tasks (via milestone/project permission)
-  async checkTaskPermission(taskId, userEmail, requiredRoles = ['CREATOR', 'ADMIN']) {
+  async checkTaskPermission(taskId, userEmail, allowedRoles = ['CREATOR', 'ADMIN']) {
     try {
       const task = await prisma.task.findUnique({
         where: { id: taskId },
@@ -1132,12 +1165,12 @@ class TaskService {
       const project = task.milestone.project;
       
       // Check if user is project creator
-      if (requiredRoles.includes('CREATOR') && project.creator.email === userEmail) {
+      if (allowedRoles.includes('CREATOR') && project.creator.email === userEmail) {
         return true;
       }
 
       // Check if user is admin member
-      if (requiredRoles.includes('ADMIN')) {
+      if (allowedRoles.includes('ADMIN')) {
         const adminMember = project.members.find(
           member => member.user.email === userEmail && member.role === 'ADMIN'
         );
@@ -1145,12 +1178,12 @@ class TaskService {
       }
 
       // Check if user is task assignee (for task completion and viewing)
-      if (requiredRoles.includes('TASK_COMPLETER') && task.assignee && task.assignee.email === userEmail) {
+      if (allowedRoles.includes('TASK_COMPLETER') && task.assignee && task.assignee.email === userEmail) {
         return true;
       }
 
       // Check if user is regular member (for read operations)
-      if (requiredRoles.includes('MEMBER')) {
+      if (allowedRoles.includes('MEMBER')) {
         const member = project.members.find(
           member => member.user.email === userEmail
         );
@@ -1164,207 +1197,29 @@ class TaskService {
     }
   }
 
-  // Check milestone permission for creating tasks
-  async checkMilestonePermission(milestoneId, userEmail, requiredRoles = ['CREATOR', 'ADMIN']) {
+  // Helper method to check project membership
+  async checkProjectMembership(projectId, userEmail) {
     try {
-      const milestone = await prisma.milestone.findUnique({
-        where: { id: milestoneId },
-        include: {
-          project: {
-            include: {
-              creator: true,
+      const project = await prisma.project.findFirst({
+        where: {
+          id: projectId,
+          OR: [
+            { creatorId: userEmail },
+            {
               members: {
-                include: {
-                  user: true
+                some: {
+                  userId: userEmail
                 }
               }
             }
-          }
+          ]
         }
       });
 
-      if (!milestone) return false;
-
-      const project = milestone.project;
-      
-      // Check if user is project creator
-      if (requiredRoles.includes('CREATOR') && project.creator.email === userEmail) {
-        return true;
-      }
-
-      // Check if user is admin member
-      if (requiredRoles.includes('ADMIN')) {
-        const adminMember = project.members.find(
-          member => member.user.email === userEmail && member.role === 'ADMIN'
-        );
-        if (adminMember) return true;
-      }
-
-      // Check if user is regular member (for read operations)
-      if (requiredRoles.includes('MEMBER')) {
-        const member = project.members.find(
-          member => member.user.email === userEmail
-        );
-        if (member) return true;
-      }
-
+      return !!project;
+    } catch (error) {
+      console.error('Error in checkProjectMembership:', error);
       return false;
-    } catch (error) {
-      console.error('Error checking milestone permission:', error);
-      return false;
-    }
-  }
-
-  // Create task (only project creator or admin can create)
-  async createTask(milestoneId, userEmail, taskData) {
-    try {
-      // Check if user has permission to create tasks in this milestone
-      const hasPermission = await this.checkMilestonePermission(milestoneId, userEmail, ['CREATOR', 'ADMIN']);
-      if (!hasPermission) {
-        return null;
-      }
-
-      const task = await prisma.task.create({
-        data: {
-          title: taskData.title,
-          description: taskData.description || null,
-          priority: taskData.priority || 'MEDIUM',
-          status: taskData.status || 'UPCOMING',
-          startDate: taskData.startDate ? new Date(taskData.startDate) : null,
-          dueDate: taskData.dueDate ? new Date(taskData.dueDate) : null,
-          milestoneId: milestoneId,
-          assigneeId: taskData.assigneeId || null
-        },
-        include: {
-          assignee: {
-            select: {
-           
-              email: true,
-              skillset: true
-            }
-          },
-          milestone: {
-            select: {
-              id: true,
-              name: true,
-              project: {
-                select: {
-                  id: true,
-                  name: true,
-                  creator: {
-                    select: {
-                      email: true,
-                      skillset: true
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      });
-
-      return task;
-    } catch (error) {
-      console.error('Error in createTask:', error);
-      throw error;
-    }
-  }
-
-  // Get task by ID (project members and assignee can view)
-  async getTaskById(taskId, userEmail) {
-    try {
-      // Check if user has permission to view this task
-      const hasPermission = await this.checkTaskPermission(taskId, userEmail, ['CREATOR', 'ADMIN', 'TASK_COMPLETER', 'MEMBER']);
-      if (!hasPermission) {
-        return null;
-      }
-
-      const task = await prisma.task.findUnique({
-        where: { id: taskId },
-        include: {
-          assignee: {
-            select: {
-              email: true,
-              skillset: true
-            }
-          },
-          milestone: {
-            select: {
-              id: true,
-              name: true,
-              project: {
-                select: {
-                  id: true,
-                  name: true,
-                  creator: {
-                    select: {
-                      email: true,
-                      skillset: true
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      });
-
-      return task;
-    } catch (error) {
-      console.error('Error in getTaskById:', error);
-      throw error;
-    }
-  }
-
-  // Get all tasks for a milestone (project members can view)
-  async getMilestoneTasks(milestoneId, userEmail) {
-    try {
-      // Check if user has permission to view milestone tasks
-      const hasPermission = await this.checkMilestonePermission(milestoneId, userEmail, ['CREATOR', 'ADMIN', 'MEMBER']);
-      if (!hasPermission) {
-        return null;
-      }
-
-      const tasks = await prisma.task.findMany({
-        where: { milestoneId: milestoneId },
-        include: {
-          assignee: {
-            select: {
-             
-              email: true,
-              skillset: true
-            }
-          },
-          milestone: {
-            select: {
-              id: true,
-              name: true,
-              project: {
-                select: {
-                  id: true,
-                  name: true,
-                  creator: {
-                    select: {
-                      email: true,
-                      skillset: true
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        orderBy: [
-          { priority: 'desc' },
-          { dueDate: 'asc' }
-        ]
-      });
-
-      return tasks;
-    } catch (error) {
-      console.error('Error in getMilestoneTasks:', error);
-      throw error;
     }
   }
 
@@ -1426,163 +1281,6 @@ class TaskService {
     }
   }
 
-  // Update task (only project creator, admin, or assignee can update)
-  async updateTask(taskId, userEmail, updateData) {
-    try {
-      // For status updates, allow assignee to update
-      const allowedRoles = updateData.status ? ['CREATOR', 'ADMIN', 'TASK_COMPLETER'] : ['CREATOR', 'ADMIN'];
-      
-      // Check if user has permission to update this task
-      const hasPermission = await this.checkTaskPermission(taskId, userEmail, allowedRoles);
-      if (!hasPermission) {
-        return null;
-      }
-
-      const task = await prisma.task.update({
-        where: { id: taskId },
-        data: {
-          ...(updateData.title && { title: updateData.title }),
-          ...(updateData.description !== undefined && { description: updateData.description }),
-          ...(updateData.priority && { priority: updateData.priority }),
-          ...(updateData.status && { status: updateData.status }),
-          ...(updateData.startDate && { startDate: new Date(updateData.startDate) }),
-          ...(updateData.dueDate && { dueDate: new Date(updateData.dueDate) }),
-          ...(updateData.assigneeId !== undefined && { assigneeId: updateData.assigneeId })
-        },
-        include: {
-          assignee: {
-            select: {
-              email: true,
-              skillset: true
-            }
-          },
-          milestone: {
-            select: {
-              id: true,
-              name: true,
-              project: {
-                select: {
-                  id: true,
-                  name: true,
-                  creator: {
-                    select: {
-                      email: true,
-                      skillset: true
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      });
-
-      return task;
-    } catch (error) {
-      console.error('Error in updateTask:', error);
-      throw error;
-    }
-  }
-
-  // Delete task (only project creator or admin can delete)
-  async deleteTask(taskId, userEmail) {
-    try {
-      // Check if user has permission to delete this task
-      const hasPermission = await this.checkTaskPermission(taskId, userEmail, ['CREATOR', 'ADMIN']);
-      if (!hasPermission) {
-        return null;
-      }
-
-      const task = await prisma.task.delete({
-        where: { id: taskId },
-        include: {
-          assignee: {
-            select: {
-              email: true,
-              skillset: true
-            }
-          },
-          milestone: {
-            select: {
-              id: true,
-              name: true,
-              project: {
-                select: {
-                  id: true,
-                  name: true,
-                  creator: {
-                    select: {
-                      email: true,
-                      skillset: true
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      });
-
-      return task;
-    } catch (error) {
-      console.error('Error in deleteTask:', error);
-      throw error;
-    }
-  }
-
-  // Get tasks by status for a milestone
-  async getTasksByStatus(milestoneId, userEmail, status) {
-    try {
-      // Check if user has permission to view milestone tasks
-      const hasPermission = await this.checkMilestonePermission(milestoneId, userEmail, ['CREATOR', 'ADMIN', 'MEMBER']);
-      if (!hasPermission) {
-        return null;
-      }
-
-      const tasks = await prisma.task.findMany({
-        where: { 
-          milestoneId: milestoneId,
-          status: status
-        },
-        include: {
-          assignee: {
-            select: {
-              email: true,
-              skillset: true
-            }
-          },
-          milestone: {
-            select: {
-              id: true,
-              name: true,
-              project: {
-                select: {
-                  id: true,
-                  name: true,
-                  creator: {
-                    select: {
-                      email: true,
-                      skillset: true
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        orderBy: [
-          { priority: 'desc' },
-          { dueDate: 'asc' }
-        ]
-      });
-
-      return tasks;
-    } catch (error) {
-      console.error('Error in getTasksByStatus:', error);
-      throw error;
-    }
-  }
-
   // Get tasks by priority for a milestone
   async getTasksByPriority(milestoneId, userEmail, priority) {
     try {
@@ -1631,63 +1329,6 @@ class TaskService {
       return tasks;
     } catch (error) {
       console.error('Error in getTasksByPriority:', error);
-      throw error;
-    }
-  }
-
-  // Get overdue tasks for a milestone
-  async getOverdueTasks(milestoneId, userEmail) {
-    try {
-      // Check if user has permission to view milestone tasks
-      const hasPermission = await this.checkMilestonePermission(milestoneId, userEmail, ['CREATOR', 'ADMIN', 'MEMBER']);
-      if (!hasPermission) {
-        return null;
-      }
-
-      const tasks = await prisma.task.findMany({
-        where: { 
-          milestoneId: milestoneId,
-          dueDate: {
-            lt: new Date()
-          },
-          status: {
-            not: 'COMPLETED'
-          }
-        },
-        include: {
-          assignee: {
-            select: {
-              email: true,
-              skillset: true
-            }
-          },
-          milestone: {
-            select: {
-              id: true,
-              name: true,
-              project: {
-                select: {
-                  id: true,
-                  name: true,
-                  creator: {
-                    select: {
-                      email: true,
-                      skillset: true
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        orderBy: {
-          dueDate: 'asc'
-        }
-      });
-
-      return tasks;
-    } catch (error) {
-      console.error('Error in getOverdueTasks:', error);
       throw error;
     }
   }
@@ -1745,55 +1386,6 @@ class TaskService {
       return tasks;
     } catch (error) {
       console.error('Error in getUpcomingTasks:', error);
-      throw error;
-    }
-  }
-
-  // Assign task to user (only project creator or admin can assign)
-  async assignTask(taskId, userEmail, assigneeId) {
-    try {
-      // Check if user has permission to assign this task
-      const hasPermission = await this.checkTaskPermission(taskId, userEmail, ['CREATOR', 'ADMIN']);
-      if (!hasPermission) {
-        return null;
-      }
-
-      const task = await prisma.task.update({
-        where: { id: taskId },
-        data: {
-          assigneeId: assigneeId
-        },
-        include: {
-          assignee: {
-            select: {
-              email: true,
-              skillset: true
-            }
-          },
-          milestone: {
-            select: {
-              id: true,
-              name: true,
-              project: {
-                select: {
-                  id: true,
-                  name: true,
-                  creator: {
-                    select: {
-                      email: true,
-                      skillset: true
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      });
-
-      return task;
-    } catch (error) {
-      console.error('Error in assignTask:', error);
       throw error;
     }
   }

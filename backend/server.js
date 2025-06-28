@@ -4,6 +4,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const errorHandler = require('./src/middlewares/errorHandler');
+require('./src/services/statusUpdateService.js');
 
 // Import Firebase config
 const { initializeFirebase } = require('./src/config/firebase');
@@ -15,7 +16,6 @@ const protectedRoutes = require('./src/routes/protectedRoutes');
 const milestoneRoutes = require('./src/routes/milestoneRoutes');
 const taskRoutes = require('./src/routes/taskRoutes');
 const fileRoutes = require('./src/routes/fileRoutes');
-const taskRoutes = require('./src/routes/taskRoutes');
 
 // Initialize Express app
 const app = express();
@@ -68,7 +68,6 @@ app.use('/api/milestones', milestoneRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api', protectedRoutes);
 app.use('/api/files', fileRoutes);
-app.use('/api/tasks',taskRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
