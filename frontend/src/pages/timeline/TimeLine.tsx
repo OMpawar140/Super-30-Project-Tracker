@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Calendar, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Clock, User, Target, Loader2, AlertCircle } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Clock, User, Target, Loader2, AlertCircle, X, Info } from 'lucide-react';
 import { apiService, useApiCall } from '@/services/api';
 
 // Types for our data
@@ -243,6 +243,113 @@ const SimpleCalendar: React.FC<{
   );
 };
 
+// Project Details Modal Component
+const ProjectDetailsModal: React.FC<{
+  event: TimelineEvent;
+  isOpen: boolean;
+  onClose: () => void;
+  formatDate: (date: Date) => string;
+  getStatusColor: (status: string) => string;
+}> = ({ event, isOpen, onClose, formatDate, getStatusColor }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fade-in">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+            {event.type === 'project' && <Target className="w-5 h-5 text-blue-500" />}
+            {event.type === 'task' && <Clock className="w-5 h-5 text-indigo-500" />}
+            {event.type === 'milestone' && <Calendar className="w-5 h-5 text-purple-500" />}
+            {event.title}
+          </h3>
+          <button 
+            onClick={onClose}
+            className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+          >
+            <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+          </button>
+        </div>
+        
+        {/* Content */}
+        <div className="px-6 py-4 space-y-4">
+          {/* Status Badge */}
+          <div className="flex items-center justify-between">
+            <span className={`
+              px-3 py-1 rounded-full text-sm font-medium border
+              ${getStatusColor(event.status)}
+            `}>
+              {event.status}
+            </span>
+            <span className="text-sm text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-700 px-2 py-1 rounded border border-gray-300 dark:border-gray-600">
+              {event.type}
+            </span>
+          </div>
+          
+          {/* Dates */}
+          <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+            <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Timeline</h4>
+            <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+              <Calendar className="w-4 h-4 text-gray-400" />
+              <div>
+                <span className="font-medium">Start:</span> {formatDate(event.startDate)}
+              </div>
+            </div>
+            {event.type !== 'milestone' && (
+              <div className="flex items-center gap-2 mt-2 text-gray-700 dark:text-gray-300">
+                <Calendar className="w-4 h-4 text-gray-400" />
+                <div>
+                  <span className="font-medium">End:</span> {formatDate(event.endDate)}
+                </div>
+              </div>
+            )}
+          </div>
+          
+          {/* Description */}
+          <div>
+            <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Description</h4>
+            <p className="text-gray-700 dark:text-gray-300 whitespace-pre-line">
+              {event.description}
+            </p>
+          </div>
+          
+          {/* Additional Details */}
+          {event.details && event.details !== event.description && (
+            <div>
+              <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Additional Details</h4>
+              <p className="text-gray-700 dark:text-gray-300 whitespace-pre-line">
+                {event.details}
+              </p>
+            </div>
+          )}
+          
+          {/* Assignee */}
+          {event.assignee && (
+            <div>
+              <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Assigned To</h4>
+              <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-700/50 p-2 rounded-lg">
+                <User className="w-5 h-5 text-gray-400 dark:text-gray-500" />
+                <span className="text-gray-700 dark:text-gray-300">{event.assignee}</span>
+              </div>
+            </div>
+          )}
+        </div>
+        
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-md text-sm transition-colors border border-gray-300 dark:border-gray-600"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const TimeLinePage: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<'month' | 'week'>('month');
@@ -254,6 +361,11 @@ const TimeLinePage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const { callApi } = useApiCall();
+  // New state for modal
+  const [detailsModal, setDetailsModal] = useState<{isOpen: boolean, event: TimelineEvent | null}>({
+    isOpen: false,
+    event: null
+  });
   
   // Define monthNames at the component level to fix the reference error
   const monthNames = [
@@ -461,6 +573,22 @@ const TimeLinePage: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [selectedDate, viewMode]);
+
+  // Function to open the modal with a specific event
+  const openDetailsModal = (event: TimelineEvent) => {
+    setDetailsModal({
+      isOpen: true,
+      event
+    });
+  };
+
+  // Function to close the modal
+  const closeDetailsModal = () => {
+    setDetailsModal({
+      isOpen: false,
+      event: null
+    });
+  };
 
   const renderEventTooltip = (event: TimelineEvent) => (
     <div>
@@ -770,11 +898,12 @@ const TimeLinePage: React.FC = () => {
                                   </div>
                                 )}
                                 <div className="flex gap-2 pt-2">
-                                  <button className="bg-blue-500 dark:bg-blue-600 hover:bg-blue-600 dark:hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm transition-colors">
+                                  <button 
+                                    onClick={() => openDetailsModal(event)} 
+                                    className="bg-blue-500 dark:bg-blue-600 hover:bg-blue-600 dark:hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm transition-colors flex items-center gap-1"
+                                  >
+                                    <Info className="w-4 h-4" />
                                     View Details
-                                  </button>
-                                  <button className="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-md text-sm transition-colors border border-gray-300 dark:border-gray-600">
-                                    Edit
                                   </button>
                                 </div>
                               </div>
@@ -790,6 +919,17 @@ const TimeLinePage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Details Modal */}
+      {detailsModal.event && (
+        <ProjectDetailsModal 
+          event={detailsModal.event}
+          isOpen={detailsModal.isOpen}
+          onClose={closeDetailsModal}
+          formatDate={formatDate}
+          getStatusColor={getStatusColor}
+        />
+      )}
     </div>
   );
 };
