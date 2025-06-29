@@ -85,6 +85,7 @@ const ProjectReportPDF: React.FC<ProjectReportPDFProps> = ({ project, onDownload
         day: 'numeric'
       });
     } catch (error) {
+      console.error('Invalid date format:', dateString, error);
       return 'Invalid Date';
     }
   };
@@ -98,6 +99,7 @@ const ProjectReportPDF: React.FC<ProjectReportPDFProps> = ({ project, onDownload
         year: 'numeric' 
       });
     } catch (error) {
+      console.error('Invalid date format:', dateString, error);
       return 'Invalid Date';
     }
   };
@@ -577,15 +579,6 @@ const ProjectReportPDF: React.FC<ProjectReportPDFProps> = ({ project, onDownload
             </div>
             `}
           </div>
-
-          ${project.tags && project.tags.length > 0 ? `
-          <div class="section">
-            <h2 class="section-title">Project Tags</h2>
-            <div class="tags-container">
-              ${project.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
-            </div>
-          </div>
-          ` : ''}
 
           <div class="section">
             <h2 class="section-title">Milestones & Tasks</h2>

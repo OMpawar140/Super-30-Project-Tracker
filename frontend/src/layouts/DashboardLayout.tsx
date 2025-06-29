@@ -68,7 +68,7 @@ const DashboardLayout = () => {
       >
         <div className="h-full flex flex-col">
           <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200 dark:border-gray-700">
-            <div className="text-xl font-bold text-gray-900 dark:text-white">
+            <div className="text-xl font-bold text-gray-900 dark:text-white select-none">
               <img src={logo} alt="TrackPro Logo" className="h-8 w-8 inline-block mr-2" />
               Project Tracker
             </div>
@@ -80,7 +80,7 @@ const DashboardLayout = () => {
             </button>
           </div>
 
-          <nav className="flex-1 px-2 py-4 space-y-1">
+          <nav className="flex-1 px-2 py-4 space-y-1 select-none">
             {navigationItems.map((item) => (
               <button
                 key={item.name}
@@ -97,7 +97,7 @@ const DashboardLayout = () => {
             ))}
           </nav>
           
-          <div className="px-2 py-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="px-2 py-4 border-t border-gray-200 dark:border-gray-700 select-none">
             <button 
               onClick={() => {
                 navigateTo('Profile');
@@ -139,18 +139,20 @@ const DashboardLayout = () => {
               <HiMenu className="h-6 w-6" />
             </button>
 
-            <div className="flex items-center space-x-4">
-              <ThemeToggle />
-              <NotificationOverlay />
-              <div className="flex items-center">
+            <div className="flex items-center justify-between w-full">
+              <div className="flex items-center space-x-4">
+                <ThemeToggle />
+                <NotificationOverlay />
+              </div>
+              <div className="flex items-center mr-4">
                 {currentUser?.photoURL && (
                   <img
                     src={currentUser.photoURL}
                     alt="User avatar"
-                    className="h-6 w-6 rounded-full mr-2 border border-gray-200"
+                    className="h-7 w-7 rounded-full mr-2 border border-gray-200 select-none"
                   />
                 ) || <User className="h-4 w-4 mr-2" />}
-                <span className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   {currentUser?.displayName || currentUser?.email}
                 </span>
               </div>

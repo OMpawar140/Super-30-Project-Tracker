@@ -9,6 +9,8 @@ import TaskFileModal from '../../components/ui/TaskFileModal';
 import { useAuth } from '@/context/AuthContext';
 import TaskReviewModal from '@/components/ui/TaskReviewModal';
 import ProjectReportPDF from '@/components/ui/ProjectReportPDF';
+import UserProjectsPDF from '@/components/ui/UserProjectsPDF';
+import UserTasksPDF from '@/components/ui/UserTasksPDF';
 
 // Types for our data (updated to match backend structure)
 interface User {
@@ -605,7 +607,7 @@ const ProjectsPage: React.FC = () => {
       `}</style>
 
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50 transition-colors duration-300">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-40 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
@@ -615,6 +617,21 @@ const ProjectsPage: React.FC = () => {
                 ({projects.length} total)
               </span>
             </div>
+            <div onClick={(e) => e.stopPropagation()}
+              className='flex gap-3'>
+                <UserTasksPDF 
+                  projects={projects} 
+                  currentUser={currentUser} 
+                  onDownload={() => console.log('PDF generated')} 
+                />
+                <UserProjectsPDF 
+                  projects={projects}
+                  currentUser={currentUser}
+                  onDownload={() => {
+                    console.log(`PDF report downloaded for all projects created by ${currentUser?.email}`);
+                  }}
+                />
+              </div>
           </div>
         </div>
       </div>

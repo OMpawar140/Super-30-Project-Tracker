@@ -209,7 +209,7 @@ const NotificationOverlay = () => {
       >
         <HiBell className={`h-6 w-6 ${isOpen ? 'animate-bounce-subtle' : ''}`} />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[20px] h-5 px-1 rounded-full bg-red-500 text-white text-xs font-medium animate-pulse-glow">
+          <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[20px] h-5 px-1 rounded-full bg-red-500 text-white text-xs font-medium animate-pulse-glow select-none">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
@@ -255,7 +255,7 @@ const NotificationOverlay = () => {
           </div>
 
           {/* Notifications List */}
-          <div className="max-h-96 overflow-y-auto">
+          <div className="max-h-96 overflow-y-auto z-50">
             {notifications.slice(0, 5).map((notification, index) => (
               <div
                 key={notification.id}
