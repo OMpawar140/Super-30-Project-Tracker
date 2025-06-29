@@ -10,6 +10,7 @@ datasource db {
 model User {
   email           String          @id
   skillset        String?
+  notifications   notifications[]
   projectMembers  ProjectMember[]
   createdProjects Project[]       @relation("ProjectCreator")
   taskReviews     TaskReview[]
@@ -19,18 +20,19 @@ model User {
 }
 
 model Project {
-  id          String          @id @default(cuid())
-  name        String
-  description String?
-  status      ProjectStatus   @default(ACTIVE)
-  startDate   DateTime?
-  endDate     DateTime?
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-  creatorId   String
-  milestones  Milestone[]
-  members     ProjectMember[]
-  creator     User            @relation("ProjectCreator", fields: [creatorId], references: [email], onDelete: Cascade)
+  id            String          @id @default(cuid())
+  name          String
+  description   String?
+  status        ProjectStatus   @default(ACTIVE)
+  startDate     DateTime?
+  endDate       DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  creatorId     String
+  milestones    Milestone[]
+  notifications notifications[]
+  members       ProjectMember[]
+  creator       User            @relation("ProjectCreator", fields: [creatorId], references: [email], onDelete: Cascade)
 
   @@map("projects")
 }
@@ -66,35 +68,37 @@ model Milestone {
 }
 
 model Task {
-  id          String           @id @default(cuid())
-  title       String
-  description String?
-  priority    TaskPriority     @default(MEDIUM)
-  status      TaskStatus       @default(UPCOMING)
-  startDate   DateTime?
-  dueDate     DateTime?
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-  milestoneId String
-  assigneeId  String?
-  attachments TaskAttachment[]
-  reviews     TaskReview[]
-  assignee    User?            @relation("TaskAssignee", fields: [assigneeId], references: [email])
-  milestone   Milestone        @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+  id            String           @id @default(cuid())
+  title         String
+  description   String?
+  priority      TaskPriority     @default(MEDIUM)
+  status        TaskStatus       @default(UPCOMING)
+  startDate     DateTime?
+  dueDate       DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  milestoneId   String
+  assigneeId    String?
+  notifications notifications[]
+  attachments   TaskAttachment[]
+  reviews       TaskReview[]
+  assignee      User?            @relation("TaskAssignee", fields: [assigneeId], references: [email])
+  milestone     Milestone        @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
 
   @@map("tasks")
 }
 
 model TaskReview {
-  id         String           @id @default(cuid())
-  status     TaskReviewStatus
-  comment    String?
-  createdAt  DateTime         @default(now())
-  updatedAt  DateTime         @updatedAt
-  taskId     String
-  reviewerId String
-  reviewer   User             @relation(fields: [reviewerId], references: [email], onDelete: Cascade)
-  task       Task             @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  id            String           @id @default(cuid())
+  status        TaskReviewStatus
+  comment       String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  taskId        String
+  reviewerId    String
+  notifications notifications[]
+  reviewer      User             @relation(fields: [reviewerId], references: [email], onDelete: Cascade)
+  task          Task             @relation(fields: [taskId], references: [id], onDelete: Cascade)
 
   @@map("task_reviews")
 }
@@ -110,6 +114,25 @@ model TaskAttachment {
   task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
 
   @@map("task_attachments")
+}
+
+model notifications {
+  id           String           @id
+  type         NotificationType
+  title        String
+  message      String
+  isRead       Boolean          @default(false)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime
+  userId       String
+  projectId    String?
+  taskId       String?
+  taskReviewId String?
+  metadata     Json?
+  projects     Project?         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks        Task?            @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  task_reviews TaskReview?      @relation(fields: [taskReviewId], references: [id], onDelete: Cascade)
+  users        User             @relation(fields: [userId], references: [email], onDelete: Cascade)
 }
 
 enum ProjectStatus {
@@ -151,4 +174,14 @@ enum TaskReviewStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+enum NotificationType {
+  PROJECT_MEMBER_ADDED
+  TASK_APPROVED
+  TASK_REJECTED
+  TASK_REVIEW_REQUESTED
+  TASK_STARTED
+  TASK_OVERDUE
+  TASK_DUE_REMINDER
 }
