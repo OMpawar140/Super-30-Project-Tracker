@@ -150,34 +150,90 @@ class NotificationTriggers {
     }
   }
 
+  // Bulk trigger for started tasks (scheduled job)
+  static async processStartedTasks(startedTasks) {
+    try {
+      const notificationsToCreate = [];
+
+      for (const task of startedTasks) {
+        // Check if a TASK_STARTED notification already exists for this task and assignee
+        const existing = await notificationService.findFirstByTypeTaskUser({
+          where: {
+            type: "TASK_STARTED",
+            taskId: task.id,
+            userId: task.assigneeId,
+          },
+        });
+
+        if (!existing) {
+          notificationsToCreate.push({
+            type: "TASK_STARTED",
+            title: "Task Started",
+            message: `"${task.title}" has been started.`,
+            userId: task.assigneeId,
+            taskId: task.id,
+            projectId: task.milestone.projectId,
+            metadata: {
+              taskTitle: task.title,
+              startedBy: task.assigneeId,
+              projectName: task.milestone.project.name,
+            },
+          });
+        }
+      }
+
+      if (notificationsToCreate.length > 0) {
+        await notificationService.createBulk(notificationsToCreate);
+        logger.info(
+          `Processed ${notificationsToCreate.length} started task notifications`
+        );
+      }
+    } catch (error) {
+      logger.error("Error processing started tasks notifications:", error);
+    }
+  }
+
   // Bulk trigger for overdue tasks (scheduled job)
   static async processOverdueTasks(overdueTasks) {
     try {
-      const notifications = overdueTasks.map((task) => {
-        const daysPastDue = Math.ceil(
-          (new Date() - new Date(task.dueDate)) / (1000 * 60 * 60 * 24)
-        );
+      const notificationsToCreate = [];
 
-        return {
+      for (const task of overdueTasks) {
+        // Check if a TASK_OVERDUE notification already exists for this task and assignee
+        const existing = await notificationService.findFirstByTypeTaskUser({
           type: "TASK_OVERDUE",
-          title: "Task Overdue",
-          message: `"${task.title}" is now ${daysPastDue} day(s) overdue`,
-          userId: task.assigneeId,
           taskId: task.id,
-          projectId: task.milestone.projectId,
-          metadata: {
-            taskTitle: task.title,
-            daysPastDue,
-            dueDate: task.dueDate,
-            projectName: task.milestone.project.name,
-          },
-        };
-      });
+          userId: task.assigneeId,
+        });
 
-      await notificationService.createBulk(notifications);
-      logger.info(
-        `Processed ${notifications.length} overdue task notifications`
-      );
+        if (!existing) {
+          const daysPastDue = Math.ceil(
+            (new Date() - new Date(task.dueDate)) / (1000 * 60 * 60 * 24)
+          );
+
+          notificationsToCreate.push({
+            type: "TASK_OVERDUE",
+            title: "Task Overdue",
+            message: `"${task.title}" is now ${daysPastDue} day(s) overdue`,
+            userId: task.assigneeId,
+            taskId: task.id,
+            projectId: task.milestone.projectId,
+            metadata: {
+              taskTitle: task.title,
+              daysPastDue,
+              dueDate: task.dueDate,
+              projectName: task.milestone.project.name,
+            },
+          });
+        }
+      }
+
+      if (notificationsToCreate.length > 0) {
+        await notificationService.createBulk(notificationsToCreate);
+        logger.info(
+          `Processed ${notificationsToCreate.length} overdue task notifications`
+        );
+      }
     } catch (error) {
       logger.error("Error processing overdue tasks notifications:", error);
     }
@@ -186,25 +242,40 @@ class NotificationTriggers {
   // Bulk trigger for due reminders (scheduled job)
   static async processDueReminders(upcomingTasks, daysUntilDue = 3) {
     try {
-      const notifications = upcomingTasks.map((task) => ({
-        type: "TASK_DUE_REMINDER",
-        title: "Task Due Soon",
-        message: `"${task.title}" is due in ${daysUntilDue} day(s)`,
-        userId: task.assigneeId,
-        taskId: task.id,
-        projectId: task.milestone.projectId,
-        metadata: {
-          taskTitle: task.title,
-          daysUntilDue,
-          dueDate: task.dueDate,
-          projectName: task.milestone.project.name,
-        },
-      }));
+      const notificationsToCreate = [];
 
-      await notificationService.createBulk(notifications);
-      logger.info(
-        `Processed ${notifications.length} due reminder notifications`
-      );
+      for (const task of upcomingTasks) {
+        // Check if a TASK_DUE_REMINDER notification already exists for this task and assignee
+        const existing = await notificationService.findFirstByTypeTaskUser({
+          type: "TASK_DUE_REMINDER",
+          taskId: task.id,
+          userId: task.assigneeId,
+        });
+
+        if (!existing) {
+          notificationsToCreate.push({
+            type: "TASK_DUE_REMINDER",
+            title: "Task Due Soon",
+            message: `"${task.title}" is due in ${daysUntilDue} day(s)`,
+            userId: task.assigneeId,
+            taskId: task.id,
+            projectId: task.milestone.projectId,
+            metadata: {
+              taskTitle: task.title,
+              daysUntilDue,
+              dueDate: task.dueDate,
+              projectName: task.milestone.project.name,
+            },
+          });
+        }
+      }
+
+      if (notificationsToCreate.length > 0) {
+        await notificationService.createBulk(notificationsToCreate);
+        logger.info(
+          `Processed ${notificationsToCreate.length} due reminder notifications`
+        );
+      }
     } catch (error) {
       logger.error("Error processing due reminder notifications:", error);
     }

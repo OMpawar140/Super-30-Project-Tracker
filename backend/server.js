@@ -4,6 +4,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const errorHandler = require('./src/middlewares/errorHandler');
+require('./src/jobs/notificationJobs');
 
 // Import Firebase config
 const { initializeFirebase } = require('./src/config/firebase');

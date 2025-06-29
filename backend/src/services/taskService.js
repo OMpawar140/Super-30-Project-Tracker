@@ -968,6 +968,107 @@ class TaskService {
     }
   }
 
+  // Get all tasks that have just started (status === 'STARTED') and do NOT have a TASK_STARTED notification for the assignee. Optionally filter by projectId. 
+  async getStartedTasksWithoutNotification(projectId = null) {
+    try {
+      // Find all started tasks (adjust status value as per your schema)
+      const whereClause = {
+        status: 'STARTED',
+      };
+      if (projectId) {
+        whereClause.milestone = { projectId };
+      }
+
+      const tasks = await prisma.task.findMany({
+        where: whereClause,
+        include: {
+          assignee: true,
+          milestone: { include: { project: true } },
+        },
+      });
+
+      // Filter out tasks that already have a TASK_STARTED notification for the assignee
+      // const filteredTasks = [];
+      // for (const task of tasks) {
+      //   const existing = await prisma.notification.findFirst({
+      //     where: {
+      //       type: 'TASK_STARTED',
+      //       taskId: task.id,
+      //       userId: task.assigneeId,
+      //     },
+      //   });
+      //   if (!existing) {
+      //     filteredTasks.push(task);
+      //   }
+      // }
+
+      return tasks;
+    } catch (error) {
+      console.error('Error in getStartedTasksWithoutNotification:', error);
+      throw error;
+    }
+  }
+
+  // Get all overdue tasks (dueDate < now, not done) Optionally filter by projectId
+  async getOverdueTasksForNotification(projectId = null) {
+    try {
+      const whereClause = {
+        dueDate: { lt: new Date() },
+        status: { not: 'COMPLETED' || 'IN_REVIEW' },
+      };
+      if (projectId) {
+        whereClause.milestone = { projectId };
+      }
+      const tasks = await prisma.task.findMany({
+        where: whereClause,
+        include: {
+          assignee: true,
+          milestone: { include: { project: true } },
+        },
+        orderBy: { dueDate: 'asc' }
+      });
+      return tasks;
+    } catch (error) {
+      console.error('Error in getOverdueTasks:', error);
+      throw error;
+    }
+  }
+
+  // Get all tasks due in X days (not done) Optionally filter by projectId
+  async getUpcomingTasks(daysUntilDue = 3, projectId = null) {
+    try {
+      const now = new Date();
+      const targetDate = new Date(now);
+      targetDate.setDate(now.getDate() + daysUntilDue);
+
+      const startOfDay = new Date(targetDate.setHours(0, 0, 0, 0));
+      const endOfDay = new Date(targetDate.setHours(23, 59, 59, 999));
+
+      const whereClause = {
+        dueDate: {
+          gte: startOfDay,
+          lte: endOfDay
+        },
+        status: { not: 'COMPLETED' || 'IN_REVIEW' },
+      };
+      if (projectId) {
+        whereClause.milestone = { projectId };
+      }
+      const tasks = await prisma.task.findMany({
+        where: whereClause,
+        include: {
+          assignee: true,
+          milestone: { include: { project: true } },
+        },
+        orderBy: { dueDate: 'asc' }
+      });
+      return tasks;
+    } catch (error) {
+      console.error('Error in getUpcomingTasks:', error);
+      throw error;
+    }
+  } 
+
   // Helper method to check project access
   async checkProjectAccess(projectId, userEmail) {
     try {
@@ -1097,6 +1198,8 @@ class TaskService {
       return false;
     }
   }
+ 
+
 }
 
 module.exports = new TaskService();

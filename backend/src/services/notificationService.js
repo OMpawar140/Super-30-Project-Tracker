@@ -187,6 +187,22 @@ class NotificationService {
     }
   }
 
+  // Find the first notification by type, taskId, and userId
+  async findFirstByTypeTaskUser({ type, taskId, userId }) {
+    try {
+      return await prisma.notification.findFirst({
+        where: {
+          type,
+          taskId,
+          userId,
+        },
+      });
+    } catch (error) {
+      logger.error("Find first notification error:", error);
+      throw error;
+    }
+  }
+
   // Bulk create notifications (for multiple users)
   async createBulk(notifications) {
     try {
