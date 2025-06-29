@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Calendar, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Clock, User, Target, Loader2, AlertCircle } from 'lucide-react';
 import { apiService, useApiCall } from '@/services/api';
 
@@ -254,10 +254,16 @@ const TimeLinePage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const { callApi } = useApiCall();
+  
+  // Define monthNames at the component level to fix the reference error
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
 
   useEffect(() => {
-      document.title = "Timeline - Project Tracker";
-    }, []);
+    document.title = "Timeline - Project Tracker";
+  }, []);
 
   // Helper function to determine event type based on project data
   const determineEventType = (project: ApiProject): 'project' | 'task' | 'milestone' => {
@@ -373,6 +379,7 @@ const TimeLinePage: React.FC = () => {
     }
   }, [loading, events]);
 
+  // Format date for display
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('en-US', { 
       month: 'short', 
@@ -380,6 +387,80 @@ const TimeLinePage: React.FC = () => {
       year: 'numeric' 
     });
   };
+
+  // Check if a date falls within a given range
+  const isDateInRange = (date: Date, startDate: Date, endDate: Date): boolean => {
+    const dateTime = date.getTime();
+    return dateTime >= startDate.getTime() && dateTime <= endDate.getTime();
+  };
+
+  // Check if a date overlaps with a given range
+  const doesDateRangeOverlap = (
+    eventStart: Date, 
+    eventEnd: Date, 
+    periodStart: Date, 
+    periodEnd: Date
+  ): boolean => {
+    return (
+      (eventStart <= periodEnd && eventStart >= periodStart) || // Event starts in period
+      (eventEnd >= periodStart && eventEnd <= periodEnd) || // Event ends in period
+      (eventStart <= periodStart && eventEnd >= periodEnd) // Event completely encompasses period
+    );
+  };
+
+  // Get start and end dates for selected month
+  const getMonthBoundaries = (date: Date): { start: Date; end: Date } => {
+    const start = new Date(date.getFullYear(), date.getMonth(), 1);
+    const end = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+    return { start, end };
+  };
+
+  // Get start and end dates for selected week
+  const getWeekBoundaries = (date: Date): { start: Date; end: Date } => {
+    const day = date.getDay(); // 0-6, Sunday-Saturday
+    const start = new Date(date);
+    start.setDate(date.getDate() - day); // Start of week (Sunday)
+    
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6); // End of week (Saturday)
+    
+    return { start, end };
+  };
+
+  // Filter events based on selected date/period
+  const filteredEvents = useMemo(() => {
+    if (!events.length) return [];
+
+    if (viewMode === 'month') {
+      const { start, end } = getMonthBoundaries(selectedDate);
+      return events.filter(event => 
+        doesDateRangeOverlap(event.startDate, event.endDate, start, end)
+      );
+    } else { // week view
+      const { start, end } = getWeekBoundaries(selectedDate);
+      return events.filter(event => 
+        doesDateRangeOverlap(event.startDate, event.endDate, start, end)
+      );
+    }
+  }, [events, selectedDate, viewMode]);
+
+  // Clear expanded card when changing date/view
+  useEffect(() => {
+    setExpandedCard(null);
+    // Reset visible events for animation when filter changes
+    setVisibleEvents([]);
+    if (filteredEvents.length > 0) {
+      const timer = setTimeout(() => {
+        filteredEvents.forEach((event, index) => {
+          setTimeout(() => {
+            setVisibleEvents(prev => [...prev, event.id]);
+          }, index * 200); // Faster animation for filter changes
+        });
+      }, 300);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [selectedDate, viewMode]);
 
   const renderEventTooltip = (event: TimelineEvent) => (
     <div>
@@ -500,9 +581,9 @@ const TimeLinePage: React.FC = () => {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-4">
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Project Timeline</h1>
-              {events.length > 0 && (
+              {filteredEvents.length > 0 && (
                 <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 px-3 py-1 rounded-full text-sm font-medium">
-                  {events.length} Projects
+                  {filteredEvents.length} {filteredEvents.length === 1 ? 'Project' : 'Projects'}
                 </span>
               )}
             </div>
@@ -555,6 +636,17 @@ const TimeLinePage: React.FC = () => {
               onDateChange={setSelectedDate}
               viewMode={viewMode}
             />
+            {events.length > 0 && (
+              <div className="mt-4 text-center">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {viewMode === 'month' ? (
+                    <>Showing projects for {monthNames[selectedDate.getMonth()]} {selectedDate.getFullYear()}</>
+                  ) : (
+                    <>Showing projects for week of {selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</>
+                  )}
+                </p>
+              </div>
+            )}
           </div>
           
           {/* Timeline Section */}
@@ -573,6 +665,22 @@ const TimeLinePage: React.FC = () => {
                   </button>
                 </div>
               </div>
+            ) : filteredEvents.length === 0 ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                  <Calendar className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Projects for This Period</h3>
+                  <p className="text-gray-500 dark:text-gray-400">
+                    There are no projects scheduled for {viewMode === 'month' ? 
+                      `${monthNames[selectedDate.getMonth()]} ${selectedDate.getFullYear()}` : 
+                      `the week of ${selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+                    }.
+                  </p>
+                  <p className="text-gray-500 dark:text-gray-400 mt-2">
+                    Try selecting a different {viewMode === 'month' ? 'month' : 'week'}.
+                  </p>
+                </div>
+              </div>
             ) : (
               <div className="relative">
                 {/* Animated Timeline Line */}
@@ -584,7 +692,7 @@ const TimeLinePage: React.FC = () => {
                 
                 {/* Timeline Events */}
                 <div className="space-y-8">
-                  {events.map((event) => (
+                  {filteredEvents.map((event) => (
                     <div 
                       key={event.id} 
                       className={`relative flex items-start transition-all duration-500 ${
