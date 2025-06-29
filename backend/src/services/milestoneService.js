@@ -374,7 +374,7 @@ class MilestoneService {
           milestoneId: milestoneId,
           priority: taskData.priority || 'MEDIUM',
           startDate: taskData.startDate ? new Date(taskData.startDate) : null,
-          dueDate: taskData.dueDate ? new Date(taskData.endDate) : null,
+          dueDate: taskData.endDate ? new Date(taskData.endDate) : null,
           status: taskData.status || 'UPCOMING'
         },
         include: {

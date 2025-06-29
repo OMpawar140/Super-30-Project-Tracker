@@ -169,6 +169,7 @@ const toggleAddMilestoneForm = (projectId : string) => {
     ...prev,
     [projectId]: !prev[projectId]
   }));
+
   if (!showAddMilestoneForm[projectId]) {
     setNewMilestoneData({
       name: '',
@@ -846,7 +847,7 @@ const deleteTask = async (projectId: string, taskId: string) => {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="appearance-none bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 pr-8 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-300"
+                className="appearance-none bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 pr-8 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-300 cursor-pointer"
               >
                 <option value="All">All Status</option>
                 <option value="ACTIVE">Active</option>
@@ -1322,10 +1323,10 @@ const deleteTask = async (projectId: string, taskId: string) => {
             onChange={(e) => setNewMilestoneData(prev => ({ ...prev, status: e.target.value }))}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
           >
-            <option value="PLANNED">PLANNED</option>
-            <option value="ACTIVE">Active</option>
+            <option value="PLANNED">Planned</option>
+            <option value="IN_PROGRESS">In Progress</option>
             <option value="COMPLETED">Completed</option>
-            <option value="ON_HOLD">On Hold</option>
+            <option value="OVERDUE">Overdue</option>
           </select>
         </div>
         <div>
@@ -1430,10 +1431,10 @@ const deleteTask = async (projectId: string, taskId: string) => {
             onChange={(e) => setNewTaskData(prev => ({ ...prev, priority: e.target.value }))}
             className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
           >
-            <option value="low">Low</option>
-            <option value="MEDIUM">MEDIUM</option>
-            <option value="high">High</option>
-            <option value="critical">Critical</option>
+            <option value="LOW">Low</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="HIGH">High</option>
+            <option value="CRITICAL">Critical</option>
           </select>
         </div>
         <div>
@@ -1578,10 +1579,10 @@ const deleteTask = async (projectId: string, taskId: string) => {
                                                     onChange={(e) => setEditingTaskData(prev => ({ ...prev, priority: e.target.value }))}
                                                     className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                                   >
-                                                    <option value="low">Low</option>
-                                                    <option value="MEDIUM">MEDIUM</option>
-                                                    <option value="high">High</option>
-                                                    <option value="critical">Critical</option>
+                                                    <option value="LOW">Low</option>
+                                                    <option value="MEDIUM">Medium</option>
+                                                    <option value="HIGH">High</option>
+                                                    <option value="CRITICAL">Critical</option>
                                                   </select>
                                                 </div>
                                                 <div>
