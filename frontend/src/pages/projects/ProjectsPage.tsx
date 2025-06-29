@@ -150,7 +150,7 @@ const [showAddTaskForm, setShowAddTaskForm] = useState<Record<string, boolean>>(
 const [newMilestoneData, setNewMilestoneData] = useState({
   name: '',
   description: '',
-  status: 'PLANNED',
+  status: 'PLANNING',
   startDate: '',
   endDate: ''
 });
@@ -173,7 +173,7 @@ const toggleAddMilestoneForm = (projectId : string) => {
     setNewMilestoneData({
       name: '',
       description: '',
-      status: 'PLANNED',
+      status: 'PLANNING',
       startDate: '',
       endDate: ''
     });
@@ -202,14 +202,14 @@ const addMilestone = async (projectId: string) => {
   try {
     const response = await callApi(() => apiService.milestones.createMilestone(projectId, newMilestoneData));
     if (response.success) {
-      const newMilestone = response.data; // The newly created milestone
+      const newMilestone = response.data;
       
-      // Update the specific project by adding the new milestone
       setProjects(prev => prev.map(project => {
         if (project.id === projectId) {
           return {
             ...project,
-            milestones: [...(project.milestones || []), newMilestone]
+            // Ensure milestones array exists, initialize as empty if null/undefined
+            milestones: project.milestones ? [...project.milestones, newMilestone] : [newMilestone]
           };
         }
         return project;
@@ -650,7 +650,7 @@ const deleteTask = async (projectId: string, taskId: string) => {
       case 'in progress':
       case 'ongoing':
         return 'text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700';
-      case 'PLANNED':
+      case 'planning':
       case 'upcoming':
       case 'not_started':
       case 'not started':
@@ -850,7 +850,7 @@ const deleteTask = async (projectId: string, taskId: string) => {
               >
                 <option value="All">All Status</option>
                 <option value="ACTIVE">Active</option>
-                <option value="PLANNED">PLANNED</option>
+                <option value="PLANNING">Planning</option>
                 <option value="COMPLETED">Completed</option>
                 <option value="ON_HOLD">On Hold</option>
               </select>
@@ -887,7 +887,7 @@ const deleteTask = async (projectId: string, taskId: string) => {
             >
               {/* Project Header */}
               <div 
-                className={`p-6 transition-colors duration-300 ${
+                className={`p-6 transition-colors duration-300 dark:hover:bg-gray-900 ${
                   editingProjectId === project.id 
                     ? 'bg-blue-50 dark:bg-blue-900/20' 
                     : 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750'
@@ -982,7 +982,7 @@ const deleteTask = async (projectId: string, taskId: string) => {
                               onChange={(e) => setEditingProjectData(prev => ({ ...prev, status: e.target.value }))}
                               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             >
-                              <option value="PLANNED">PLANNED</option>
+                              <option value="PLANNING">Planning</option>
                               <option value="ACTIVE">Active</option>
                               <option value="COMPLETED">Completed</option>
                               <option value="ON_HOLD">On Hold</option>
@@ -1120,7 +1120,7 @@ const deleteTask = async (projectId: string, taskId: string) => {
                     </div>
 
                     {/* Milestones Section */}
-                    <div>
+ <div>
                      <div className="flex items-center justify-between mb-3">
   <h3 className="text-lg font-MEDIUM text-gray-900 dark:text-white flex items-center gap-2">
     <HiFlag className="w-5 h-5" />
@@ -1136,6 +1136,95 @@ const deleteTask = async (projectId: string, taskId: string) => {
     </button>
   )}
 </div>
+
+{/* Add Milestone Form - Moved to top level, outside of milestone map */}
+{showAddMilestoneForm[project.id] && (
+  <div className="bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-700 p-4 mb-4">
+    <h4 className="text-sm font-MEDIUM text-gray-900 dark:text-white mb-3">Add New Milestone</h4>
+    <div className="space-y-3">
+      <div>
+        <label className="block text-sm font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
+          Milestone Name
+        </label>
+        <input
+          type="text"
+          value={newMilestoneData.name}
+          onChange={(e) => setNewMilestoneData(prev => ({ ...prev, name: e.target.value }))}
+          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+          placeholder="Enter milestone name"
+        />
+      </div>
+       <div>
+        <label className="block text-sm font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
+          Description
+        </label>
+        <textarea
+          value={newMilestoneData.description}
+          onChange={(e) => setNewMilestoneData(prev => ({ ...prev, description: e.target.value }))}
+          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+          placeholder="Enter milestone description"
+        />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div>
+          <label className="block text-sm font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
+            Status
+          </label>
+          <select
+            value={newMilestoneData.status}
+            onChange={(e) => setNewMilestoneData(prev => ({ ...prev, status: e.target.value }))}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+          >
+            <option value="PLANNING">Planning</option>
+            <option value="ACTIVE">Active</option>
+            <option value="COMPLETED">Completed</option>
+            <option value="ON_HOLD">On Hold</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
+            Start Date
+          </label>
+          <input
+            type="date"
+            value={newMilestoneData.startDate}
+            min={project.startDate ? new Date(project.startDate).toISOString().split('T')[0] : undefined}
+            onChange={(e) => setNewMilestoneData(prev => ({ ...prev, startDate: e.target.value }))}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
+            End Date
+          </label>
+          <input
+            type="date"
+            value={newMilestoneData.endDate}
+            onChange={(e) => setNewMilestoneData(prev => ({ ...prev, endDate: e.target.value }))}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+          />
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <button
+          onClick={() => addMilestone(project.id)}
+          className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors"
+        >
+          <HiCheck className="w-4 h-4" />
+          Add Milestone
+        </button>
+        <button
+          onClick={() => toggleAddMilestoneForm(project.id)}
+          className="flex items-center gap-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded-lg transition-colors"
+        >
+          <HiX className="w-4 h-4" />
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
                       <div className="space-y-3">
                         {project.milestones.map((milestone) => (
                           <div key={milestone.id} className="bg-gray-50 dark:bg-gray-750 rounded-lg border border-gray-200 dark:border-gray-600">
@@ -1239,7 +1328,7 @@ const deleteTask = async (projectId: string, taskId: string) => {
                                             onChange={(e) => setEditingMilestoneData(prev => ({ ...prev, status: e.target.value }))}
                                             className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                           >
-                                            <option value="PLANNED">PLANNED</option>
+                                            <option value="PLANNING">Planning</option>
                                             <option value="ACTIVE">Active</option>
                                             <option value="COMPLETED">Completed</option>
                                             <option value="ON_HOLD">On Hold</option>
@@ -1252,6 +1341,7 @@ const deleteTask = async (projectId: string, taskId: string) => {
                                           <input
                                             type="date"
                                             value={editingMilestoneData.startDate}
+                                            min={project.startDate ? new Date(project.startDate).toISOString().split('T')[0] : undefined}
                                             onChange={(e) => setEditingMilestoneData(prev => ({ ...prev, startDate: e.target.value }))}
                                             className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                           />
@@ -1283,94 +1373,6 @@ const deleteTask = async (projectId: string, taskId: string) => {
                                 )}
                               </div>
                             </div>
-
-                            
-{showAddMilestoneForm[project.id] && (
-  <div className="bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-700 p-4 mb-4">
-    <h4 className="text-sm font-MEDIUM text-gray-900 dark:text-white mb-3">Add New Milestone</h4>
-    <div className="space-y-3">
-      <div>
-        <label className="block text-sm font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
-          Milestone Name
-        </label>
-        <input
-          type="text"
-          value={newMilestoneData.name}
-          onChange={(e) => setNewMilestoneData(prev => ({ ...prev, name: e.target.value }))}
-          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-          placeholder="Enter milestone name"
-        />
-      </div>
-       <div>
-        <label className="block text-sm font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
-          Description
-        </label>
-        <textarea
-          value={newMilestoneData.description}
-          onChange={(e) => setNewMilestoneData(prev => ({ ...prev, description: e.target.value }))}
-          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-          placeholder="Enter milestone description"
-        />
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div>
-          <label className="block text-sm font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
-            Status
-          </label>
-          <select
-            value={newMilestoneData.status}
-            onChange={(e) => setNewMilestoneData(prev => ({ ...prev, status: e.target.value }))}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-          >
-            <option value="PLANNED">PLANNED</option>
-            <option value="ACTIVE">Active</option>
-            <option value="COMPLETED">Completed</option>
-            <option value="ON_HOLD">On Hold</option>
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
-            Start Date
-          </label>
-          <input
-            type="date"
-            value={newMilestoneData.startDate}
-            onChange={(e) => setNewMilestoneData(prev => ({ ...prev, startDate: e.target.value }))}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
-            End Date
-          </label>
-          <input
-            type="date"
-            value={newMilestoneData.endDate}
-            onChange={(e) => setNewMilestoneData(prev => ({ ...prev, endDate: e.target.value }))}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-          />
-        </div>
-      </div>
-      <div className="flex gap-2">
-        <button
-          onClick={() => addMilestone(project.id)}
-          className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors"
-        >
-          <HiCheck className="w-4 h-4" />
-          Add Milestone
-        </button>
-        <button
-          onClick={() => toggleAddMilestoneForm(project.id)}
-          className="flex items-center gap-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded-lg transition-colors"
-        >
-          <HiX className="w-4 h-4" />
-          Cancel
-        </button>
-      </div>
-    </div>
-  </div>
-)}
-
 
 
                             {/* Tasks Section */}
@@ -1443,6 +1445,7 @@ const deleteTask = async (projectId: string, taskId: string) => {
           <input
             type="date"
             value={newTaskData.startDate}
+            min={milestone.startDate ? new Date(milestone.startDate).toISOString().split('T')[0] : undefined}
             onChange={(e) => setNewTaskData(prev => ({ ...prev, startDate: e.target.value }))}
             className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
           />
@@ -1591,6 +1594,7 @@ const deleteTask = async (projectId: string, taskId: string) => {
                                                   <input
                                                     type="date"
                                                     value={editingTaskData.startDate}
+                                                    min={milestone.startDate ? new Date(milestone.startDate).toISOString().split('T')[0] : undefined}
                                                     onChange={(e) => setEditingTaskData(prev => ({ ...prev, startDate: e.target.value }))}
                                                     className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                                   />
@@ -1799,8 +1803,6 @@ const deleteTask = async (projectId: string, taskId: string) => {
 
 export default ProjectsPage;
   
-
-// /* eslint-disable react-hooks/exhaustive-deps */
 // /* eslint-disable @typescript-eslint/no-explicit-any */
 // /* eslint-disable @typescript-eslint/no-unused-vars */
 // import React, { useState, useEffect } from 'react';
@@ -2264,7 +2266,7 @@ export default ProjectsPage;
 //       case 'in progress':
 //       case 'ongoing':
 //         return 'text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700';
-//       case 'PLANNED':
+//       case 'planning':
 //       case 'upcoming':
 //       case 'not_started':
 //       case 'not started':
@@ -2461,7 +2463,7 @@ export default ProjectsPage;
 //               >
 //                 <option value="All">All Status</option>
 //                 <option value="ACTIVE">Active</option>
-//                 <option value="PLANNED">PLANNED</option>
+//                 <option value="PLANNING">Planning</option>
 //                 <option value="COMPLETED">Completed</option>
 //                 <option value="ON_HOLD">On Hold</option>
 //               </select>
