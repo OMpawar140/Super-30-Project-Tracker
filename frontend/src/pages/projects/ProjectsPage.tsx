@@ -169,6 +169,7 @@ const toggleAddMilestoneForm = (projectId : string) => {
     ...prev,
     [projectId]: !prev[projectId]
   }));
+
   if (!showAddMilestoneForm[projectId]) {
     setNewMilestoneData({
       name: '',
@@ -846,7 +847,7 @@ const deleteTask = async (projectId: string, taskId: string) => {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="appearance-none bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 pr-8 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-300"
+                className="appearance-none bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 pr-8 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-300 cursor-pointer"
               >
                 <option value="All">All Status</option>
                 <option value="ACTIVE">Active</option>
@@ -1175,7 +1176,7 @@ const deleteTask = async (projectId: string, taskId: string) => {
             onChange={(e) => setNewMilestoneData(prev => ({ ...prev, status: e.target.value }))}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
           >
-            <option value="PLANNING">Planning</option>
+            <option value="PLANNED">Planned</option>
             <option value="ACTIVE">Active</option>
             <option value="COMPLETED">Completed</option>
             <option value="ON_HOLD">On Hold</option>
@@ -1374,6 +1375,94 @@ const deleteTask = async (projectId: string, taskId: string) => {
                               </div>
                             </div>
 
+                            
+{showAddMilestoneForm[project.id] && (
+  <div className="bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-700 p-4 mb-4">
+    <h4 className="text-sm font-MEDIUM text-gray-900 dark:text-white mb-3">Add New Milestone</h4>
+    <div className="space-y-3">
+      <div>
+        <label className="block text-sm font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
+          Milestone Name
+        </label>
+        <input
+          type="text"
+          value={newMilestoneData.name}
+          onChange={(e) => setNewMilestoneData(prev => ({ ...prev, name: e.target.value }))}
+          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+          placeholder="Enter milestone name"
+        />
+      </div>
+       <div>
+        <label className="block text-sm font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
+          Description
+        </label>
+        <textarea
+          value={newMilestoneData.description}
+          onChange={(e) => setNewMilestoneData(prev => ({ ...prev, description: e.target.value }))}
+          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+          placeholder="Enter milestone description"
+        />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div>
+          <label className="block text-sm font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
+            Status
+          </label>
+          <select
+            value={newMilestoneData.status}
+            onChange={(e) => setNewMilestoneData(prev => ({ ...prev, status: e.target.value }))}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+          >
+            <option value="PLANNED">PLANNED</option>
+            <option value="ACTIVE">Active</option>
+            <option value="COMPLETED">Completed</option>
+            <option value="ON_HOLD">On Hold</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
+            Start Date
+          </label>
+          <input
+            type="date"
+            value={newMilestoneData.startDate}
+            onChange={(e) => setNewMilestoneData(prev => ({ ...prev, startDate: e.target.value }))}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
+            End Date
+          </label>
+          <input
+            type="date"
+            value={newMilestoneData.endDate}
+            onChange={(e) => setNewMilestoneData(prev => ({ ...prev, endDate: e.target.value }))}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+          />
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <button
+          onClick={() => addMilestone(project.id)}
+          className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors"
+        >
+          <HiCheck className="w-4 h-4" />
+          Add Milestone
+        </button>
+        <button
+          onClick={() => toggleAddMilestoneForm(project.id)}
+          className="flex items-center gap-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded-lg transition-colors"
+        >
+          <HiX className="w-4 h-4" />
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+
 
                             {/* Tasks Section */}
                               {expandedMilestones.includes(milestone.id) && milestone.tasks && (
@@ -1432,10 +1521,10 @@ const deleteTask = async (projectId: string, taskId: string) => {
             onChange={(e) => setNewTaskData(prev => ({ ...prev, priority: e.target.value }))}
             className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
           >
-            <option value="low">Low</option>
-            <option value="MEDIUM">MEDIUM</option>
-            <option value="high">High</option>
-            <option value="critical">Critical</option>
+            <option value="LOW">Low</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="HIGH">High</option>
+            <option value="CRITICAL">Critical</option>
           </select>
         </div>
         <div>
@@ -1581,10 +1670,10 @@ const deleteTask = async (projectId: string, taskId: string) => {
                                                     onChange={(e) => setEditingTaskData(prev => ({ ...prev, priority: e.target.value }))}
                                                     className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                                   >
-                                                    <option value="low">Low</option>
-                                                    <option value="MEDIUM">MEDIUM</option>
-                                                    <option value="high">High</option>
-                                                    <option value="critical">Critical</option>
+                                                    <option value="LOW">Low</option>
+                                                    <option value="MEDIUM">Medium</option>
+                                                    <option value="HIGH">High</option>
+                                                    <option value="CRITICAL">Critical</option>
                                                   </select>
                                                 </div>
                                                 <div>

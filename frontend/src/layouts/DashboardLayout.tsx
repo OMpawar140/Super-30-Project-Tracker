@@ -152,7 +152,7 @@ const DashboardLayout = () => {
                     className="h-7 w-7 rounded-full mr-2 border border-gray-200 select-none"
                   />
                 ) || <User className="h-4 w-4 mr-2" />}
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 select-none">
                   {currentUser?.displayName || currentUser?.email}
                 </span>
               </div>

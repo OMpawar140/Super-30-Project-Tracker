@@ -205,7 +205,7 @@ const NotificationOverlay = () => {
       <button
         ref={buttonRef}
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-1 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
+        className="relative p-1 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 cursor-pointer"
       >
         <HiBell className={`h-6 w-6 ${isOpen ? 'animate-bounce-subtle' : ''}`} />
         {unreadCount > 0 && (
