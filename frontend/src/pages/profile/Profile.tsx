@@ -21,7 +21,7 @@ const Profile: React.FC<ProfileComponentProps> = () => {
 
   const { currentUser } = useAuth();
   // Mock data - in real app this would come from Firebase/props
-  const [profile, setProfile] = useState<Profile>({
+  const [profile] = useState<Profile>({
     name: currentUser?.displayName || "User",
     email: currentUser?.email,
     avatar: currentUser?.photoURL ?? "",

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // MilestoneModal.tsx
 import React, { useState } from 'react';
 import { HiPlus, HiTrash, HiCalendar } from 'react-icons/hi';
@@ -19,6 +20,7 @@ interface MilestoneModalProps {
     startDate: string;
     endDate: string;
   };
+  isLoading?: boolean;
 }
 
 const MilestoneModal: React.FC<MilestoneModalProps> = ({

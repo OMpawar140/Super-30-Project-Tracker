@@ -14,7 +14,8 @@ const getAuthToken = async (): Promise<string | null> => {
 
 const apiCall = async (
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  expectBlob = false 
 ): Promise<any> => {
   const token = await getAuthToken();
   
@@ -36,6 +37,11 @@ const apiCall = async (
     const errorData = await response.json().catch(() => ({}));
     console.error(errorData);
     throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+  }
+
+    // Handle blob responses
+  if (expectBlob) {
+    return await response.blob();
   }
 
   return await response.json();
@@ -305,7 +311,7 @@ export const apiService = {
       }),
   },
 
-  files: {
+ files: {
     // Get all files (maps to GET /api/files)
     getAllFiles: (searchParams?: Record<string, any>) => {
       const queryString = searchParams ? 
@@ -349,10 +355,8 @@ export const apiService = {
 
     // Download file (maps to GET /api/files/:key/download)
     downloadFile: (key: string) => {
-      // Return the URL for direct download or handle blob response
-      return apiCall(`/files/${key}/download`, {
-        responseType: 'blob'
-      });
+      // Return blob response for file download
+      return apiCall(`/files/${key}/download`, {}, true); // Pass true for expectBlob
     },
 
     // Get file signed URL (maps to GET /api/files/:key/url)
@@ -380,8 +384,7 @@ export const apiService = {
       apiCall('/files/bulk/download', {
         method: 'POST',
         body: JSON.stringify({ keys }),
-        responseType: 'blob'
-      }),
+      }, true), // Pass true for expectBlob
 
     // Health check (maps to GET /api/files/health)
     healthCheck: () => apiCall('/files/health'),

@@ -243,7 +243,7 @@ export const useNotifications = (): UseNotificationsReturn => {
         setHasMore(false);
       }
 
-      console.log(`Loaded ${notificationsData.length} notifications (page ${pageNum})`);
+      // console.log(`Loaded ${notificationsData.length} notifications (page ${pageNum})`);
       forceUpdate(); // Force re-render
     } catch (err) {
       const errorMessage = 'Failed to load notifications';
@@ -436,7 +436,7 @@ export const useNotifications = (): UseNotificationsReturn => {
           }, delay);
         } else {
           setError('Failed to connect to notification stream after multiple attempts');
-          console.error('❌ Max reconnection attempts reached');
+          console.error('Max reconnection attempts reached');
         }
       };
 
@@ -555,7 +555,7 @@ export const useNotifications = (): UseNotificationsReturn => {
   // Cleanup function
   const cleanup = useCallback(() => {
     if (eventSourceRef.current) {
-      console.log('🧹 Cleaning up SSE connection');
+      // console.log('🧹 Cleaning up SSE connection');
       eventSourceRef.current.close();
       eventSourceRef.current = null;
     }
@@ -593,12 +593,9 @@ export const useNotifications = (): UseNotificationsReturn => {
 
   // Debug effect to log state changes
   useEffect(() => {
-    console.log('Notifications state updated:', {
-      notificationsCount: notifications?.length || 0,
-      stats: stats,
-      isConnected,
-      updateTrigger
-    });
+    // State change effect: notifications, stats, isConnected, updateTrigger
+    // You can add analytics, debugging, or custom side effects here if needed.
+    // For example, you could emit a custom event or call a callback.
   }, [notifications, stats, isConnected, updateTrigger]);
 
   return {

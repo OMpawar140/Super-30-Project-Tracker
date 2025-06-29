@@ -40,19 +40,13 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
   const unreadCount = stats?.unread || 0;
 
   // Trigger animation when unread count changes
+
+
   useEffect(() => {
     if (unreadCount !== prevUnreadCount) {
       setPrevUnreadCount(unreadCount);
     }
   }, [unreadCount, prevUnreadCount]);
-
-  console.log('🔔 NotificationBell render:', {
-    stats,
-    notificationsCount: notifications?.length || 0,
-    unreadCount,
-    recentNotifications: recentNotifications.length,
-    isConnected
-  });
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
