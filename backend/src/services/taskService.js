@@ -316,87 +316,102 @@ class TaskService {
   }
   
   // Create new task
-  async createTask(milestoneId, userEmail, taskData) {
-    try {
-      // Check if user has permission to create tasks in this milestone
-      const hasPermission = await this.checkMilestonePermission(milestoneId, userEmail, ['CREATOR', 'ADMIN', 'TASK_MANAGER']);
-      if (!hasPermission) {
-        return null;
-      }
+async createTask(milestoneId, userEmail, taskData) {
+  try {
+    console.log(`[createTask] Start: userEmail=${userEmail}, milestoneId=${milestoneId}, taskData=`, taskData);
 
-      // Validate assignee exists if provided
-      if (taskData.assigneeId) {
-        const assigneeExists = await prisma.user.findUnique({
-          where: { id: taskData.assigneeId }
-        });
-        if (!assigneeExists) {
-          throw new Error('Assigned user not found');
-        }
-      }
+    // Check if user has permission
+    const hasPermission = await this.checkMilestonePermission(
+      milestoneId,
+      userEmail,
+      ['CREATOR', 'ADMIN', 'TASK_MANAGER']
+    );
+    console.log(`[createTask] Permission Check: ${hasPermission}`);
 
-      // Get the next order number for the milestone
-      const lastTask = await prisma.task.findFirst({
-        where: { milestoneId },
-        orderBy: { order: 'desc' }
+    if (!hasPermission) {
+      console.warn('[createTask] User does not have permission to create tasks');
+      return null;
+    }
+
+    // Validate assignee existence
+    if (taskData.assigneeId) {
+      console.log(`[createTask] Validating assigneeId: ${taskData.assigneeId}`);
+      const assigneeExists = await prisma.user.findUnique({
+        where: { id: taskData.assigneeId }
       });
+      if (!assigneeExists) {
+        console.error('[createTask] Assigned user not found');
+        throw new Error('Assigned user not found');
+      }
+    }
 
-      const nextOrder = lastTask ? lastTask.order + 1 : 1;
+    // Get last task in milestone to determine next order
+    const lastTask = await prisma.task.findFirst({
+      where: { milestoneId },
+      orderBy: { order: 'desc' }
+    });
+    const nextOrder = lastTask ? lastTask.order + 1 : 1;
+    console.log(`[createTask] Calculated next task order: ${nextOrder}`);
 
-      const task = await prisma.task.create({
-        data: {
-          title: taskData.title,
-          description: taskData.description || null,
-          status: taskData.status || 'TODO',
-          priority: taskData.priority || 'MEDIUM',
-          startDate: taskData.startDate ? new Date(taskData.startDate) : null,
-          dueDate: taskData.dueDate ? new Date(taskData.dueDate) : null,
-          estimatedHours: taskData.estimatedHours || null,
-          assigneeId: taskData.assigneeId || null,
-          milestoneId,
-          createdBy: userEmail,
-          order: nextOrder,
-          tags: taskData.tags || []
+    // Create the task
+    const task = await prisma.task.create({
+      data: {
+        title: taskData.title,
+        description: taskData.description || null,
+        status: taskData.status || 'TODO',
+        priority: taskData.priority || 'MEDIUM',
+        startDate: taskData.startDate ? new Date(taskData.startDate) : null,
+        dueDate: taskData.dueDate ? new Date(taskData.dueDate) : null,
+        estimatedHours: taskData.estimatedHours || null,
+        assigneeId: taskData.assigneeId || null,
+        milestoneId,
+        createdBy: userEmail,
+        order: nextOrder,
+        tags: taskData.tags || []
+      },
+      include: {
+        assignee: {
+          select: {
+            email: true,
+            skillset: true
+          }
         },
-        include: {
-          assignee: {
-            select: {
-              email: true,
-              skillset: true
-            }
-          },
-          creator: {
-            select: {
-              email: true,
-              skillset: true
-            }
-          },
-          milestone: {
-            select: {
-              id: true,
-              name: true,
-              project: {
-                select: {
-                  id: true,
-                  name: true,
-                  creator: {
-                    select: {
-                      email: true,
-                      skillset: true
-                    }
+        creator: {
+          select: {
+            email: true,
+            skillset: true
+          }
+        },
+        milestone: {
+          select: {
+            id: true,
+            name: true,
+            project: {
+              select: {
+                id: true,
+                name: true,
+                creator: {
+                  select: {
+                    email: true,
+                    skillset: true
                   }
                 }
               }
             }
           }
         }
-      });
+      }
+    });
 
-      return task;
-    } catch (error) {
-      console.error('Error in createTask:', error);
-      throw error;
-    }
+    console.log('[createTask] Task created successfully:', task.id);
+    return task;
+
+  } catch (error) {
+    console.error('[createTask] Error:', error);
+    throw error;
   }
+}
+
 
   // Update existing task
   async updateTask(taskId, userEmail, updateData) {
@@ -476,7 +491,7 @@ class TaskService {
   async deleteTask(taskId, userEmail) {
     try {
       // Check if user has permission to delete this task
-      const hasPermission = await this.checkTaskPermission(taskId, userEmail, ['CREATOR', 'ADMIN', 'TASK_MANAGER']);
+      const hasPermission = await this.checkTaskPermission(taskId, userEmail, ['CREATOR', 'ADMIN']);
       if (!hasPermission) {
         return null;
       }

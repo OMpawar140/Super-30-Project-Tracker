@@ -27,8 +27,6 @@ router.get('/:id', projectIdValidator, projectController.getProject);
 // PUT /api/projects/:id - Update project
 router.put('/:id', milestoneIdValidator, updateMilestoneValidator, milestoneController.updateMilestone);
 
-// DELETE /api/projects/:id - Delete project
-router.delete('/:id', projectIdValidator, projectController.deleteProject);
 
 // GET /api/projects/:id/members - Get project members
 router.get('/:id/members', projectIdValidator, projectController.getProjectMembers);
@@ -68,7 +66,7 @@ router.get('/milestones/:id', milestoneIdValidator, milestoneController.getMiles
 router.put('/milestones/:id', milestoneIdValidator, updateMilestoneValidator, milestoneController.updateMilestone);
 
 // DELETE /api/milestones/:id - Delete milestone
-router.delete('/milestones/:id', milestoneIdValidator, milestoneController.deleteMilestone);
+router.delete('/:id', milestoneIdValidator, milestoneController.deleteMilestone);
 
 // POST /api/milestones/:id/tasks - Add milestone task
 router.post('/:id/tasks', milestoneIdValidator, createTaskValidator, milestoneController.createTask);

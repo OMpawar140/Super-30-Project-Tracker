@@ -2,8 +2,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState, useEffect } from 'react';
-import { HiClipboardList, HiFlag, HiUser, HiCalendar, HiChevronDown, HiChevronUp, HiSearch, HiFilter, HiCheckCircle, 
-  HiClock, HiExclamation, HiUpload, HiEye, HiPencil, HiCheck, HiX } from 'react-icons/hi';
+import { HiClipboardList, HiFlag, HiUser, HiCalendar, HiChevronDown, HiChevronUp, HiSearch, HiFilter, HiCheckCircle, HiTrash,
+  HiClock, HiExclamation, HiUpload, HiEye, HiPencil, HiCheck, HiX,HiPlus } from 'react-icons/hi';
 import { apiService, useApiCall } from '@/services/api';
 import TaskFileModal from '../../components/ui/TaskFileModal';
 import { useAuth } from '@/context/AuthContext';
@@ -35,7 +35,7 @@ interface Task {
   status: string;
   priority?: string;
   startDate?: string;
-  dueDate?: string;
+  endDate?: string;
   assigneeId?: string;
   createdAt: string;
   updatedAt: string;
@@ -133,7 +133,7 @@ const ProjectsPage: React.FC = () => {
     status: string;
     priority: string;
     startDate: string;
-    dueDate: string;
+    endDate: string;
     assigneeId: string;
   }>({
     title: '',
@@ -141,9 +141,198 @@ const ProjectsPage: React.FC = () => {
     status: '',
     priority: '',
     startDate: '',
-    dueDate: '',
+    endDate: '',
     assigneeId: '' 
   });
+
+const [showAddMilestoneForm, setShowAddMilestoneForm] = useState<Record<string, boolean>>({});
+const [showAddTaskForm, setShowAddTaskForm] = useState<Record<string, boolean>>({});
+const [newMilestoneData, setNewMilestoneData] = useState({
+  name: '',
+  description: '',
+  status: 'PLANNED',
+  startDate: '',
+  endDate: ''
+});
+const [newTaskData, setNewTaskData] = useState({
+  title: '',
+  description: '',
+  priority: 'MEDIUM',
+  startDate: '',
+  endDate: '',
+  assigneeId: ''
+});
+
+
+const toggleAddMilestoneForm = (projectId : string) => {
+  setShowAddMilestoneForm(prev => ({
+    ...prev,
+    [projectId]: !prev[projectId]
+  }));
+  if (!showAddMilestoneForm[projectId]) {
+    setNewMilestoneData({
+      name: '',
+      description: '',
+      status: 'PLANNED',
+      startDate: '',
+      endDate: ''
+    });
+  }
+};
+
+
+const toggleAddTaskForm = (milestoneId : string) => {
+  setShowAddTaskForm(prev => ({
+    ...prev,
+    [milestoneId]: !prev[milestoneId]
+  }));
+  if (!showAddTaskForm[milestoneId]) {
+    setNewTaskData({
+      title: '',
+      description: '',
+      priority: 'MEDIUM',
+      startDate: '',
+      endDate: '',
+      assigneeId: ''
+    });
+  }
+};
+
+const addMilestone = async (projectId: string) => {
+  try {
+    const response = await callApi(() => apiService.milestones.createMilestone(projectId, newMilestoneData));
+    if (response.success) {
+      const newMilestone = response.data; // The newly created milestone
+      
+      // Update the specific project by adding the new milestone
+      setProjects(prev => prev.map(project => {
+        if (project.id === projectId) {
+          return {
+            ...project,
+            milestones: [...(project.milestones || []), newMilestone]
+          };
+        }
+        return project;
+      }));
+      
+      setShowAddMilestoneForm(prev => ({ ...prev, [projectId]: false }));
+      setNewMilestoneData({
+        name: '',
+        description: '',
+        status: 'PLANNED',
+        startDate: '',
+        endDate: ''
+      });
+    }
+  } catch (error) {
+    console.error('Error adding milestone:', error);
+  }
+};
+
+const deleteMilestone = async (projectId: string, milestoneId: string) => { 
+  if (!confirm('Are you sure you want to delete this milestone? This will also delete all associated tasks.')) {
+    return;
+  }
+
+  console.log(`Milestone id : ${milestoneId} for project id: ${projectId}`);
+
+  try {
+    const response = await callApi(() => apiService.milestones.deleteMilestone(milestoneId));
+
+    if (response.success) {
+      console.log(`Milestone with id ${milestoneId} deleted successfully.`);
+
+      setProjects(prevProjects =>
+        prevProjects.map(project =>
+          project.id === projectId
+            ? {
+                ...project,
+                milestones: project.milestones.filter(milestone => milestone.id !== milestoneId)
+              }
+            : project
+        )
+      );
+    }
+  } catch (error) {
+    console.error('Error deleting milestone:', error);
+  }
+};
+
+
+const addTask = async (projectId: string, milestoneId: string) => {
+  try {
+    const response = await callApi(() => apiService.tasks.createTask(milestoneId, newTaskData));
+    console.log(response);
+    window.location.reload();
+    if (response.success) {
+      const newTask = response.data; // The newly created task
+      
+      setProjects(prev => prev.map(project => {
+        if (project.id === projectId) {
+          return {
+            ...project,
+            milestones: project.milestones.map(milestone => {
+              if (milestone.id === milestoneId) {
+                return {
+                  ...milestone,
+                  tasks: [...(milestone.tasks || []), newTask]
+                };
+              }
+              return milestone;
+            })
+          };
+        }
+        return project;
+      }));
+      
+      // Reset form
+      setShowAddTaskForm(prev => ({ ...prev, [milestoneId]: false }));
+      setNewTaskData({
+        title: '',
+        description: '',
+        priority: 'MEDIUM',
+        startDate: '',
+        endDate: '',
+        assigneeId: ''
+      });
+    }
+  } catch (error) {
+    console.error('Error adding task:', error);
+  }
+};
+
+const deleteTask = async (projectId: string, taskId: string) => {
+  if (!confirm('Are you sure you want to delete this task?')) {
+    return;
+  }
+
+  console.log(`Task id : ${taskId} for project id: ${projectId}`);
+  try {
+    const response = await callApi(() => apiService.tasks.deleteTask(taskId));
+    console.log(response);
+    if (response.success) {
+      console.log(`Task with id ${taskId} deleted successfully.`);
+      setProjects(prevProjects =>
+        prevProjects.map(project =>
+          project.id === projectId
+            ? {
+                ...project,
+                milestones: project.milestones.map(milestone => ({
+                  ...milestone,
+                  tasks: milestone.tasks.filter(task => task.id !== taskId)
+                }))
+              }
+            : project
+        )
+      );
+     
+    }
+  } catch (error) {
+    console.error('Error deleting task:', error);
+  }
+};
+
+
 
   useEffect(() => {
     document.title = "Project Panel - Project Tracker";
@@ -256,9 +445,9 @@ const ProjectsPage: React.FC = () => {
       title: task.title,
       description: task.description || '',
       status: task.status,
-      priority: task.priority || 'medium',
+      priority: task.priority || 'MEDIUM',
       startDate: task.startDate ? task.startDate.split('T')[0] : '',
-      dueDate: task.dueDate ? task.dueDate.split('T')[0] : '',
+      endDate: task.endDate ? task.endDate.split('T')[0] : '',
       assigneeId: task.assigneeId || '' 
     });
   };
@@ -271,7 +460,7 @@ const ProjectsPage: React.FC = () => {
       status: '',
       priority: '',
       startDate: '',
-      dueDate: '',
+      endDate: '',
       assigneeId: ''
     });
   };
@@ -286,7 +475,7 @@ const ProjectsPage: React.FC = () => {
         status: editingTaskData.status,
         priority: editingTaskData.priority,
         startDate: editingTaskData.startDate ? new Date(editingTaskData.startDate).toISOString() : undefined,
-        dueDate: editingTaskData.dueDate ? new Date(editingTaskData.dueDate).toISOString() : undefined,
+        endDate: editingTaskData.endDate ? new Date(editingTaskData.endDate).toISOString() : undefined,
         assigneeId: editingTaskData.assigneeId || undefined
       };
 
@@ -376,7 +565,7 @@ const ProjectsPage: React.FC = () => {
           ],
           progress: calculateProjectProgress(project),
           tags: extractTags(project),
-          priority: project.priority || 'medium',
+          priority: project.priority || 'MEDIUM',
           budget: project.budget || null,
           totalTasks: calculateTotalTasks(project),
           completedTasks: calculateCompletedTasks(project),
@@ -461,7 +650,7 @@ const ProjectsPage: React.FC = () => {
       case 'in progress':
       case 'ongoing':
         return 'text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700';
-      case 'planning':
+      case 'PLANNED':
       case 'upcoming':
       case 'not_started':
       case 'not started':
@@ -485,7 +674,7 @@ const ProjectsPage: React.FC = () => {
         return 'text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20';
       case 'high':
         return 'text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20';
-      case 'medium':
+      case 'MEDIUM':
         return 'text-yellow-700 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20';
       case 'low':
         return 'text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20';
@@ -661,17 +850,32 @@ const ProjectsPage: React.FC = () => {
               >
                 <option value="All">All Status</option>
                 <option value="ACTIVE">Active</option>
-                <option value="PLANNING">Planning</option>
+                <option value="PLANNED">PLANNED</option>
                 <option value="COMPLETED">Completed</option>
                 <option value="ON_HOLD">On Hold</option>
               </select>
               <HiFilter className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-4 h-4 pointer-events-none" />
             </div>
+
+            <div className="relative">
+        <select
+          value={roleFilter}
+          onChange={(e) => setRoleFilter(e.target.value)}
+          className="appearance-none bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 pr-8 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-300"
+        >
+          <option value="All">All Roles</option>
+          <option value="ADMIN">Admin</option>
+          <option value="CREATOR">Creator</option>
+          <option value="TASK_COMPLETER">Task Completer</option>
+        </select>
+        <HiFilter className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-4 h-4 pointer-events-none" />
+      </div>
+
           </div>
         </div>
 
         {/* Projects List */}
-        <div className="space-y-6">
+   <div className="space-y-6">
           {filteredProjects.map((project) => (
             <div
               key={project.id}
@@ -683,39 +887,53 @@ const ProjectsPage: React.FC = () => {
             >
               {/* Project Header */}
               <div 
-                className="p-6 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors duration-300"
-                onClick={() => toggleProjectExpansion(project.id)}
+                className={`p-6 transition-colors duration-300 ${
+                  editingProjectId === project.id 
+                    ? 'bg-blue-50 dark:bg-blue-900/20' 
+                    : 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750'
+                }`}
+                onClick={editingProjectId === project.id ? undefined : () => toggleProjectExpansion(project.id)}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       {editingProjectId === project.id ? (
-                        <div className="flex items-center gap-2 flex-1">
-                          <input
-                            type="text"
-                            value={editingProjectData.name}
-                            onChange={(e) => setEditingProjectData(prev => ({ ...prev, name: e.target.value }))}
-                            className="text-xl font-semibold bg-transparent border-b border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 flex-1"
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              saveProjectChanges();
-                            }}
-                            className="text-green-600 hover:text-green-700 p-1"
-                          >
-                            <HiCheck className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              cancelEditingProject();
-                            }}
-                            className="text-red-600 hover:text-red-700 p-1"
-                          >
-                            <HiX className="w-4 h-4" />
-                          </button>
+                        <div className="flex items-center gap-3 flex-1">
+                          <div className="flex-1">
+                            <label className="block text-sm font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
+                              Project Title
+                            </label>
+                            <input
+                              type="text"
+                              value={editingProjectData.name}
+                              onChange={(e) => setEditingProjectData(prev => ({ ...prev, name: e.target.value }))}
+                              className="w-full text-xl font-semibold bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="Enter project title"
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          </div>
+                          <div className="flex gap-2 mt-6">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                saveProjectChanges();
+                              }}
+                              className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors"
+                            >
+                              <HiCheck className="w-4 h-4" />
+                              Save Changes
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                cancelEditingProject();
+                              }}
+                              className="flex items-center gap-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded-lg transition-colors"
+                            >
+                              <HiX className="w-4 h-4" />
+                              Cancel
+                            </button>
+                          </div>
                         </div>
                       ) : (
                         <>
@@ -723,14 +941,13 @@ const ProjectsPage: React.FC = () => {
                             {project.name}
                           </h2>
                           {currentUser && currentUser.email === project.creatorId && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                startEditingProject(project);
-                              }}
-                              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1"
+                               <button
+                              onClick={() => startEditingProject(project)}
+                              className="flex items-center gap-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
+                              title="Edit project"
                             >
                               <HiPencil className="w-4 h-4" />
+                              Edit
                             </button>
                           )}
                           {expandedProjects.includes(project.id) ? 
@@ -742,36 +959,57 @@ const ProjectsPage: React.FC = () => {
                     </div>
                     
                     {editingProjectId === project.id ? (
-                      <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
-                        <textarea
-                          value={editingProjectData.description}
-                          onChange={(e) => setEditingProjectData(prev => ({ ...prev, description: e.target.value }))}
-                          className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
-                          rows={3}
-                        />
-                        <div className="flex gap-4">
-                          <select
-                            value={editingProjectData.status}
-                            onChange={(e) => setEditingProjectData(prev => ({ ...prev, status: e.target.value }))}
-                            className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                          >
-                            <option value="PLANNING">Planning</option>
-                            <option value="ACTIVE">Active</option>
-                            <option value="COMPLETED">Completed</option>
-                            <option value="ON_HOLD">On Hold</option>
-                          </select>
-                          <input
-                            type="date"
-                            value={editingProjectData.startDate}
-                            onChange={(e) => setEditingProjectData(prev => ({ ...prev, startDate: e.target.value }))}
-                            className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      <div className="space-y-4" onClick={(e) => e.stopPropagation()}>
+                        <div>
+                          <label className="block text-sm font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
+                            Description
+                          </label>
+                          <textarea
+                            value={editingProjectData.description}
+                            onChange={(e) => setEditingProjectData(prev => ({ ...prev, description: e.target.value }))}
+                            className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            rows={3}
+                            placeholder="Enter project description"
                           />
-                          <input
-                            type="date"
-                            value={editingProjectData.endDate}
-                            onChange={(e) => setEditingProjectData(prev => ({ ...prev, endDate: e.target.value }))}
-                            className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                          />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div>
+                            <label className="block text-sm font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
+                              Status
+                            </label>
+                            <select
+                              value={editingProjectData.status}
+                              onChange={(e) => setEditingProjectData(prev => ({ ...prev, status: e.target.value }))}
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            >
+                              <option value="PLANNED">PLANNED</option>
+                              <option value="ACTIVE">Active</option>
+                              <option value="COMPLETED">Completed</option>
+                              <option value="ON_HOLD">On Hold</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
+                              Start Date
+                            </label>
+                            <input
+                              type="date"
+                              value={editingProjectData.startDate}
+                              onChange={(e) => setEditingProjectData(prev => ({ ...prev, startDate: e.target.value }))}
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
+                              End Date
+                            </label>
+                            <input
+                              type="date"
+                              value={editingProjectData.endDate}
+                              onChange={(e) => setEditingProjectData(prev => ({ ...prev, endDate: e.target.value }))}
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            />
+                          </div>
                         </div>
                       </div>
                     ) : (
@@ -816,7 +1054,7 @@ const ProjectsPage: React.FC = () => {
                   
                   <div className="flex flex-col items-end gap-3 ml-6">
                     <div className="flex gap-2">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(project.status)}`}>
+                      <span className={`px-3 py-1 rounded-full text-xs font-MEDIUM border ${getStatusColor(project.status)}`}>
                         {project.status.replace('_', ' ')}
                       </span>
                     </div>
@@ -854,7 +1092,7 @@ const ProjectsPage: React.FC = () => {
                     <div className='flex flex-col md:flex-row gap-6 justify-between'>
                       {/* Creator Info */}
                       <div className='md:pl-8 lg:pl-12'>
-                        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3">Project Creator</h3>
+                        <h3 className="text-lg font-MEDIUM text-gray-900 dark:text-white mb-3">Project Creator</h3>
                         <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded-lg w-fit">
                           <HiUser className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                           <span className="text-sm text-gray-700 dark:text-gray-300">{project.creator.email}</span>
@@ -869,7 +1107,7 @@ const ProjectsPage: React.FC = () => {
                       {/* Tags */}
                       {project.tags && project.tags.length > 0 && (
                         <div className='md:pr-8 lg:pr-12'>
-                          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3">Tags</h3>
+                          <h3 className="text-lg font-MEDIUM text-gray-900 dark:text-white mb-3">Tags</h3>
                           <div className="flex flex-wrap gap-2">
                             {project.tags.map((tag, index) => (
                               <span key={index} className="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-sm">
@@ -883,63 +1121,104 @@ const ProjectsPage: React.FC = () => {
 
                     {/* Milestones Section */}
                     <div>
-                      <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                        <HiFlag className="w-5 h-5" />
-                        Milestones ({project.milestones.length})
-                      </h3>
+                     <div className="flex items-center justify-between mb-3">
+  <h3 className="text-lg font-MEDIUM text-gray-900 dark:text-white flex items-center gap-2">
+    <HiFlag className="w-5 h-5" />
+    Milestones ({project.milestones.length})
+  </h3>
+  {currentUser && currentUser.email === project.creatorId && (
+    <button
+      onClick={() => toggleAddMilestoneForm(project.id)}
+      className="flex items-center gap-2 px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors"
+    >
+      <HiPlus className="w-4 h-4" />
+      Add Milestone
+    </button>
+  )}
+</div>
                       <div className="space-y-3">
                         {project.milestones.map((milestone) => (
                           <div key={milestone.id} className="bg-gray-50 dark:bg-gray-750 rounded-lg border border-gray-200 dark:border-gray-600">
                             {/* Milestone Header */}
                             <div 
-                              className="p-4 cursor-pointer hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-900 transition-colors duration-200"
-                              onClick={() => toggleMilestoneExpansion(milestone.id)}
+                              className={`p-4 transition-colors duration-200 ${
+                                editingMilestoneId === milestone.id 
+                                  ? 'bg-blue-50 dark:bg-blue-900/20' 
+                                  : 'cursor-pointer hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-900'
+                              }`}
+                              onClick={editingMilestoneId === milestone.id ? undefined : () => toggleMilestoneExpansion(milestone.id)}
                             >
                               <div className="flex items-start justify-between">
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2 mb-1">
                                     {editingMilestoneId === milestone.id ? (
-                                      <div className="flex items-center gap-2 flex-1">
-                                        <input
-                                          type="text"
-                                          value={editingMilestoneData.name}
-                                          onChange={(e) => setEditingMilestoneData(prev => ({ ...prev, name: e.target.value }))}
-                                          className="font-medium bg-transparent border-b border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 flex-1"
-                                          onClick={(e) => e.stopPropagation()}
-                                        />
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            saveMilestoneChanges();
-                                          }}
-                                          className="text-green-600 hover:text-green-700 p-1"
-                                        >
-                                          <HiCheck className="w-3 h-3" />
-                                        </button>
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            cancelEditingMilestone();
-                                          }}
-                                          className="text-red-600 hover:text-red-700 p-1"
-                                        >
-                                          <HiX className="w-3 h-3" />
-                                        </button>
-                                      </div>
-                                    ) : (
-                                      <>
-                                        <h4 className="font-medium text-gray-900 dark:text-white">{milestone.name}</h4>
-                                        {currentUser && currentUser.email === project.creatorId && (
+                                      <div className="flex items-center gap-3 flex-1">
+                                        <div className="flex-1">
+                                          <label className="block text-sm font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
+                                            Milestone Name
+                                          </label>
+                                          <input
+                                            type="text"
+                                            value={editingMilestoneData.name}
+                                            onChange={(e) => setEditingMilestoneData(prev => ({ ...prev, name: e.target.value }))}
+                                            className="w-full font-MEDIUM bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                            placeholder="Enter milestone name"
+                                            onClick={(e) => e.stopPropagation()}
+                                          />
+                                        </div>
+                                        
+                                        <div className="flex gap-2 mt-6">
                                           <button
                                             onClick={(e) => {
                                               e.stopPropagation();
-                                              startEditingMilestone(milestone);
+                                              saveMilestoneChanges();
                                             }}
-                                            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1"
+                                            className="flex items-center gap-2 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs rounded-lg transition-colors"
                                           >
-                                            <HiPencil className="w-3 h-3" />
+                                            <HiCheck className="w-3 h-3" />
+                                            Save
                                           </button>
-                                        )}
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              cancelEditingMilestone();
+                                            }}
+                                            className="flex items-center gap-2 px-3 py-1.5 bg-gray-600 hover:bg-gray-700 text-white text-xs rounded-lg transition-colors"
+                                          >
+                                            <HiX className="w-3 h-3" />
+                                            Cancel
+                                          </button>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <>
+                                        <h4 className="font-MEDIUM text-gray-900 dark:text-white">{milestone.name}</h4>
+                                      {currentUser && currentUser.email === project.creatorId && (
+  <>
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        startEditingMilestone(milestone);
+      }}
+      className="flex items-center gap-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg transition-colors"
+      title="Edit milestone"
+    >
+      <HiPencil className="w-3 h-3" />
+      Edit
+    </button>
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        deleteMilestone(project.id, milestone.id);
+      }}
+      className="flex items-center gap-1 px-2 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded-lg transition-colors"
+      title="Delete milestone"
+    >
+      <HiTrash className="w-3 h-3" />
+      Delete
+    </button>
+  </>
+)}
                                         {expandedMilestones.includes(milestone.id) ? 
                                           <HiChevronUp className="w-4 h-4 text-gray-400 dark:text-gray-500" /> : 
                                           <HiChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-500" />
@@ -949,30 +1228,45 @@ const ProjectsPage: React.FC = () => {
                                   </div>
                                   
                                   {editingMilestoneId === milestone.id ? (
-                                    <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
-                                      <div className="flex gap-2">
-                                        <select
-                                          value={editingMilestoneData.status}
-                                          onChange={(e) => setEditingMilestoneData(prev => ({ ...prev, status: e.target.value }))}
-                                          className="px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                                        >
-                                          <option value="PLANNING">Planning</option>
-                                          <option value="ACTIVE">Active</option>
-                                          <option value="COMPLETED">Completed</option>
-                                          <option value="ON_HOLD">On Hold</option>
-                                        </select>
-                                        <input
-                                          type="date"
-                                          value={editingMilestoneData.startDate}
-                                          onChange={(e) => setEditingMilestoneData(prev => ({ ...prev, startDate: e.target.value }))}
-                                          className="px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                                        />
-                                        <input
-                                          type="date"
-                                          value={editingMilestoneData.endDate}
-                                          onChange={(e) => setEditingMilestoneData(prev => ({ ...prev, endDate: e.target.value }))}
-                                          className="px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                                        />
+                                    <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
+                                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                        <div>
+                                          <label className="block text-xs font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
+                                            Status
+                                          </label>
+                                          <select
+                                            value={editingMilestoneData.status}
+                                            onChange={(e) => setEditingMilestoneData(prev => ({ ...prev, status: e.target.value }))}
+                                            className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                          >
+                                            <option value="PLANNED">PLANNED</option>
+                                            <option value="ACTIVE">Active</option>
+                                            <option value="COMPLETED">Completed</option>
+                                            <option value="ON_HOLD">On Hold</option>
+                                          </select>
+                                        </div>
+                                        <div>
+                                          <label className="block text-xs font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
+                                            Start Date
+                                          </label>
+                                          <input
+                                            type="date"
+                                            value={editingMilestoneData.startDate}
+                                            onChange={(e) => setEditingMilestoneData(prev => ({ ...prev, startDate: e.target.value }))}
+                                            className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                          />
+                                        </div>
+                                        <div>
+                                          <label className="block text-xs font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
+                                            End Date
+                                          </label>
+                                          <input
+                                            type="date"
+                                            value={editingMilestoneData.endDate}
+                                            onChange={(e) => setEditingMilestoneData(prev => ({ ...prev, endDate: e.target.value }))}
+                                            className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                          />
+                                        </div>
                                       </div>
                                     </div>
                                   ) : (
@@ -983,119 +1277,377 @@ const ProjectsPage: React.FC = () => {
                                   )}
                                 </div>
                                 {editingMilestoneId !== milestone.id && (
-                                  <span className={`px-2 py-1 rounded text-xs font-medium border ${getStatusColor(milestone.status, 'milestone')}`}>
+                                  <span className={`px-2 py-1 rounded text-xs font-MEDIUM border ${getStatusColor(milestone.status, 'milestone')}`}>
                                     {milestone.status.replace('_', ' ')}
                                   </span>
                                 )}
                               </div>
                             </div>
 
+                            
+{showAddMilestoneForm[project.id] && (
+  <div className="bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-700 p-4 mb-4">
+    <h4 className="text-sm font-MEDIUM text-gray-900 dark:text-white mb-3">Add New Milestone</h4>
+    <div className="space-y-3">
+      <div>
+        <label className="block text-sm font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
+          Milestone Name
+        </label>
+        <input
+          type="text"
+          value={newMilestoneData.name}
+          onChange={(e) => setNewMilestoneData(prev => ({ ...prev, name: e.target.value }))}
+          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+          placeholder="Enter milestone name"
+        />
+      </div>
+       <div>
+        <label className="block text-sm font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
+          Description
+        </label>
+        <textarea
+          value={newMilestoneData.description}
+          onChange={(e) => setNewMilestoneData(prev => ({ ...prev, description: e.target.value }))}
+          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+          placeholder="Enter milestone description"
+        />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div>
+          <label className="block text-sm font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
+            Status
+          </label>
+          <select
+            value={newMilestoneData.status}
+            onChange={(e) => setNewMilestoneData(prev => ({ ...prev, status: e.target.value }))}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+          >
+            <option value="PLANNED">PLANNED</option>
+            <option value="ACTIVE">Active</option>
+            <option value="COMPLETED">Completed</option>
+            <option value="ON_HOLD">On Hold</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
+            Start Date
+          </label>
+          <input
+            type="date"
+            value={newMilestoneData.startDate}
+            onChange={(e) => setNewMilestoneData(prev => ({ ...prev, startDate: e.target.value }))}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
+            End Date
+          </label>
+          <input
+            type="date"
+            value={newMilestoneData.endDate}
+            onChange={(e) => setNewMilestoneData(prev => ({ ...prev, endDate: e.target.value }))}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+          />
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <button
+          onClick={() => addMilestone(project.id)}
+          className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors"
+        >
+          <HiCheck className="w-4 h-4" />
+          Add Milestone
+        </button>
+        <button
+          onClick={() => toggleAddMilestoneForm(project.id)}
+          className="flex items-center gap-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded-lg transition-colors"
+        >
+          <HiX className="w-4 h-4" />
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+
+
                             {/* Tasks Section */}
-                            {expandedMilestones.includes(milestone.id) && milestone.tasks && (
+                              {expandedMilestones.includes(milestone.id) && milestone.tasks && (
                               <div className="border-t border-gray-200 dark:border-gray-600 p-4 bg-gray-100 dark:bg-gray-800 animate-slide-down">
-                                <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-                                  <HiClipboardList className="w-4 h-4" />
-                                  Tasks ({milestone.tasks.length})
-                                </h5>
+                               <div className="flex items-center justify-between mb-3">
+                                  <h5 className="text-sm font-MEDIUM text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                                    <HiClipboardList className="w-4 h-4" />
+                                    Tasks ({milestone.tasks.length})
+                                  </h5>
+                                  {currentUser && currentUser.email === project.creatorId && (
+                                    <button
+                                      onClick={() => toggleAddTaskForm(milestone.id)}
+                                      className="flex items-center gap-1 px-2 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded-lg transition-colors"
+                                    >
+                                      <HiPlus className="w-3 h-3" />
+                                      Add Task
+                                    </button>
+                                  )}
+                                </div>
+
+                                {showAddTaskForm[milestone.id] && (
+  <div className="bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-700 p-3 mb-3">
+    <h6 className="text-xs font-MEDIUM text-gray-900 dark:text-white mb-2">Add New Task</h6>
+    <div className="space-y-2">
+      <div>
+        <label className="block text-xs font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
+          Task Title
+        </label>
+        <input
+          type="text"
+          value={newTaskData.title}
+          onChange={(e) => setNewTaskData(prev => ({ ...prev, title: e.target.value }))}
+          className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+          placeholder="Enter task title"
+        />
+      </div>
+      <div>
+        <label className="block text-xs font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
+          Description
+        </label>
+        <textarea
+          value={newTaskData.description}
+          onChange={(e) => setNewTaskData(prev => ({ ...prev, description: e.target.value }))}
+          className="w-full p-2 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+          rows={2}
+          placeholder="Enter task description"
+        />
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        <div>
+          <label className="block text-xs font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
+            Priority
+          </label>
+          <select
+            value={newTaskData.priority}
+            onChange={(e) => setNewTaskData(prev => ({ ...prev, priority: e.target.value }))}
+            className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+          >
+            <option value="low">Low</option>
+            <option value="MEDIUM">MEDIUM</option>
+            <option value="high">High</option>
+            <option value="critical">Critical</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
+            Start Date
+          </label>
+          <input
+            type="date"
+            value={newTaskData.startDate}
+            onChange={(e) => setNewTaskData(prev => ({ ...prev, startDate: e.target.value }))}
+            className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
+            Due Date
+          </label>
+          <input
+            type="date"
+            value={newTaskData.endDate}
+            onChange={(e) => setNewTaskData(prev => ({ ...prev, endDate: e.target.value }))}
+            className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
+            Assignee
+          </label>
+          <select
+            value={newTaskData.assigneeId}
+            onChange={(e) => setNewTaskData(prev => ({ ...prev, assigneeId: e.target.value }))}
+            className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+          >
+            <option value="" disabled >Select Assignee</option>
+            {project.members
+              .filter((member) => member.role === 'TASK_COMPLETER')
+              .map((member) => (
+                <option key={member.id} value={member.user.email}>
+                  {member.user.email}
+                </option>
+              ))}
+          </select>
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <button
+          onClick={() => addTask(project.id, milestone.id)}
+          className="flex items-center gap-1 px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded-lg transition-colors"
+        >
+          <HiCheck className="w-3 h-3" />
+          Add Task
+        </button>
+        <button
+          onClick={() => toggleAddTaskForm(milestone.id)}
+          className="flex items-center gap-1 px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white text-xs rounded-lg transition-colors"
+        >
+          <HiX className="w-3 h-3" />
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+)}
                                 <div className="space-y-2">
                                   {milestone.tasks.map((task) => (
-                                    <div key={task.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-600 p-3">
+                                    <div key={task.id} className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-600 p-3 ${
+                                      editingTaskId === task.id ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20' : ''
+                                    }`}>
                                       <div className="flex items-start justify-between">
                                         <div className="flex-1">
                                           <div className="flex items-center gap-2 mb-1">
                                             {getTaskIcon(task.status)}
                                             {editingTaskId === task.id ? (
-                                              <div className="flex items-center gap-2 flex-1">
-                                                <input
-                                                  type="text"
-                                                  value={editingTaskData.title}
-                                                  onChange={(e) => setEditingTaskData(prev => ({ ...prev, title: e.target.value }))}
-                                                  className="text-sm font-medium bg-transparent border-b border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 flex-1"
-                                                />
-                                                <button
-                                                  onClick={() => saveTaskChanges()}
-                                                  className="text-green-600 hover:text-green-700 p-1"
-                                                >
-                                                  <HiCheck className="w-3 h-3" />
-                                                </button>
-                                                <button
-                                                  onClick={() => cancelEditingTask()}
-                                                  className="text-red-600 hover:text-red-700 p-1"
-                                                >
-                                                  <HiX className="w-3 h-3" />
-                                                </button>
+                                              <div className="flex items-center gap-3 flex-1">
+                                                <div className="flex-1">
+                                                  <label className="block text-xs font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
+                                                    Task Title
+                                                  </label>
+                                                  <input
+                                                    type="text"
+                                                    value={editingTaskData.title}
+                                                    onChange={(e) => setEditingTaskData(prev => ({ ...prev, title: e.target.value }))}
+                                                    className="w-full text-sm font-MEDIUM bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                    placeholder="Enter task title"
+                                                  />
+                                                </div>
                                               </div>
                                             ) : (
                                               <>
-                                                <h6 className="text-sm font-medium text-gray-900 dark:text-white">{task.title}</h6>
-                                                {currentUser && currentUser.email === project.creatorId && (
-                                                  <button
-                                                    onClick={() => startEditingTask(task)}
-                                                    className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1"
-                                                  >
-                                                    <HiPencil className="w-3 h-3" />
-                                                  </button>
-                                                )}
+                                                <h6 className="text-sm font-MEDIUM text-gray-900 dark:text-white">{task.title}</h6>
+                                              {currentUser && currentUser.email === project.creatorId && (
+  <>
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        startEditingTask(task);
+      }}
+      className="flex items-center gap-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg transition-colors"
+      title="Edit task"
+    >
+      <HiPencil className="w-3 h-3" />
+      Edit
+    </button>
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        deleteTask(project.id, task.id);
+      }}
+      className="flex items-center gap-1 px-2 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded-lg transition-colors"
+      title="Delete task"
+    >
+      <HiTrash className="w-3 h-3" />
+      Delete
+    </button>
+  </>
+)}
                                               </>
                                             )}
                                           </div>
                                           
                                           {editingTaskId === task.id ? (
-                                            <div className="space-y-2">
-                                              <textarea
-                                                value={editingTaskData.description}
-                                                onChange={(e) => setEditingTaskData(prev => ({ ...prev, description: e.target.value }))}
-                                                className="w-full p-2 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
-                                                rows={2}
-                                              />
-                                              <div className="flex gap-2 flex-wrap">
-                                                {/* <select
-                                                  value={editingTaskData.status}
-                                                  onChange={(e) => setEditingTaskData(prev => ({ ...prev, status: e.target.value }))}
-                                                  className="px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                                                >
-                                                  <option value="TODO">Upcoming</option>
-                                                  <option value="IN_PROGRESS">In Progress</option>
-                                                  <option value="COMPLETED">Completed</option>
-                                                  <option value="BLOCKED">Blocked</option>
-                                                </select> */}
-                                                <select
-                                                  value={editingTaskData.priority}
-                                                  onChange={(e) => setEditingTaskData(prev => ({ ...prev, priority: e.target.value }))}
-                                                  className="px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                                                >
-                                                  <option value="low">Low</option>
-                                                  <option value="medium">Medium</option>
-                                                  <option value="high">High</option>
-                                                  <option value="critical">Critical</option>
-                                                </select>
-                                                <input
-                                                  type="date"
-                                                  value={editingTaskData.startDate}
-                                                  onChange={(e) => setEditingTaskData(prev => ({ ...prev, startDate: e.target.value }))}
-                                                  className="px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                            <div className="space-y-3">
+                                              <div>
+                                                <label className="block text-xs font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
+                                                  Description
+                                                </label>
+                                                <textarea
+                                                  value={editingTaskData.description}
+                                                  onChange={(e) => setEditingTaskData(prev => ({ ...prev, description: e.target.value }))}
+                                                  className="w-full p-2 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                  rows={2}
+                                                  placeholder="Enter task description"
                                                 />
-                                                <input
-                                                  type="date"
-                                                  value={editingTaskData.dueDate}
-                                                  onChange={(e) => setEditingTaskData(prev => ({ ...prev, dueDate: e.target.value }))}
-                                                  className="px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                                                />
-                                                <select
-                                                  value={editingTaskData.assigneeId}
-                                                  onChange={(e) => setEditingTaskData(prev => ({ ...prev, assigneeId: e.target.value }))}
-                                                  className="px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                              </div>
+                                              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                                <div>
+                                                  <label className="block text-xs font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
+                                                    Priority
+                                                  </label>
+                                                  <select
+                                                    value={editingTaskData.priority}
+                                                    onChange={(e) => setEditingTaskData(prev => ({ ...prev, priority: e.target.value }))}
+                                                    className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                  >
+                                                    <option value="low">Low</option>
+                                                    <option value="MEDIUM">MEDIUM</option>
+                                                    <option value="high">High</option>
+                                                    <option value="critical">Critical</option>
+                                                  </select>
+                                                </div>
+                                                <div>
+                                                  <label className="block text-xs font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
+                                                    Start Date
+                                                  </label>
+                                                  <input
+                                                    type="date"
+                                                    value={editingTaskData.startDate}
+                                                    onChange={(e) => setEditingTaskData(prev => ({ ...prev, startDate: e.target.value }))}
+                                                    className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                  />
+                                                </div>
+                                                <div>
+                                                  <label className="block text-xs font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
+                                                    Due Date
+                                                  </label>
+                                                  <input
+                                                    type="date"
+                                                    value={editingTaskData.endDate}
+                                                    onChange={(e) => setEditingTaskData(prev => ({ ...prev, endDate: e.target.value }))}
+                                                    className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                  />
+                                                </div>
+                                                <div>
+                                                  <label className="block text-xs font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
+                                                    Assignee
+                                                  </label>
+                                                  <select
+                                                    value={editingTaskData.assigneeId}
+                                                    onChange={(e) => setEditingTaskData(prev => ({ ...prev, assigneeId: e.target.value }))}
+                                                    className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                  >
+                                                    {project.members
+                                                    .filter((member) => (
+                                                      member.role === 'TASK_COMPLETER'
+                                                    ))
+                                                    .map((member) => (
+                                                      <option key={member.id} value={member.user.email}>
+                                                        {member.user.email}
+                                                      </option>
+                                                    ))}
+                                                  </select>
+                                                </div>
+                                              </div>
+                                             <div className="flex gap-2 mt-3">
+                                                <button
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    saveTaskChanges();
+                                                  }}
+                                                  className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors"
                                                 >
-                                                  {project.members
-                                                  .filter((member) => (
-                                                    member.role === 'TASK_COMPLETER'
-                                                  ))
-                                                  .map((member) => (
-                                                    <option key={member.id} value={member.user.email}>
-                                                      {member.user.email}
-                                                    </option>
-                                                  ))}
-                                                </select>
+                                                  <HiCheck className="w-4 h-4" />
+                                                  Save Changes
+                                                </button>
+                                                <button
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    cancelEditingTask();
+                                                  }}
+                                                  className="flex items-center gap-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded-lg transition-colors"
+                                                >
+                                                  <HiX className="w-4 h-4" />
+                                                  Cancel
+                                                </button>
                                               </div>
                                             </div>
                                           ) : (
@@ -1104,8 +1656,8 @@ const ProjectsPage: React.FC = () => {
                                                 <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">{task.description}</p>
                                               )}
                                               <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
-                                                {task.startDate && task.dueDate && (
-                                                  <span>{formatDate(task.startDate)} - {formatDate(task.dueDate)}</span>
+                                                {task.startDate && task.endDate && (
+                                                  <span>{formatDate(task.startDate)} - {formatDate(task.endDate)}</span>
                                                 )}
                                                 {task.assigneeId && (
                                                   <span className="flex items-center gap-1">
@@ -1120,11 +1672,11 @@ const ProjectsPage: React.FC = () => {
                                         <div className="flex flex-col items-end gap-2 ml-3">
                                           {editingTaskId !== task.id && (
                                             <div className="flex items-center gap-1">
-                                              <span className={`px-2 py-1 rounded text-xs font-medium border ${getStatusColor(task.status, 'task')}`}>
+                                              <span className={`px-2 py-1 rounded text-xs font-MEDIUM border ${getStatusColor(task.status, 'task')}`}>
                                                 {task.status.replace('_', ' ')}
                                               </span>
                                               {task.priority && (
-                                                <span className={`px-2 py-1 rounded text-xs font-medium ${getPriorityColor(task.priority)}`}>
+                                                <span className={`px-2 py-1 rounded text-xs font-MEDIUM ${getPriorityColor(task.priority)}`}>
                                                   {task.priority}
                                                 </span>
                                               )}
@@ -1178,7 +1730,7 @@ const ProjectsPage: React.FC = () => {
 
                     {/* Team Members */}
                     <div>
-                      <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3">Team Members</h3>
+                      <h3 className="text-lg font-MEDIUM text-gray-900 dark:text-white mb-3">Team Members</h3>
                       <div className="space-y-2">
                         {project.members.map((member) => (
                           <div key={member.id} className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded-lg">
@@ -1209,7 +1761,7 @@ const ProjectsPage: React.FC = () => {
         {filteredProjects.length === 0 && !loading && (
           <div className="text-center py-12">
             <HiClipboardList className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No projects found</h3>
+            <h3 className="text-lg font-MEDIUM text-gray-900 dark:text-white mb-2">No projects found</h3>
             <p className="text-gray-500 dark:text-gray-400">
               {searchTerm || statusFilter !== 'All' || priorityFilter !== 'All' 
                 ? 'Try adjusting your search or filter criteria.'
@@ -1282,7 +1834,7 @@ export default ProjectsPage;
 //   status: string;
 //   priority?: string;
 //   startDate?: string;
-//   dueDate?: string;
+//   endDate?: string;
 //   assigneeId?: string;
 //   createdAt: string;
 //   updatedAt: string;
@@ -1376,7 +1928,7 @@ export default ProjectsPage;
 //   status: string;
 //   priority: string;
 //   startDate: string;
-//   dueDate: string;
+//   endDate: string;
 //   assigneeId: string;
 // }>({
 //   title: '',
@@ -1384,7 +1936,7 @@ export default ProjectsPage;
 //   status: '',
 //   priority: '',
 //   startDate: '',
-//   dueDate: '',
+//   endDate: '',
 //   assigneeId: '' 
 // });
 
@@ -1500,9 +2052,9 @@ export default ProjectsPage;
 //     title: task.title,
 //     description: task.description || '',
 //     status: task.status,
-//     priority: task.priority || 'medium',
+//     priority: task.priority || 'MEDIUM',
 //     startDate: task.startDate ? task.startDate.split('T')[0] : '',
-//     dueDate: task.dueDate ? task.dueDate.split('T')[0] : '',
+//     endDate: task.endDate ? task.endDate.split('T')[0] : '',
 //     assigneeId: task.assigneeId || '' 
 //   });
 // };
@@ -1515,7 +2067,7 @@ export default ProjectsPage;
 //     status: '',
 //     priority: '',
 //     startDate: '',
-//     dueDate: '',
+//     endDate: '',
 //     assigneeId: ''
 //   });
 // };
@@ -1530,7 +2082,7 @@ export default ProjectsPage;
 //       status: editingTaskData.status,
 //       priority: editingTaskData.priority,
 //       startDate: editingTaskData.startDate ? new Date(editingTaskData.startDate).toISOString() : undefined,
-//       dueDate: editingTaskData.dueDate ? new Date(editingTaskData.dueDate).toISOString() : undefined,
+//       endDate: editingTaskData.endDate ? new Date(editingTaskData.endDate).toISOString() : undefined,
 //       assigneeId: editingTaskData.assigneeId || undefined
 //     };
 
@@ -1572,7 +2124,7 @@ export default ProjectsPage;
 //           ],
 //           progress: calculateProjectProgress(project),
 //           tags: extractTags(project),
-//           priority: project.priority || 'medium', // Default priority since API doesn't provide it
+//           priority: project.priority || 'MEDIUM', // Default priority since API doesn't provide it
 //           budget: project.budget || null,
 //           totalTasks: calculateTotalTasks(project),
 //           completedTasks: calculateCompletedTasks(project),
@@ -1712,7 +2264,7 @@ export default ProjectsPage;
 //       case 'in progress':
 //       case 'ongoing':
 //         return 'text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700';
-//       case 'planning':
+//       case 'PLANNED':
 //       case 'upcoming':
 //       case 'not_started':
 //       case 'not started':
@@ -1736,7 +2288,7 @@ export default ProjectsPage;
 //         return 'text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20';
 //       case 'high':
 //         return 'text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20';
-//       case 'medium':
+//       case 'MEDIUM':
 //         return 'text-yellow-700 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20';
 //       case 'low':
 //         return 'text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20';
@@ -1909,7 +2461,7 @@ export default ProjectsPage;
 //               >
 //                 <option value="All">All Status</option>
 //                 <option value="ACTIVE">Active</option>
-//                 <option value="PLANNING">Planning</option>
+//                 <option value="PLANNED">PLANNED</option>
 //                 <option value="COMPLETED">Completed</option>
 //                 <option value="ON_HOLD">On Hold</option>
 //               </select>
@@ -1983,7 +2535,7 @@ export default ProjectsPage;
                   
 //                   <div className="flex flex-col items-end gap-3 ml-6">
 //                     <div className="flex gap-2">
-//                       <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(project.status)}`}>
+//                       <span className={`px-3 py-1 rounded-full text-xs font-MEDIUM border ${getStatusColor(project.status)}`}>
 //                         {project.status.replace('_', ' ')}
 //                       </span>
 //                     </div>
@@ -2012,7 +2564,7 @@ export default ProjectsPage;
 //                     <div className='flex flex-col md:flex-row gap-6 justify-between'>
 //                     {/* Creator Info */}
 //                     <div className='md:pl-8 lg:pl-12'>
-//                       <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3">Project Creator</h3>
+//                       <h3 className="text-lg font-MEDIUM text-gray-900 dark:text-white mb-3">Project Creator</h3>
 //                       <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded-lg w-fit">
 //                         <HiUser className="w-4 h-4 text-gray-500 dark:text-gray-400" />
 //                         <span className="text-sm text-gray-700 dark:text-gray-300">{project.creator.email}</span>
@@ -2027,7 +2579,7 @@ export default ProjectsPage;
 //                     {/* Tags */}
 //                     {project.tags && project.tags.length > 0 && (
 //                       <div className='md:pr-8 lg:pr-12'>
-//                         <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3">Tags</h3>
+//                         <h3 className="text-lg font-MEDIUM text-gray-900 dark:text-white mb-3">Tags</h3>
 //                         <div className="flex flex-wrap gap-2">
 //                           {project.tags.map((tag, index) => (
 //                             <span key={index} className="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-sm">
@@ -2041,7 +2593,7 @@ export default ProjectsPage;
 
 //                     {/* Milestones Section */}
 //                     <div>
-//                       <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+//                       <h3 className="text-lg font-MEDIUM text-gray-900 dark:text-white mb-3 flex items-center gap-2">
 //                         <HiFlag className="w-5 h-5" />
 //                         Milestones ({project.milestones.length})
 //                       </h3>
@@ -2056,7 +2608,7 @@ export default ProjectsPage;
 //                               <div className="flex items-start justify-between">
 //                                 <div className="flex-1">
 //                                   <div className="flex items-center gap-2 mb-1">
-//                                     <h4 className="font-medium text-gray-900 dark:text-white">{milestone.name}</h4>
+//                                     <h4 className="font-MEDIUM text-gray-900 dark:text-white">{milestone.name}</h4>
 //                                     {expandedMilestones.includes(milestone.id) ? 
 //                                       <HiChevronUp className="w-4 h-4 text-gray-400 dark:text-gray-500" /> : 
 //                                       <HiChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-500" />
@@ -2067,7 +2619,7 @@ export default ProjectsPage;
 //                                     <span>{milestone.tasks ? milestone.tasks.length : 0} tasks</span>
 //                                   </div>
 //                                 </div>
-//                                 <span className={`px-2 py-1 rounded text-xs font-medium border ${getStatusColor(milestone.status, 'milestone')}`}>
+//                                 <span className={`px-2 py-1 rounded text-xs font-MEDIUM border ${getStatusColor(milestone.status, 'milestone')}`}>
 //                                   {milestone.status.replace('_', ' ')}
 //                                 </span>
 //                               </div>
@@ -2076,7 +2628,7 @@ export default ProjectsPage;
 //                             {/* Tasks Section */}
 //                             {expandedMilestones.includes(milestone.id) && milestone.tasks && (
 //                               <div className="border-t border-gray-200 dark:border-gray-600 p-4 bg-gray-100 dark:bg-gray-800 animate-slide-down">
-//                                 <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+//                                 <h5 className="text-sm font-MEDIUM text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
 //                                   <HiClipboardList className="w-4 h-4" />
 //                                   Tasks ({milestone.tasks.length})
 //                                 </h5>
@@ -2087,14 +2639,14 @@ export default ProjectsPage;
 //                                         <div className="flex-1">
 //                                           <div className="flex items-center gap-2 mb-1">
 //                                             {getTaskIcon(task.status)}
-//                                             <h6 className="text-sm font-medium text-gray-900 dark:text-white">{task.title}</h6>
+//                                             <h6 className="text-sm font-MEDIUM text-gray-900 dark:text-white">{task.title}</h6>
 //                                           </div>
 //                                           {task.description && (
 //                                             <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">{task.description}</p>
 //                                           )}
 //                                           <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
-//                                             {task.startDate && task.dueDate && (
-//                                               <span>{formatDate(task.startDate)} - {formatDate(task.dueDate)}</span>
+//                                             {task.startDate && task.endDate && (
+//                                               <span>{formatDate(task.startDate)} - {formatDate(task.endDate)}</span>
 //                                             )}
 //                                             {task.assigneeId && (
 //                                               <span className="flex items-center gap-1">
@@ -2106,11 +2658,11 @@ export default ProjectsPage;
 //                                         </div>
 //                                         <div className="flex flex-col items-end gap-2 ml-3">
 //                                           <div className="flex items-center gap-1">
-//                                             <span className={`px-2 py-1 rounded text-xs font-medium border ${getStatusColor(task.status, 'task')}`}>
+//                                             <span className={`px-2 py-1 rounded text-xs font-MEDIUM border ${getStatusColor(task.status, 'task')}`}>
 //                                               {task.status.replace('_', ' ')}
 //                                             </span>
 //                                             {task.priority && (
-//                                               <span className={`px-2 py-1 rounded text-xs font-medium ${getPriorityColor(task.priority)}`}>
+//                                               <span className={`px-2 py-1 rounded text-xs font-MEDIUM ${getPriorityColor(task.priority)}`}>
 //                                                 {task.priority}
 //                                               </span>
 //                                             )}
@@ -2163,7 +2715,7 @@ export default ProjectsPage;
 
 //                     {/* Team Members */}
 //                     <div>
-//                       <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3">Team Members</h3>
+//                       <h3 className="text-lg font-MEDIUM text-gray-900 dark:text-white mb-3">Team Members</h3>
 //                       <div className="space-y-2">
 //                         {project.members.map((member) => (
 //                           <div key={member.id} className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded-lg">
@@ -2194,7 +2746,7 @@ export default ProjectsPage;
 //         {filteredProjects.length === 0 && !loading && (
 //           <div className="text-center py-12">
 //             <HiClipboardList className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-//             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No projects found</h3>
+//             <h3 className="text-lg font-MEDIUM text-gray-900 dark:text-white mb-2">No projects found</h3>
 //             <p className="text-gray-500 dark:text-gray-400">
 //               {searchTerm || statusFilter !== 'All' || priorityFilter !== 'All' 
 //                 ? 'Try adjusting your search or filter criteria.'
