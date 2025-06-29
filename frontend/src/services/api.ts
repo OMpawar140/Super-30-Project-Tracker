@@ -139,6 +139,13 @@ export const apiService = {
         body: JSON.stringify(memberData),
       }),
 
+    // Update project status (maps to PATCH /api/projects/:id/status)
+    updateProjectStatus: (id: string, status: string) =>
+      apiCall(`/projects/${id}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status }),
+      }),
+      
     // Remove project member (maps to DELETE /api/projects/:id/members/:userId)
     removeProjectMember: (id: string, userId: string) =>
       apiCall(`/projects/${id}/members/${userId}`, { method: 'DELETE' }),

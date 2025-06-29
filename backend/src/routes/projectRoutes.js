@@ -46,6 +46,9 @@ router.delete('/:id/members/:userId', projectIdValidator, projectController.remo
 // Post /api/projects/:id/access - Check project permission
 router.post('/:id/permission', projectIdValidator, projectController.checkProjectPermission);
 
+// PATCH /api/projects/:id/status - Update project status
+router.patch('/:id/status', projectIdValidator, projectController.updateProjectStatus);
+
 // POST /api/projects/:id/access - Check project access
 router.post('/:id/access', projectIdValidator, projectController.checkProjectAccess);
 
