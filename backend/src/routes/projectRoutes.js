@@ -49,4 +49,13 @@ router.post('/:id/permission', projectIdValidator, projectController.checkProjec
 // POST /api/projects/:id/access - Check project access
 router.post('/:id/access', projectIdValidator, projectController.checkProjectAccess);
 
+// DELETE /api/projects/:id/archive - Archive project (soft delete)
+router.delete('/:id/archive', projectIdValidator, projectController.archiveProject);
+
+// PATCH /api/projects/:id/restore - Restore archived project
+router.patch('/:id/restore', projectIdValidator, projectController.restoreProject);
+
+// GET /api/projects/archived - Get all archived projects
+router.get('/archived', projectController.getArchivedProjects);
+
 module.exports = router;

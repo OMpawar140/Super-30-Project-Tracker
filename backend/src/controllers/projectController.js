@@ -2,6 +2,7 @@ const projectService = require('../services/projectService');
 const { successResponse, errorResponse } = require('../utils/response');
 const { validationResult } = require('express-validator');
 const emailService = require('../services/emailService');
+const statusUpdateService = require('../services/statusUpdateService');
 
 class ProjectController {
   // Get all projects for authenticated user
@@ -100,24 +101,24 @@ class ProjectController {
     }
   }
 
-  // Delete project
-  async deleteProject(req, res) {
-    try {
-      const { id } = req.params;
-      const userEmail = req.user.email;
+  // // Delete project
+  // async deleteProject(req, res) {
+  //   try {
+  //     const { id } = req.params;
+  //     const userEmail = req.user.email;
 
-      const deleted = await projectService.deleteProject(id, userEmail);
+  //     const deleted = await projectService.deleteProject(id, userEmail);
       
-      if (!deleted) {
-        return errorResponse(res, 'Project not found or access denied', 404);
-      }
+  //     if (!deleted) {
+  //       return errorResponse(res, 'Project not found or access denied', 404);
+  //     }
 
-      return successResponse(res, 'Project deleted successfully');
-    } catch (error) {
-      console.error('Error deleting project:', error);
-      return errorResponse(res, 'Failed to delete project', 500);
-    }
-  }
+  //     return successResponse(res, 'Project deleted successfully');
+  //   } catch (error) {
+  //     console.error('Error deleting project:', error);
+  //     return errorResponse(res, 'Failed to delete project', 500);
+  //   }
+  // }
 
   // Create a new milestone
   async createMilestone(req, res) {
@@ -310,6 +311,122 @@ class ProjectController {
       return errorResponse(res, 'Failed to check project access', 500);
     }
   }
+
+  // Archive project (soft delete)
+  async archiveProject (req, res) {
+    try {
+      const { id } = req.params;
+      
+      const archivedProject = await statusUpdateService.archiveProject(id);
+      
+      const responseData = {
+        id: archivedProject.id,
+        name: archivedProject.name,
+        status: archivedProject.status,
+        archivedAt: archivedProject.updatedAt
+      };
+      
+      return successResponse(res, 'Project archived successfully. You have 7 days to restore it.', responseData, 200);
+      
+    } catch (error) {
+      console.error('Error archiving project:', error);
+      
+      if (error.message === 'Project not found') {
+        return errorResponse(res, 'Project not found', 404);
+      }
+      
+      if (error.message === 'Project is already archived') {
+        return errorResponse(res, 'Project is already archived', 400);
+      }
+      
+      return errorResponse(res, 'Failed to archive project', 500);
+    }
+  };
+
+  // Restore archived project
+  async restoreProject (req, res) {
+    try {
+      const { id } = req.params;
+      
+      const restoredProject = await statusUpdateService.restoreProject(id);
+      
+      const responseData = {
+        id: restoredProject.id,
+        name: restoredProject.name,
+        status: restoredProject.status,
+        updatedAt: restoredProject.updatedAt
+      };
+      
+      return successResponse(res, 'Project restored successfully', responseData, 200);
+      
+    } catch (error) {
+      console.error('Error restoring project:', error);
+      
+      if (error.message === 'Project not found') {
+        return errorResponse(res, 'Project not found', 404);
+      }
+      
+      if (error.message === 'Project is not archived') {
+        return errorResponse(res, 'Project is not archived', 400);
+      }
+      
+      if (error.message === 'Project restoration period has expired') {
+        return errorResponse(res, 'Project restoration period has expired', 400);
+      }
+      
+      return errorResponse(res, 'Failed to restore project', 500);
+    }
+  };
+
+  // Get all archived projects that can be restored
+  async getArchivedProjects (req, res) {
+    try {
+      const archivedProjects = await statusUpdateService.getRestorableProjects();
+      
+      const responseData = {
+        projects: archivedProjects,
+        count: archivedProjects.length
+      };
+      
+      return successResponse(res, 'Archived projects retrieved successfully', responseData, 200);
+      
+    } catch (error) {
+      console.error('Error fetching archived projects:', error);
+      return errorResponse(res, 'Failed to fetch archived projects', 500);
+    }
+  };
+
+  // Update the existing delete method to use archive instead
+  async deleteProject (req, res) {
+    try {
+      const { id } = req.params;
+      
+      // Instead of permanent deletion, archive the project
+      const archivedProject = await statusUpdateService.archiveProject(id);
+      
+      const responseData = {
+        id: archivedProject.id,
+        name: archivedProject.name,
+        status: archivedProject.status,
+        archivedAt: archivedProject.updatedAt
+      };
+      
+      return successResponse(res, 'Project has been archived. You have 7 days to restore it if needed.', responseData, 200);
+      
+    } catch (error) {
+      console.error('Error deleting project:', error);
+      
+      if (error.message === 'Project not found') {
+        return errorResponse(res, 'Project not found', 404);
+      }
+      
+      if (error.message === 'Project is already archived') {
+        return errorResponse(res, 'Project is already archived', 400);
+      }
+      
+      return errorResponse(res, 'Failed to delete project', 500);
+    }
+  };
 
 }
 

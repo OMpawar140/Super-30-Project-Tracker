@@ -3,7 +3,8 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState, useEffect } from 'react';
 import { HiClipboardList, HiFlag, HiUser, HiCalendar, HiChevronDown, HiChevronUp, HiSearch, HiFilter, HiCheckCircle, HiTrash,
-  HiClock, HiExclamation, HiUpload, HiEye, HiPencil, HiCheck, HiX,HiPlus } from 'react-icons/hi';
+  HiClock, HiExclamation, HiUpload, HiEye, HiPencil, HiCheck, HiX,HiPlus, 
+  HiRefresh} from 'react-icons/hi';
 import { apiService, useApiCall } from '@/services/api';
 import TaskFileModal from '../../components/ui/TaskFileModal';
 import { useAuth } from '@/context/AuthContext';
@@ -259,6 +260,62 @@ const deleteMilestone = async (projectId: string, milestoneId: string) => {
   }
 };
 
+const deleteProject = async (projectId: string) => { 
+  if (!confirm('Are you sure you want to delete this project? This project  will be archived for 7 days before permanent deletion. You still have the option to restore it during this period.')) {
+    return;
+  }
+
+  console.log(`Deleting (archiving) Project id: ${projectId}`);
+
+  try {
+    const response = await callApi(() => apiService.projects.archiveProject(projectId));
+
+    if (response.success) {
+      console.log(`Project with id ${projectId} deleted successfully.`);
+
+      setProjects(prevProjects =>
+        prevProjects.map(project =>
+          project.id === projectId
+            ? {
+                ...project,
+                status: 'ARCHIVED',
+              }
+            : project
+        )
+      );
+    }
+  } catch (error) {
+    console.error('Error deleting project:', error);
+  }
+};
+
+const restoreProject = async (projectId: string) => { 
+  
+  console.log(`Restoring Project id: ${projectId}`);
+
+  try {
+    const response = await callApi(() => apiService.projects.restoreProject(projectId));
+
+    if (response.success) {
+      console.log(`Project with id ${projectId} restored successfully.`);
+
+      alert('Project restored successfully! Now you have all the data back.');
+
+      setProjects(prevProjects =>
+        prevProjects.map(project =>
+          project.id === projectId
+            ? {
+                ...project,
+                status: 'ACTIVE',
+              }
+            : project
+        )
+      );
+    }
+  } catch (error) {
+    console.error('Error restoring project:', error);
+  }
+};
 
 const addTask = async (projectId: string, milestoneId: string) => {
   try {
@@ -942,14 +999,43 @@ const deleteTask = async (projectId: string, taskId: string) => {
                             {project.name}
                           </h2>
                           {currentUser && currentUser.email === project.creatorId && (
-                               <button
-                              onClick={() => startEditingProject(project)}
-                              className="flex items-center gap-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
-                              title="Edit project"
-                            >
-                              <HiPencil className="w-4 h-4" />
-                              Edit
-                            </button>
+                            <>
+                              {project.status !== 'ARCHIVED' ? (
+                                <>
+                                <button
+                                onClick={() => startEditingProject(project)}
+                                className="flex items-center gap-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
+                                title="Edit project"
+                              >
+                                <HiPencil className="w-4 h-4" />
+                                Edit
+                              </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    deleteProject(project.id);
+                                  }}
+                                  className="flex items-center gap-1 px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition-colors"
+                                  title="Delete milestone"
+                                >
+                                  <HiTrash className="w-3 h-3" />
+                                  Delete
+                                </button>
+                                </>
+                              ) : (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      restoreProject(project.id);
+                                    }}
+                                    className="flex items-center gap-1 px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition-colors"
+                                    title="Delete milestone"
+                                  >
+                                    <HiRefresh className="w-3 h-3" />
+                                    Restore
+                                  </button>
+                                )}
+                            </>
                           )}
                           {expandedProjects.includes(project.id) ? 
                             <HiChevronUp className="w-5 h-5 text-gray-400 dark:text-gray-500" /> : 
@@ -1127,7 +1213,7 @@ const deleteTask = async (projectId: string, taskId: string) => {
     <HiFlag className="w-5 h-5" />
     Milestones ({project.milestones.length})
   </h3>
-  {currentUser && currentUser.email === project.creatorId && (
+  {currentUser && currentUser.email === project.creatorId && project.status !== 'ARCHIVED' && (
     <button
       onClick={() => toggleAddMilestoneForm(project.id)}
       className="flex items-center gap-2 px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors"
@@ -1283,7 +1369,7 @@ const deleteTask = async (projectId: string, taskId: string) => {
                                     ) : (
                                       <>
                                         <h4 className="font-MEDIUM text-gray-900 dark:text-white">{milestone.name}</h4>
-                                      {currentUser && currentUser.email === project.creatorId && (
+                                      {currentUser && currentUser.email === project.creatorId && project.status !== 'ARCHIVED' && (
   <>
     <button
       onClick={(e) => {
@@ -1383,7 +1469,7 @@ const deleteTask = async (projectId: string, taskId: string) => {
                                     <HiClipboardList className="w-4 h-4" />
                                     Tasks ({milestone.tasks.length})
                                   </h5>
-                                  {currentUser && currentUser.email === project.creatorId && (
+                                  {currentUser && currentUser.email === project.creatorId && project.status !== 'ARCHIVED' && (
                                     <button
                                       onClick={() => toggleAddTaskForm(milestone.id)}
                                       className="flex items-center gap-1 px-2 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded-lg transition-colors"
@@ -1527,7 +1613,7 @@ const deleteTask = async (projectId: string, taskId: string) => {
                                             ) : (
                                               <>
                                                 <h6 className="text-sm font-MEDIUM text-gray-900 dark:text-white">{task.title}</h6>
-                                              {currentUser && currentUser.email === project.creatorId && (
+                                              {currentUser && currentUser.email === project.creatorId && project.status !== 'ARCHIVED' && (
   <>
     <button
       onClick={(e) => {
@@ -1687,7 +1773,7 @@ const deleteTask = async (projectId: string, taskId: string) => {
                                             </div>
                                           )}
                                           {/* Add Files & Request Review */}
-                                          {currentUser && currentUser.email === task.assigneeId && editingTaskId !== task.id && (
+                                          {currentUser && currentUser.email === task.assigneeId && editingTaskId !== task.id && project.status !== 'ARCHIVED' && (
                                             <button
                                               onClick={(e) => {
                                                 e.stopPropagation();
@@ -1701,7 +1787,7 @@ const deleteTask = async (projectId: string, taskId: string) => {
                                             </button>
                                           )}
                                           {/* Review Files & Update Status */}
-                                          {currentUser && currentUser.email === project.creatorId && (
+                                          {currentUser && currentUser.email === project.creatorId && project.status !== 'ARCHIVED' && (
                                             <button
                                               onClick={(e) => {
                                                 e.stopPropagation();

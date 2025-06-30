@@ -1,11 +1,11 @@
-// src/services/statusUpdateService.js - CommonJS version
+// src/services/statusUpdateService.js
 const { PrismaClient } = require('@prisma/client');
 const cron = require('node-cron');
 
 const prisma = new PrismaClient();
 
 // Status update service
-class StatusUpdateService {
+class statusUpdateService {
   // Update tasks based on dates
   static async updateTaskStatuses() {
     const now = new Date();
@@ -165,10 +165,187 @@ class StatusUpdateService {
     }
   }
 
+  // Archive project (soft delete with 7-day retention)
+  async archiveProject(projectId) {
+    const now = new Date();
+    
+    try {
+      // First check if project exists and is not already archived
+      const existingProject = await prisma.project.findUnique({
+        where: { id: projectId }
+      });
+
+      if (!existingProject) {
+        throw new Error('Project not found');
+      }
+
+      if (existingProject.status === 'ARCHIVED') {
+        throw new Error('Project is already archived');
+      }
+
+      const updatedProject = await prisma.project.update({
+        where: { id: projectId },
+        data: {
+          status: 'ARCHIVED',
+          updatedAt: now
+        }
+      });
+
+      const deleteAfter = new Date(now.getTime() + (7 * 24 * 60 * 60 * 1000));
+      console.log(`Project ${projectId} archived. Will be deleted after ${deleteAfter.toISOString()}`);
+      return updatedProject;
+      
+    } catch (error) {
+      console.error('Error archiving project:', error);
+      throw error;
+    }
+  }
+
+  // Restore archived project
+  async restoreProject(projectId) {
+    const now = new Date();
+    
+    try {
+      const project = await prisma.project.findUnique({
+        where: { id: projectId }
+      });
+
+      if (!project) {
+        throw new Error('Project not found');
+      }
+
+      if (project.status !== 'ARCHIVED') {
+        throw new Error('Project is not archived');
+      }
+
+      // Check if the project is still within the restoration period (7 days from updatedAt)
+      const archiveDate = new Date(project.updatedAt);
+      const expirationDate = new Date(archiveDate.getTime() + (7 * 24 * 60 * 60 * 1000));
+      
+      if (now > expirationDate) {
+        throw new Error('Project restoration period has expired');
+      }
+
+      const restoredProject = await prisma.project.update({
+        where: { id: projectId },
+        data: {
+          status: 'ACTIVE',
+          updatedAt: now
+        }
+      });
+
+      console.log(`Project ${projectId} restored successfully`);
+      return restoredProject;
+      
+    } catch (error) {
+      console.error('Error restoring project:', error);
+      throw error;
+    }
+  }
+
+  // Clean up expired archived projects
+  static async cleanupExpiredProjects() {
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
+    
+    try {
+      // Find projects that are archived and were archived more than 7 days ago
+      const expiredProjects = await prisma.project.findMany({
+        where: {
+          status: 'ARCHIVED',
+          updatedAt: { lt: sevenDaysAgo }
+        },
+        include: {
+          milestones: {
+            include: {
+              tasks: true
+            }
+          }
+        }
+      });
+
+      console.log(`Found ${expiredProjects.length} expired projects to delete`);
+
+      for (const project of expiredProjects) {
+        // Delete all tasks associated with the project's milestones
+        for (const milestone of project.milestones) {
+          await prisma.task.deleteMany({
+            where: { milestoneId: milestone.id }
+          });
+        }
+
+        // Delete all milestones associated with the project
+        await prisma.milestone.deleteMany({
+          where: { projectId: project.id }
+        });
+
+        // Finally, delete the project
+        await prisma.project.delete({
+          where: { id: project.id }
+        });
+
+        console.log(`Permanently deleted expired project: ${project.id} - ${project.name}`);
+      }
+
+      if (expiredProjects.length > 0) {
+        console.log(`Cleanup completed: ${expiredProjects.length} expired projects permanently deleted`);
+      }
+      
+    } catch (error) {
+      console.error('Error during cleanup of expired projects:', error);
+    }
+  }
+
+  // Get archived projects that can still be restored
+  async getRestorableProjects() {
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
+    
+    try {
+      const restorableProjects = await prisma.project.findMany({
+        where: {
+          status: 'ARCHIVED',
+          updatedAt: { gt: sevenDaysAgo } // Only projects archived within the last 7 days
+        },
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          status: true,
+          updatedAt: true
+        },
+        orderBy: {
+          updatedAt: 'desc'
+        }
+      });
+
+      // Add expiration date and days remaining for each project
+      const projectsWithExpiration = restorableProjects.map(project => {
+        const archiveDate = new Date(project.updatedAt);
+        const expirationDate = new Date(archiveDate.getTime() + (7 * 24 * 60 * 60 * 1000));
+        const daysRemaining = Math.ceil((expirationDate - now) / (1000 * 60 * 60 * 24));
+        
+        return {
+          ...project,
+          archivedAt: project.updatedAt,
+          expirationDate,
+          daysRemaining: Math.max(0, daysRemaining)
+        };
+      });
+
+      return projectsWithExpiration;
+      
+    } catch (error) {
+      console.error('Error fetching restorable projects:', error);
+      throw error;
+    }
+  }
+
   // Main update function
   static async updateAllStatuses() {
     console.log('Starting scheduled status update...');
     await this.updateTaskStatuses();
+    await this.cleanupExpiredProjects();
     console.log('Status update completed');
   }
 }
@@ -183,9 +360,15 @@ cron.schedule('*/15 9-18 * * 1-5', () => {
   StatusUpdateService.updateAllStatuses();
 });
 
+// Run cleanup daily at 2 AM to remove expired archived projects
+cron.schedule('0 2 * * *', () => {
+  console.log('Running daily cleanup of expired projects...');
+  StatusUpdateService.cleanupExpiredProjects();
+});
+
 // Run once at startup
-StatusUpdateService.updateAllStatuses();
+statusUpdateService.updateAllStatuses();
 
 console.log('Status update service started with cron jobs');
 
-module.exports = StatusUpdateService;
+module.exports = new statusUpdateService();

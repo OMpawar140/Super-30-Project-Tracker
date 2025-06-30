@@ -142,6 +142,14 @@ export const apiService = {
     // Remove project member (maps to DELETE /api/projects/:id/members/:userId)
     removeProjectMember: (id: string, userId: string) =>
       apiCall(`/projects/${id}/members/${userId}`, { method: 'DELETE' }),
+
+    archiveProject: (id: string) =>
+      apiCall(`/projects/${id}/archive`, { method: 'DELETE' }),
+
+    restoreProject: (id: string) =>
+      apiCall(`/projects/${id}/restore`, { method: 'PATCH' }),
+
+    getArchivedProjects: () => apiCall('/projects/archived'),
   },
 
   // Milestone management endpoints
