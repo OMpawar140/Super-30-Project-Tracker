@@ -77,13 +77,26 @@ const TaskFileModal: React.FC<TaskFileModalProps> = ({
       if (!response?.data) {
         throw new Error('No file data received');
       }
+      // setFiles(prevFiles => {
+      //   const currentFiles = Array.isArray(prevFiles) ? prevFiles : [];
+      //   return [...currentFiles, response.data];
+      // });
+
       setFiles(prevFiles => {
         const currentFiles = Array.isArray(prevFiles) ? prevFiles : [];
-        return [...currentFiles, response.data];
+        const newFile = response.data;
+        
+        // Remove duplicates based on file ID or name (adjust the key as needed)
+        const filteredFiles = currentFiles.filter(file => 
+          file.id !== newFile.id // Change 'id' to whatever unique identifier your files have
+        );
+        
+        // Add the new file
+        return [...filteredFiles, newFile];
       });
     } catch (err) {
       console.error('Error fetching task files:', err);
-      setError('Failed to load task files');
+      setError('No task files previously uploaded');
     } finally {
       setLoading(false);
     }
@@ -296,7 +309,7 @@ const TaskFileModal: React.FC<TaskFileModalProps> = ({
           )}
 
           {/* File Upload Area */}
-          { taskStatus.toLowerCase() !== 'completed' && (<div className="mb-6">
+          { (taskStatus.toLowerCase() !== 'completed' && taskStatus.toLowerCase() !== 'in_review') && (<div className="mb-6">
             <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
               Upload Files
             </h4>
@@ -360,7 +373,7 @@ const TaskFileModal: React.FC<TaskFileModalProps> = ({
             ) : files.length > 0 ? (
               <div className="space-y-2">
                 {files.map((file) => (
-                  <div key={file.id} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <div key={`${file.id}-${file.uploadedAt}`} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                     {getFileIcon(file.mimeType)}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
@@ -378,7 +391,7 @@ const TaskFileModal: React.FC<TaskFileModalProps> = ({
                       >
                         <HiEye className="w-4 h-4" />
                       </button>
-                      <button
+                      {/* <button
                         onClick={() => {
                           const link = document.createElement('a');
                           link.href = file.url;
@@ -389,7 +402,7 @@ const TaskFileModal: React.FC<TaskFileModalProps> = ({
                         title="Download file"
                       >
                         <HiDownload className="w-4 h-4" />
-                      </button>
+                      </button> */}
                     </div>
                   </div>
                 ))}

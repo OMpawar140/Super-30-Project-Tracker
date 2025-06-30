@@ -374,7 +374,7 @@ class ProjectService {
         // If user does not exist, create a new user
         await prisma.user.create({
           data: {
-        email: memberUserId
+        email: memberUserId,
           }
         });
       }
@@ -437,7 +437,7 @@ class ProjectService {
 
       const deletedMember = await prisma.projectMember.deleteMany({
         where: {
-          userId: memberUserId,
+          userId: userEmail,
           projectId: projectId
         }
       });
@@ -555,6 +555,98 @@ class ProjectService {
       return false;
     }
   }
+
+  async checkUpdatePermission(projectId, userId) {
+    try {
+      // Check if user is project creator
+      const project = await prisma.project.findUnique({
+        where: { id: projectId },
+        select: { creatorId: true }
+      });
+
+      if (!project) {
+        throw new Error('Project not found');
+      }
+
+      if (project.creatorId === userId) {
+        return true;
+      }
+
+      // Check if user is an admin member of the project
+      const adminMember = await prisma.projectMember.findFirst({
+        where: {
+          projectId: projectId,
+          userId: userId,
+          role: 'ADMIN'
+        }
+      });
+
+      return !!adminMember;
+    } catch (error) {
+      console.error('Error checking update permission:', error);
+      throw error;
+    }
+  }
+
+  async updateMemberRole(projectId, memberId, newRole) {
+    try {
+      // First, verify the member exists and belongs to the project
+      const existingMember = await prisma.projectMember.findFirst({
+        where: {
+          id: memberId,
+          projectId: projectId
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              skillset: true
+            }
+          },
+          project: {
+            select: {
+              creatorId: true
+            }
+          }
+        }
+      });
+
+      if (!existingMember) {
+        throw new Error('Member not found in this project');
+      }
+
+      // Prevent changing the role of project creator
+      if (existingMember.project.creatorId === existingMember.userId) {
+        throw new Error('Cannot change the role of the project creator');
+      }
+
+      // Update the member's role
+      const updatedMember = await prisma.projectMember.update({
+        where: {
+          id: memberId
+        },
+        data: {
+          role: newRole
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              skillset: true
+            }
+          }
+        }
+      });
+
+      return updatedMember;
+    } catch (error) {
+      console.error('Error updating member role:', error);
+      throw error;
+    }
+  }
+
 }
 
 module.exports = new ProjectService();

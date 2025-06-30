@@ -82,9 +82,21 @@ const TaskReviewModal: React.FC<TaskReviewModalProps> = ({
       if (!response?.data) {
         throw new Error('No file data received');
       }
+      // setFiles(prevFiles => {
+      //   const currentFiles = Array.isArray(prevFiles) ? prevFiles : [];
+      //   return [...currentFiles, response.data];
+      // });
       setFiles(prevFiles => {
         const currentFiles = Array.isArray(prevFiles) ? prevFiles : [];
-        return [...currentFiles, response.data];
+        const newFile = response.data;
+        
+        // Remove duplicates based on file ID or name (adjust the key as needed)
+        const filteredFiles = currentFiles.filter(file => 
+          file.id !== newFile.id // Change 'id' to whatever unique identifier your files have
+        );
+        
+        // Add the new file
+        return [...filteredFiles, newFile];
       });
     } catch (err) {
       console.error('Error fetching task files:', err);
@@ -259,7 +271,7 @@ const TaskReviewModal: React.FC<TaskReviewModalProps> = ({
                       >
                         <HiEye className="w-4 h-4" />
                       </button>
-                      <button
+                      {/* <button
                         onClick={() => {
                           const link = document.createElement('a');
                           link.href = file.url;
@@ -270,7 +282,7 @@ const TaskReviewModal: React.FC<TaskReviewModalProps> = ({
                         title="Download file"
                       >
                         <HiDownload className="w-4 h-4" />
-                      </button>
+                      </button> */}
                     </div>
                   </div>
                 ))}

@@ -43,6 +43,9 @@ router.post('/:id/members', projectIdValidator, addMemberValidator, projectContr
 // DELETE /api/projects/:id/members/:userId - Remove member
 router.delete('/:id/members/:userId', projectIdValidator, projectController.removeProjectMember);
 
+// PATCH /api/projects/:id/members/:userId/:role - Update project member role
+router.patch('/:id/members/:userId/:role', projectIdValidator, projectController.removeProjectMember);
+
 // Post /api/projects/:id/access - Check project permission
 router.post('/:id/permission', projectIdValidator, projectController.checkProjectPermission);
 

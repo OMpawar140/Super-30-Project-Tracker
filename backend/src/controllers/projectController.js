@@ -172,9 +172,9 @@ class ProjectController {
 
       console.log('Inviter user details:', inviterUser);
       
-      for (const { userId, role } of members) {
+      for (const { email, role } of members) {
         try {
-          const member = await projectService.addProjectMember(id, userEmail, userId, role);
+          const member = await projectService.addProjectMember(id, userEmail, email, role);
           if (member) {
             // Send welcome email
             try {
@@ -427,6 +427,47 @@ class ProjectController {
       return errorResponse(res, 'Failed to delete project', 500);
     }
   };
+
+  async updateMemberRole(req, res) {
+    try {
+      const { projectId, memberId, role } = req.params;
+      const userEmail = req.user.email;
+
+      // Validate role
+      const validRoles = ['ADMIN', 'TASK_COMPLETER'];
+      if (!validRoles.includes(role)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid role. Must be ADMIN or TASK_COMPLETER'
+        });
+      }
+
+      // Check if user has permission to update roles (must be project creator or admin)
+      const hasPermission = await projectService.checkUpdatePermission(projectId, userEmail);
+      if (!hasPermission) {
+        return res.status(403).json({
+          success: false,
+          message: 'You do not have permission to update member roles'
+        });
+      }
+
+      // Update the member role
+      const updatedMember = await projectService.updateMemberRole(projectId, memberId, role);
+
+      res.status(200).json({
+        success: true,
+        message: 'Member role updated successfully',
+        data: updatedMember
+      });
+
+    } catch (error) {
+      console.error('Error updating member role:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      });
+    }
+  }
 
 }
 

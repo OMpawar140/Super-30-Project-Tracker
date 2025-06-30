@@ -93,14 +93,14 @@ const updateProjectValidator = [
 
 // Validation for adding a project member
 const addMemberValidator = [
-  body('*.userId')
+  body('email')
     .notEmpty()
     .withMessage('User ID (email) is required')
     .isEmail()
     .withMessage('User ID must be a valid email address')
     .normalizeEmail(),
 
-  body('*.role')
+  body('role')
     .optional()
     .isIn(['ADMIN', 'TASK_COMPLETER'])
     .withMessage('Role must be either ADMIN or TASK_COMPLETER')

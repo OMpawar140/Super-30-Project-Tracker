@@ -352,18 +352,18 @@ class statusUpdateService {
 
 // Schedule the job to run every hour
 cron.schedule('0 * * * *', () => {
-  StatusUpdateService.updateAllStatuses();
+  statusUpdateService.updateAllStatuses();
 });
 
 // Also run every 15 minutes during business hours for more responsive updates
 cron.schedule('*/15 9-18 * * 1-5', () => {
-  StatusUpdateService.updateAllStatuses();
+  statusUpdateService.updateAllStatuses();
 });
 
 // Run cleanup daily at 2 AM to remove expired archived projects
 cron.schedule('0 2 * * *', () => {
   console.log('Running daily cleanup of expired projects...');
-  StatusUpdateService.cleanupExpiredProjects();
+  statusUpdateService.cleanupExpiredProjects();
 });
 
 // Run once at startup

@@ -100,6 +100,7 @@ class FileController {
 
       // Step 1: List all files in the S3 bucket
       const allFiles = await S3Service.listFiles();
+      console.log(allFiles);
 
       // Check if any files exist at all
       if (!allFiles || !Array.isArray(allFiles) || allFiles.length === 0) {
@@ -107,22 +108,46 @@ class FileController {
       }
 
       // Step 2: Filter files that end with the specified key (taskId)
-      const filteredFiles = allFiles
-        .filter(file => file && file.key) // Ensure file object has key property
-        .map(file => file.key)
-        .filter(filename => {
-          if (!filename || typeof filename !== 'string') return false;
+      // const filteredFiles = allFiles
+      //   .filter(file => file && file.key) // Ensure file object has key property
+      //   .map(file => file.key)
+      //   .filter(filename => {
+      //     if (!filename || typeof filename !== 'string') return false;
           
-          // Remove file extension
-          const baseName = filename.split('.').slice(0, -1).join('.');
-          // Check if ends with key
-          return baseName.endsWith(key);
-        });
+      //     // Remove file extension
+      //     const baseName = filename.split('.').slice(0, -1).join('.');
+      //     // Check if ends with key
+      //     return baseName.endsWith(key);
+      //   });
 
-      // Check if any matching files were found
-      if (!filteredFiles || filteredFiles.length === 0) {
-        return errorResponse(res, 'No files found for the specified task ID', 404);
-      }
+      // // Check if any matching files were found
+      // if (!filteredFiles || filteredFiles.length === 0) {
+      //   return errorResponse(res, 'No files found for the specified task ID', 404);
+      // }
+
+      
+    // Step 2: Filter files that match the specified key (taskId)
+    const filteredFiles = allFiles
+      .filter(file => file && file.key) // Ensure file object has key property
+      .map(file => file.key)
+      .filter(filename => {
+        if (!filename || typeof filename !== 'string') return false;
+        
+        // Split by hyphen to get timestamp and taskId parts
+        const parts = filename.split('-');
+        if (parts.length < 2) return false;
+        
+        // Extract taskId (everything after the first hyphen)
+        const taskIdPart = parts.slice(1).join('-');
+        
+        // Remove file extension if present
+        const taskId = taskIdPart.includes('.') 
+          ? taskIdPart.substring(0, taskIdPart.lastIndexOf('.'))
+          : taskIdPart;
+        
+        // Check if taskId matches the key
+        return taskId === key;
+      });
 
       // Step 3: Sort files based on datetime extracted from the filename
       const sortedFiles = filteredFiles.sort((a, b) => {

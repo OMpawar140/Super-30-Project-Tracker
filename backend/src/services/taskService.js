@@ -188,21 +188,21 @@ class TaskService {
               skillset: true,
             }
           },
-          // Task creator information
-          creator: {
-            select: {
-              email: true,
-              skillset: true,
-              
-            }
-          },
+          // // Task creator information
+          // creator: {
+          //   select: {
+          //     email: true,
+          //     skillset: true,
+          //   }
+          // },
+
           // Complete milestone and project hierarchy
           milestone: {
             select: {
               id: true,
               name: true,
               description: true,
-              dueDate: true,
+              endDate: true,
               status: true,
               project: {
                 select: {
@@ -214,7 +214,6 @@ class TaskService {
                     select: {
                       email: true,
                       skillset: true,
-                      name: true
                     }
                   }
                 }
@@ -222,46 +221,45 @@ class TaskService {
             }
           },
           // Task comments with full author details
-          comments: {
-            include: {
-              author: {
-                select: {
-                  email: true,
-                  skillset: true,
-                  name: true
-                }
-              }
-            },
-            orderBy: {
-              createdAt: 'desc'
-            }
-          },
+          // comments: {
+          //   include: {
+          //     author: {
+          //       select: {
+          //         email: true,
+          //         skillset: true,
+          //       }
+          //     }
+          //   },
+          //   orderBy: {
+          //     createdAt: 'desc'
+          //   }
+          // },
           // Task dependencies (if any)
-          dependencies: {
-            select: {
-              id: true,
-              title: true,
-              status: true,
-              priority: true
-            }
-          },
-          // Tasks that depend on this task
-          dependents: {
-            select: {
-              id: true,
-              title: true,
-              status: true,
-              priority: true
-            }
-          },
+          // dependencies: {
+          //   select: {
+          //     id: true,
+          //     title: true,
+          //     status: true,
+          //     priority: true
+          //   }
+          // },
+          // // Tasks that depend on this task
+          // dependents: {
+          //   select: {
+          //     id: true,
+          //     title: true,
+          //     status: true,
+          //     priority: true
+          //   }
+          // },
           // Comment count for quick reference
-          _count: {
-            select: {
-              comments: true,
-              dependencies: true,
-              dependents: true
-            }
-          }
+          // _count: {
+          //   select: {
+          //     comments: true,
+          //     dependencies: true,
+          //     dependents: true
+          //   }
+          // }
         }
       });
 
@@ -278,9 +276,9 @@ class TaskService {
         isCreatedByCurrentUser: task.creator?.email === userEmail,
         
         // Quick access flags
-        hasComments: task._count.comments > 0,
-        hasDependencies: task._count.dependencies > 0,
-        hasDependents: task._count.dependents > 0,
+        // hasComments: task._count.comments > 0,
+        // hasDependencies: task._count.dependencies > 0,
+        // hasDependents: task._count.dependents > 0,
         
         // Contextual information
         projectContext: {
@@ -291,7 +289,7 @@ class TaskService {
           milestoneId: task.milestone.id,
           milestoneName: task.milestone.name,
           milestoneStatus: task.milestone.status,
-          milestoneDueDate: task.milestone.dueDate
+          milestoneEndDate: task.milestone.endDate
         },
         
         // Permission context for UI rendering

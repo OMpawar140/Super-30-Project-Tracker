@@ -143,6 +143,10 @@ export const apiService = {
     removeProjectMember: (id: string, userId: string) =>
       apiCall(`/projects/${id}/members/${userId}`, { method: 'DELETE' }),
 
+    // Update project member role (maps to DELETE /api/projects/:id/members/:userId)
+    updateProjectMemberRole: (id: string, userId: string, role: string) =>
+      apiCall(`/projects/${id}/members/${userId}/${role}`, { method: 'PATCH' }),
+
     archiveProject: (id: string) =>
       apiCall(`/projects/${id}/archive`, { method: 'DELETE' }),
 

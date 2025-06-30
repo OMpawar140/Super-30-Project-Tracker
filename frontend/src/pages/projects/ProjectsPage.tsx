@@ -4,7 +4,8 @@
 import React, { useState, useEffect } from 'react';
 import { HiClipboardList, HiFlag, HiUser, HiCalendar, HiChevronDown, HiChevronUp, HiSearch, HiFilter, HiCheckCircle, HiTrash,
   HiClock, HiExclamation, HiUpload, HiEye, HiPencil, HiCheck, HiX,HiPlus, 
-  HiRefresh} from 'react-icons/hi';
+  HiRefresh,
+  HiUserAdd} from 'react-icons/hi';
 import { apiService, useApiCall } from '@/services/api';
 import TaskFileModal from '../../components/ui/TaskFileModal';
 import { useAuth } from '@/context/AuthContext';
@@ -12,6 +13,9 @@ import TaskReviewModal from '@/components/ui/TaskReviewModal';
 import ProjectReportPDF from '@/components/ui/ProjectReportPDF';
 import UserProjectsPDF from '@/components/ui/UserProjectsPDF';
 import UserTasksPDF from '@/components/ui/UserTasksPDF';
+import Swal from 'sweetalert2';
+import withReactContent from 'sweetalert2-react-content';
+const MySwal = withReactContent(Swal);
 
 // Types for our data (updated to match backend structure)
 interface User {
@@ -164,6 +168,114 @@ const [newTaskData, setNewTaskData] = useState({
   assigneeId: ''
 });
 
+const [isEditMode, setIsEditMode] = useState(false);
+const [showAddMember, setShowAddMember] = useState(false);
+const [newMemberEmail, setNewMemberEmail] = useState('');
+const [newMemberRole, setNewMemberRole] = useState('TASK_COMPLETER');
+const [isAddingMember, setIsAddingMember] = useState(false);
+
+// Function to toggle edit mode
+const toggleEditMode = () => {
+  setIsEditMode(!isEditMode);
+  setShowAddMember(false); // Close add member form when toggling edit mode
+  setNewMemberEmail('');
+  setNewMemberRole('TASK_COMPLETER');
+};
+
+// Function to close edit mode
+const closeEditMode = () => {
+  setIsEditMode(false);
+  setShowAddMember(false);
+  setNewMemberEmail('');
+  setNewMemberRole('TASK_COMPLETER');
+};
+
+const updateMemberRole = async (projectId: string, memberId: string, newRole: string) => {
+  try {
+    // Call your API to update the member's role
+    const response = await callApi(() => apiService.projects.updateProjectMemberRole(projectId, memberId, newRole));
+    
+    if (response.ok) {
+      // Update local state or refetch project data
+      // This depends on your state management approach
+    }
+  } catch (error) {
+    console.error('Error updating member role:', error);
+  }
+};
+
+// Function to add a new member
+const addMember = async (projectId: string, email: string, role: string) => {
+  if (!email.trim()) {
+    alert('Please enter a valid email address');
+    return;
+  }
+
+  setIsAddingMember(true);
+  
+  try {
+    // Replace with your actual API call
+    const response = await callApi(() => apiService.projects.addProjectMember(projectId, { email, role }));
+    console.log(response);
+    
+    if (response.success) {
+      // Update local state
+      setProjects(prevProjects =>
+        prevProjects.map(proj =>
+          proj.id === projectId
+            ? {
+                ...proj,
+                members: [...proj.members, response.data[0].member]
+              }
+            : proj
+        )
+      );
+      
+      // Reset form
+      setNewMemberEmail('');
+      setNewMemberRole('TASK_COMPLETER');
+      setShowAddMember(false);
+      
+      console.log('Member added successfully');
+    }
+  } catch (error) {
+    console.error('Error adding member:', error);
+    alert('Failed to add member. Please try again.');
+  } finally {
+    setIsAddingMember(false);
+  }
+};
+
+// Function to remove a member
+const removeMember = async (projectId: string, memberId: string) => {
+  if (!confirm('Are you sure you want to remove this member from the project?')) {
+    return;
+  }
+
+  try {
+    // Replace with your actual API call
+    const response = await callApi(() => apiService.projects.removeProjectMember(projectId, memberId));
+    
+    if (response.success) {
+      // Update local state
+      setProjects(prevProjects =>
+        prevProjects.map(proj =>
+          proj.id === projectId
+            ? {
+                ...proj,
+                members: proj.members.filter(member => member.id !== memberId)
+              }
+            : proj
+        )
+      );
+      
+      console.log('Member removed successfully');
+    }
+  } catch (error) {
+    console.error('Error removing member:', error);
+    alert('Failed to remove member. Please try again. Check if the member is assigned any tasks before removing.');
+  }
+};
 
 const toggleAddMilestoneForm = (projectId : string) => {
   setShowAddMilestoneForm(prev => ({
@@ -261,9 +373,27 @@ const deleteMilestone = async (projectId: string, milestoneId: string) => {
 };
 
 const deleteProject = async (projectId: string) => { 
-  if (!confirm('Are you sure you want to delete this project? This project  will be archived for 7 days before permanent deletion. You still have the option to restore it during this period.')) {
-    return;
-  }
+  // if (!confirm('Are you sure you want to delete this project? This project will be archived for 7 days before permanent deletion. You still have the option to restore it during this period.')) {
+  //   return;
+  // }
+
+  const result = await MySwal.fire({
+      title: 'Delete this project?',
+      text: `This project will be archived for next 7 days and can be recovered till then. 
+        After 7 days, it will be permanently deleted and cannot be recovered again.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, archive it',
+      cancelButtonText: 'No, keep it active',
+      confirmButtonColor: '#6366f1',
+      cancelButtonColor: '#6b7280',
+      background: '#18181b',
+      color: '#fff',
+    });
+
+    if(!result.isConfirmed) {
+      return;
+    }
 
   console.log(`Deleting (archiving) Project id: ${projectId}`);
 
@@ -299,7 +429,13 @@ const restoreProject = async (projectId: string) => {
     if (response.success) {
       console.log(`Project with id ${projectId} restored successfully.`);
 
-      alert('Project restored successfully! Now you have all the data back.');
+      // alert('Project restored successfully! Now you have all the data back.');
+
+      Swal.fire({
+        title: "Project restored successfully!",
+        text: 'Now you have all your data back.',
+        icon: "success",
+      });
 
       setProjects(prevProjects =>
         prevProjects.map(project =>
@@ -607,9 +743,7 @@ const deleteTask = async (projectId: string, taskId: string) => {
     return [...new Set(tags)];
   };
 
-  // Fetch projects from API
-  useEffect(() => {
-    const fetchProjects = async () => {
+  const fetchProjects = async () => {
       try {
         setLoading(true);
         setError(null);
@@ -648,6 +782,8 @@ const deleteTask = async (projectId: string, taskId: string) => {
       }
     };
 
+  // Fetch projects from API
+  useEffect(() => {
     fetchProjects();
   }, []);
 
@@ -863,6 +999,13 @@ const deleteTask = async (projectId: string, taskId: string) => {
               <span className="text-sm text-gray-500 dark:text-gray-400">
                 ({projects.length} total)
               </span>
+              <button
+                onClick={fetchProjects}
+                title='Refresh projects'
+                className='cursor-pointer'
+              >
+                <HiRefresh/>
+              </button>
             </div>
             <div onClick={(e) => e.stopPropagation()}
               className='flex gap-3'>
@@ -1820,19 +1963,134 @@ const deleteTask = async (projectId: string, taskId: string) => {
 
                     {/* Team Members */}
                     <div>
-                      <h3 className="text-lg font-MEDIUM text-gray-900 dark:text-white mb-3">Team Members</h3>
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-lg font-medium text-gray-900 dark:text-white">Team Members</h3>
+                        {currentUser && currentUser.email === project.creatorId && (
+                          <>
+                            {!isEditMode && project.status !== 'ARCHIVED' ? (
+                              // Edit button (shown when not in edit mode)
+                              <button
+                                onClick={toggleEditMode}
+                                className="flex items-center gap-1 px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded-lg transition-colors"
+                                title="Edit team members"
+                              >
+                                <HiPencil className="w-4 h-4" />
+                                Edit
+                              </button>
+                            ) : (
+                              // Close button and Add Member button (shown when in edit mode)
+                              <div className="flex items-center gap-2">
+                                {!showAddMember && project.status !== 'ARCHIVED' && (
+                                  <button
+                                    onClick={() => setShowAddMember(true)}
+                                    className="flex items-center gap-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
+                                    title="Add team member"
+                                  >
+                                    <HiUserAdd className="w-4 h-4" />
+                                    Add Member
+                                  </button>
+                                )}
+                                { project.status !== 'ARCHIVED'&& (
+                                  <button
+                                  onClick={closeEditMode}
+                                  className="flex items-center gap-1 px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition-colors"
+                                  title="Close edit mode"
+                                >
+                                  <HiX className="w-4 h-4" />
+                                  Close
+                                </button>)}
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+
+                      {/* Add Member Form (only shown in edit mode) */}
+                      {isEditMode && showAddMember && project.status !== 'ARCHIVED' && (
+                        <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border">
+                          <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">Add New Member</h4>
+                          <div className="space-y-3">
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                Email Address
+                              </label>
+                              <input
+                                type="email"
+                                value={newMemberEmail}
+                                onChange={(e) => setNewMemberEmail(e.target.value)}
+                                placeholder="Enter member's email"
+                                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg 
+                                        bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                                        focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                Role
+                              </label>
+                              <select
+                                value={newMemberRole}
+                                onChange={(e) => setNewMemberRole(e.target.value)}
+                                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg 
+                                        bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                                        focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              >
+                                <option value="TASK_COMPLETER">Task Completer</option>
+                                <option value="ADMIN">Admin</option>
+                              </select>
+                            </div>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => addMember(project.id, newMemberEmail, newMemberRole)}
+                                disabled={isAddingMember}
+                                className="flex items-center gap-1 px-3 py-2 bg-green-600 hover:bg-green-700 
+                                        disabled:bg-gray-400 text-white text-sm rounded-lg transition-colors"
+                              >
+                                <HiPlus className="w-3 h-3" />
+                                {isAddingMember ? 'Adding...' : 'Add Member'}
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setShowAddMember(false);
+                                  setNewMemberEmail('');
+                                  setNewMemberRole('TASK_COMPLETER');
+                                }}
+                                className="px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded-lg transition-colors"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Members List */}
                       <div className="space-y-2">
                         {project.members.map((member) => (
-                          <div key={member.id} className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded-lg">
-                            <HiUser className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                            <span className="text-sm text-gray-700 dark:text-gray-300">{member.user.email}</span>
-                            <span className="text-xs text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 px-2 py-1 rounded">
-                              {member.role.replace('_', ' ')}
-                            </span>
-                            {member.user.skillset && (
-                              <span className="text-xs text-gray-500 dark:text-gray-400">
-                                {member.user.skillset}
+                          <div key={member.id} className="flex items-center justify-between gap-2 bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded-lg">
+                            <div className="flex items-center gap-2 flex-1">
+                              <HiUser className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                              <span className="text-sm text-gray-700 dark:text-gray-300">{member.user.email}</span>
+                              <span className="text-xs text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 px-2 py-1 rounded">
+                                {member.role.replace('_', ' ')}
                               </span>
+                              {member.user.skillset && (
+                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                  {member.user.skillset}
+                                </span>
+                              )}
+                            </div>
+                            
+                            {/* Delete button (only shown in edit mode) */}
+                            {isEditMode && project.creator.email !== member.user.email && (
+                              <button
+                                onClick={() => removeMember(project.id, member.id)}
+                                className="flex items-center gap-1 px-2 py-1 bg-red-600 hover:bg-red-700 
+                                        text-white text-xs rounded transition-colors"
+                                title="Remove member"
+                              >
+                                <HiTrash className="w-3 h-3" />
+                              </button>
                             )}
                           </div>
                         ))}
