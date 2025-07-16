@@ -1,7 +1,68 @@
 import { HiDownload } from 'react-icons/hi';
+import { type User } from 'firebase/auth';
+
+interface ProjectMember {
+  id: string;
+  userId: string;
+  role: string;
+  joinedAt: string;
+  updatedAt: string;
+  projectId: string;
+  user: User;
+}
+
+interface Task {
+  id: string;
+  title: string;
+  description?: string;
+  status: string;
+  priority?: string;
+  startDate?: string;
+  endDate?: string;
+  assigneeId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface Milestone {
+  id: string;
+  name: string;
+  description?: string;
+  status: string;
+  startDate: string;
+  endDate: string;
+  tasks: Task[];
+}
+
+interface Project {
+  id: string;
+  name: string;
+  description: string;
+  status: string;
+  startDate: string;
+  endDate: string;
+  createdAt: string;
+  updatedAt: string;
+  creatorId: string;
+  creator: User;
+  members: ProjectMember[];
+  milestones: Milestone[];
+  _count: {
+    milestones: number;
+    members: number;
+  };
+  // Computed fields
+  progress?: number;
+  teamMembers?: string[];
+  priority?: string;
+  budget?: number;
+  tags?: string[];
+  totalTasks?: number;
+  completedTasks?: number;
+}
 
 // Simple PDF generation using HTML5 Canvas and basic drawing
-const UserProjectsPDF = ({ projects, currentUser, onDownload }) => {
+const UserProjectsPDF = ({ projects, currentUser, onDownload }: {projects: Project[], currentUser: User, onDownload: () => void}) => {
   const generatePDF = () => {
     // Filter projects created by current user
     const userProjects = projects.filter(project => 
@@ -213,7 +274,7 @@ const UserProjectsPDF = ({ projects, currentUser, onDownload }) => {
           </div>
         </div>
 
-        ${userProjects.map((project, index) => `
+        ${userProjects.map((project) => `
           <div class="project">
             <div class="project-header">
               <div class="project-title">${project.name}</div>
@@ -275,19 +336,23 @@ const UserProjectsPDF = ({ projects, currentUser, onDownload }) => {
       </html>
     `;
 
-    printWindow.document.write(htmlContent);
-    printWindow.document.close();
-    
-    // Wait for content to load, then trigger print
-    printWindow.onload = () => {
-      setTimeout(() => {
-        printWindow.print();
-        // Close the window after printing (optional)
-        printWindow.onafterprint = () => {
-          printWindow.close();
-        };
-      }, 250);
-    };
+    if(printWindow) {
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+      
+      // Wait for content to load, then trigger print
+      printWindow.onload = () => {
+        setTimeout(() => {
+          printWindow.print();
+          // Close the window after printing (optional)
+          printWindow.onafterprint = () => {
+            printWindow.close();
+          };
+        }, 250);
+      };
+    } else {
+      console.error('Failed to open print window. It may have been blocked by the browser.');
+    }
 
     // Call the onDownload callback if provided
     if (onDownload) {

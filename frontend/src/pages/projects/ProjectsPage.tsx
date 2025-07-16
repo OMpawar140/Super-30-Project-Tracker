@@ -190,19 +190,19 @@ const closeEditMode = () => {
   setNewMemberRole('TASK_COMPLETER');
 };
 
-const updateMemberRole = async (projectId: string, memberId: string, newRole: string) => {
-  try {
-    // Call your API to update the member's role
-    const response = await callApi(() => apiService.projects.updateProjectMemberRole(projectId, memberId, newRole));
+// const updateMemberRole = async (projectId: string, memberId: string, newRole: string) => {
+//   try {
+//     // Call your API to update the member's role
+//     const response = await callApi(() => apiService.projects.updateProjectMemberRole(projectId, memberId, newRole));
     
-    if (response.ok) {
-      // Update local state or refetch project data
-      // This depends on your state management approach
-    }
-  } catch (error) {
-    console.error('Error updating member role:', error);
-  }
-};
+//     if (response.ok) {
+//       // Update local state or refetch project data
+//       // This depends on your state management approach
+//     }
+//   } catch (error) {
+//     console.error('Error updating member role:', error);
+//   }
+// };
 
 // Function to add a new member
 const addMember = async (projectId: string, email: string, role: string) => {
@@ -1045,6 +1045,7 @@ const deleteTask = async (projectId: string, taskId: string) => {
             {/* Status Filter */}
             <div className="relative">
               <select
+                title='Status Filter'
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="appearance-none bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 pr-8 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-300 cursor-pointer"
@@ -1060,6 +1061,7 @@ const deleteTask = async (projectId: string, taskId: string) => {
 
             <div className="relative">
         <select
+          title='Role Filter'
           value={roleFilter}
           onChange={(e) => setRoleFilter(e.target.value)}
           className="appearance-none bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 pr-8 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-300"
@@ -1208,6 +1210,7 @@ const deleteTask = async (projectId: string, taskId: string) => {
                               Status
                             </label>
                             <select
+                              title='Status'
                               value={editingProjectData.status}
                               onChange={(e) => setEditingProjectData(prev => ({ ...prev, status: e.target.value }))}
                               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -1223,6 +1226,7 @@ const deleteTask = async (projectId: string, taskId: string) => {
                               Start Date
                             </label>
                             <input
+                              title='Start Date'
                               type="date"
                               value={editingProjectData.startDate}
                               onChange={(e) => setEditingProjectData(prev => ({ ...prev, startDate: e.target.value }))}
@@ -1234,6 +1238,7 @@ const deleteTask = async (projectId: string, taskId: string) => {
                               End Date
                             </label>
                             <input
+                              title='End Date'
                               type="date"
                               value={editingProjectData.endDate}
                               onChange={(e) => setEditingProjectData(prev => ({ ...prev, endDate: e.target.value }))}
@@ -1401,6 +1406,7 @@ const deleteTask = async (projectId: string, taskId: string) => {
             Status
           </label>
           <select
+            title='Status'
             value={newMilestoneData.status}
             onChange={(e) => setNewMilestoneData(prev => ({ ...prev, status: e.target.value }))}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
@@ -1416,6 +1422,7 @@ const deleteTask = async (projectId: string, taskId: string) => {
             Start Date
           </label>
           <input
+            title='Start Date'
             type="date"
             value={newMilestoneData.startDate}
             min={project.startDate ? new Date(project.startDate).toISOString().split('T')[0] : undefined}
@@ -1428,6 +1435,7 @@ const deleteTask = async (projectId: string, taskId: string) => {
             End Date
           </label>
           <input
+            title='End Date'
             type="date"
             value={newMilestoneData.endDate}
             onChange={(e) => setNewMilestoneData(prev => ({ ...prev, endDate: e.target.value }))}
@@ -1512,32 +1520,32 @@ const deleteTask = async (projectId: string, taskId: string) => {
                                     ) : (
                                       <>
                                         <h4 className="font-MEDIUM text-gray-900 dark:text-white">{milestone.name}</h4>
-                                      {currentUser && currentUser.email === project.creatorId && project.status !== 'ARCHIVED' && (
-  <>
-    <button
-      onClick={(e) => {
-        e.stopPropagation();
-        startEditingMilestone(milestone);
-      }}
-      className="flex items-center gap-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg transition-colors"
-      title="Edit milestone"
-    >
-      <HiPencil className="w-3 h-3" />
-      Edit
-    </button>
-    <button
-      onClick={(e) => {
-        e.stopPropagation();
-        deleteMilestone(project.id, milestone.id);
-      }}
-      className="flex items-center gap-1 px-2 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded-lg transition-colors"
-      title="Delete milestone"
-    >
-      <HiTrash className="w-3 h-3" />
-      Delete
-    </button>
-  </>
-)}
+                                        {currentUser && currentUser.email === project.creatorId && project.status !== 'ARCHIVED' && (
+                                          <>
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                startEditingMilestone(milestone);
+                                              }}
+                                              className="flex items-center gap-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg transition-colors"
+                                              title="Edit milestone"
+                                            >
+                                              <HiPencil className="w-3 h-3" />
+                                              Edit
+                                            </button>
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                deleteMilestone(project.id, milestone.id);
+                                              }}
+                                              className="flex items-center gap-1 px-2 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded-lg transition-colors"
+                                              title="Delete milestone"
+                                            >
+                                              <HiTrash className="w-3 h-3" />
+                                              Delete
+                                            </button>
+                                          </>
+                                        )}
                                         {expandedMilestones.includes(milestone.id) ? 
                                           <HiChevronUp className="w-4 h-4 text-gray-400 dark:text-gray-500" /> : 
                                           <HiChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-500" />
@@ -1624,111 +1632,115 @@ const deleteTask = async (projectId: string, taskId: string) => {
                                 </div>
 
                                 {showAddTaskForm[milestone.id] && (
-  <div className="bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-700 p-3 mb-3">
-    <h6 className="text-xs font-MEDIUM text-gray-900 dark:text-white mb-2">Add New Task</h6>
-    <div className="space-y-2">
-      <div>
-        <label className="block text-xs font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
-          Task Title
-        </label>
-        <input
-          type="text"
-          value={newTaskData.title}
-          onChange={(e) => setNewTaskData(prev => ({ ...prev, title: e.target.value }))}
-          className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-          placeholder="Enter task title"
-        />
-      </div>
-      <div>
-        <label className="block text-xs font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
-          Description
-        </label>
-        <textarea
-          value={newTaskData.description}
-          onChange={(e) => setNewTaskData(prev => ({ ...prev, description: e.target.value }))}
-          className="w-full p-2 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-          rows={2}
-          placeholder="Enter task description"
-        />
-      </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-        <div>
-          <label className="block text-xs font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
-            Priority
-          </label>
-          <select
-            value={newTaskData.priority}
-            onChange={(e) => setNewTaskData(prev => ({ ...prev, priority: e.target.value }))}
-            className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-          >
-            <option value="LOW">Low</option>
-            <option value="MEDIUM">Medium</option>
-            <option value="HIGH">High</option>
-            <option value="CRITICAL">Critical</option>
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
-            Start Date
-          </label>
-          <input
-            type="date"
-            value={newTaskData.startDate}
-            min={milestone.startDate ? new Date(milestone.startDate).toISOString().split('T')[0] : undefined}
-            onChange={(e) => setNewTaskData(prev => ({ ...prev, startDate: e.target.value }))}
-            className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
-            Due Date
-          </label>
-          <input
-            type="date"
-            value={newTaskData.endDate}
-            onChange={(e) => setNewTaskData(prev => ({ ...prev, endDate: e.target.value }))}
-            className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
-            Assignee
-          </label>
-          <select
-            value={newTaskData.assigneeId}
-            onChange={(e) => setNewTaskData(prev => ({ ...prev, assigneeId: e.target.value }))}
-            className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-          >
-            <option value="" disabled >Select Assignee</option>
-            {project.members
-              .filter((member) => member.role === 'TASK_COMPLETER')
-              .map((member) => (
-                <option key={member.id} value={member.user.email}>
-                  {member.user.email}
-                </option>
-              ))}
-          </select>
-        </div>
-      </div>
-      <div className="flex gap-2">
-        <button
-          onClick={() => addTask(project.id, milestone.id)}
-          className="flex items-center gap-1 px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded-lg transition-colors"
-        >
-          <HiCheck className="w-3 h-3" />
-          Add Task
-        </button>
-        <button
-          onClick={() => toggleAddTaskForm(milestone.id)}
-          className="flex items-center gap-1 px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white text-xs rounded-lg transition-colors"
-        >
-          <HiX className="w-3 h-3" />
-          Cancel
-        </button>
-      </div>
-    </div>
-  </div>
-)}
+                                  <div className="bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-700 p-3 mb-3">
+                                    <h6 className="text-xs font-MEDIUM text-gray-900 dark:text-white mb-2">Add New Task</h6>
+                                    <div className="space-y-2">
+                                      <div>
+                                        <label className="block text-xs font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
+                                          Task Title
+                                        </label>
+                                        <input
+                                          type="text"
+                                          value={newTaskData.title}
+                                          onChange={(e) => setNewTaskData(prev => ({ ...prev, title: e.target.value }))}
+                                          className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                                          placeholder="Enter task title"
+                                        />
+                                      </div>
+                                      <div>
+                                        <label className="block text-xs font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
+                                          Description
+                                        </label>
+                                        <textarea
+                                          value={newTaskData.description}
+                                          onChange={(e) => setNewTaskData(prev => ({ ...prev, description: e.target.value }))}
+                                          className="w-full p-2 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                                          rows={2}
+                                          placeholder="Enter task description"
+                                        />
+                                      </div>
+                                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                        <div>
+                                          <label className="block text-xs font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
+                                            Priority
+                                          </label>
+                                          <select
+                                            title='Priority'
+                                            value={newTaskData.priority}
+                                            onChange={(e) => setNewTaskData(prev => ({ ...prev, priority: e.target.value }))}
+                                            className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                                          >
+                                            <option value="LOW">Low</option>
+                                            <option value="MEDIUM">Medium</option>
+                                            <option value="HIGH">High</option>
+                                            <option value="CRITICAL">Critical</option>
+                                          </select>
+                                        </div>
+                                        <div>
+                                          <label className="block text-xs font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
+                                            Start Date
+                                          </label>
+                                          <input
+                                            title='Start Date'
+                                            type="date"
+                                            value={newTaskData.startDate}
+                                            min={milestone.startDate ? new Date(milestone.startDate).toISOString().split('T')[0] : undefined}
+                                            onChange={(e) => setNewTaskData(prev => ({ ...prev, startDate: e.target.value }))}
+                                            className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                                          />
+                                        </div>
+                                        <div>
+                                          <label className="block text-xs font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
+                                            Due Date
+                                          </label>
+                                          <input
+                                            title='Due Date'
+                                            type="date"
+                                            value={newTaskData.endDate}
+                                            onChange={(e) => setNewTaskData(prev => ({ ...prev, endDate: e.target.value }))}
+                                            className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                                          />
+                                        </div>
+                                        <div>
+                                          <label className="block text-xs font-MEDIUM text-gray-700 dark:text-gray-300 mb-1">
+                                            Assignee
+                                          </label>
+                                          <select
+                                            title='Assignee'
+                                            value={newTaskData.assigneeId}
+                                            onChange={(e) => setNewTaskData(prev => ({ ...prev, assigneeId: e.target.value }))}
+                                            className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                                          >
+                                            <option value="" disabled >Select Assignee</option>
+                                            {project.members
+                                              .filter((member) => member.role === 'TASK_COMPLETER')
+                                              .map((member) => (
+                                                <option key={member.id} value={member.user.email}>
+                                                  {member.user.email}
+                                                </option>
+                                              ))}
+                                          </select>
+                                        </div>
+                                      </div>
+                                      <div className="flex gap-2">
+                                        <button
+                                          onClick={() => addTask(project.id, milestone.id)}
+                                          className="flex items-center gap-1 px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded-lg transition-colors"
+                                        >
+                                          <HiCheck className="w-3 h-3" />
+                                          Add Task
+                                        </button>
+                                        <button
+                                          onClick={() => toggleAddTaskForm(milestone.id)}
+                                          className="flex items-center gap-1 px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white text-xs rounded-lg transition-colors"
+                                        >
+                                          <HiX className="w-3 h-3" />
+                                          Cancel
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
                                 <div className="space-y-2">
                                   {milestone.tasks.map((task) => (
                                     <div key={task.id} className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-600 p-3 ${
@@ -1757,31 +1769,31 @@ const deleteTask = async (projectId: string, taskId: string) => {
                                               <>
                                                 <h6 className="text-sm font-MEDIUM text-gray-900 dark:text-white">{task.title}</h6>
                                               {currentUser && currentUser.email === project.creatorId && project.status !== 'ARCHIVED' && (
-  <>
-    <button
-      onClick={(e) => {
-        e.stopPropagation();
-        startEditingTask(task);
-      }}
-      className="flex items-center gap-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg transition-colors"
-      title="Edit task"
-    >
-      <HiPencil className="w-3 h-3" />
-      Edit
-    </button>
-    <button
-      onClick={(e) => {
-        e.stopPropagation();
-        deleteTask(project.id, task.id);
-      }}
-      className="flex items-center gap-1 px-2 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded-lg transition-colors"
-      title="Delete task"
-    >
-      <HiTrash className="w-3 h-3" />
-      Delete
-    </button>
-  </>
-)}
+                                                <>
+                                                  <button
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      startEditingTask(task);
+                                                    }}
+                                                    className="flex items-center gap-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg transition-colors"
+                                                    title="Edit task"
+                                                  >
+                                                    <HiPencil className="w-3 h-3" />
+                                                    Edit
+                                                  </button>
+                                                  <button
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      deleteTask(project.id, task.id);
+                                                    }}
+                                                    className="flex items-center gap-1 px-2 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded-lg transition-colors"
+                                                    title="Delete task"
+                                                  >
+                                                    <HiTrash className="w-3 h-3" />
+                                                    Delete
+                                                  </button>
+                                                </>
+                                              )}
                                               </>
                                             )}
                                           </div>
@@ -1806,6 +1818,7 @@ const deleteTask = async (projectId: string, taskId: string) => {
                                                     Priority
                                                   </label>
                                                   <select
+                                                    title='Priority'
                                                     value={editingTaskData.priority}
                                                     onChange={(e) => setEditingTaskData(prev => ({ ...prev, priority: e.target.value }))}
                                                     className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -1821,6 +1834,7 @@ const deleteTask = async (projectId: string, taskId: string) => {
                                                     Start Date
                                                   </label>
                                                   <input
+                                                    title='Start Date'
                                                     type="date"
                                                     value={editingTaskData.startDate}
                                                     min={milestone.startDate ? new Date(milestone.startDate).toISOString().split('T')[0] : undefined}
@@ -1833,6 +1847,7 @@ const deleteTask = async (projectId: string, taskId: string) => {
                                                     Due Date
                                                   </label>
                                                   <input
+                                                    title='Due Date'
                                                     type="date"
                                                     value={editingTaskData.endDate}
                                                     onChange={(e) => setEditingTaskData(prev => ({ ...prev, endDate: e.target.value }))}
@@ -1844,6 +1859,7 @@ const deleteTask = async (projectId: string, taskId: string) => {
                                                     Assignee
                                                   </label>
                                                   <select
+                                                    title='Assignee'
                                                     value={editingTaskData.assigneeId}
                                                     onChange={(e) => setEditingTaskData(prev => ({ ...prev, assigneeId: e.target.value }))}
                                                     className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -2029,6 +2045,7 @@ const deleteTask = async (projectId: string, taskId: string) => {
                                 Role
                               </label>
                               <select
+                                title='Role'
                                 value={newMemberRole}
                                 onChange={(e) => setNewMemberRole(e.target.value)}
                                 className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg 

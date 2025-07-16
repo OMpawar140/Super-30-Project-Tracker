@@ -1,11 +1,85 @@
-import React from 'react';
 import { HiDownload } from 'react-icons/hi';
+import { type User } from 'firebase/auth';
+
+interface ProjectMember {
+  id: string;
+  userId: string;
+  role: string;
+  joinedAt: string;
+  updatedAt: string;
+  projectId: string;
+  user: User;
+}
+
+interface Task {
+  id: string;
+  title: string;
+  description?: string;
+  status: string;
+  priority?: string;
+  startDate?: string;
+  endDate?: string;
+  assigneeId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface Milestone {
+  id: string;
+  name: string;
+  description?: string;
+  status: string;
+  startDate: string;
+  endDate: string;
+  tasks: Task[];
+}
+
+interface Project {
+  id: string;
+  name: string;
+  description: string;
+  status: string;
+  startDate: string;
+  endDate: string;
+  createdAt: string;
+  updatedAt: string;
+  creatorId: string;
+  creator: User;
+  members: ProjectMember[];
+  milestones: Milestone[];
+  _count: {
+    milestones: number;
+    members: number;
+  };
+  // Computed fields
+  progress?: number;
+  teamMembers?: string[];
+  priority?: string;
+  budget?: number;
+  tags?: string[];
+  totalTasks?: number;
+  completedTasks?: number;
+}
+
+interface UserTask {
+  projectName: string;
+  projectStatus: string;
+  milestoneName: string;
+  milestoneStatus: string;
+  assignment: string;
+  startDate?: string;
+  dueDate?: string;
+  priority?: string;
+  status: string;
+  [key: string]: any;
+}
+
 
 // PDF generation component for user's assigned tasks
-const UserTasksPDF = ({ projects, currentUser, onDownload }) => {
+const UserTasksPDF = ({ projects, currentUser, onDownload }: {projects: Project[], currentUser: User, onDownload: () => void}) => {
   const generatePDF = () => {
     // Extract all tasks where current user is a TASK_COMPLETER
-    const userTasks = [];
+    const userTasks: UserTask[] = [];
     
     projects.forEach(project => {
       if (project.milestones && project.milestones.length > 0) {
@@ -22,7 +96,7 @@ const UserTasksPDF = ({ projects, currentUser, onDownload }) => {
                     milestoneStatus: milestone.status,
                     assignment: task.title,
                     startDate: task.startDate,
-                    dueDate: task.dueDate,
+                    endDate: task.endDate,
                     priority: task.priority,
                     status: task.status,
                   });
@@ -41,7 +115,7 @@ const UserTasksPDF = ({ projects, currentUser, onDownload }) => {
     // Create a new window for PDF content
     const printWindow = window.open('', '_blank');
     
-    const formatDate = (dateString) => {
+    const formatDate = (dateString: string) => {
       try {
         const date = new Date(dateString);
         return date.toLocaleDateString('en-US', { 
@@ -50,11 +124,12 @@ const UserTasksPDF = ({ projects, currentUser, onDownload }) => {
           year: 'numeric' 
         });
       } catch (error) {
+        console.error(error);
         return 'Invalid Date';
       }
     };
 
-    const formatDateTime = (dateString) => {
+    const formatDateTime = (dateString: string) => {
       try {
         const date = new Date(dateString);
         return date.toLocaleDateString('en-US', {
@@ -65,26 +140,27 @@ const UserTasksPDF = ({ projects, currentUser, onDownload }) => {
           minute: '2-digit'
         });
       } catch (error) {
+        console.error(error);
         return 'Invalid Date';
       }
     };
 
     // Group tasks by status for summary
-    const tasksByStatus = userTasks.reduce((acc, task) => {
+    const tasksByStatus = userTasks.reduce((acc: Record<string, number>, task) => {
       const status = task.status || 'PENDING';
       acc[status] = (acc[status] || 0) + 1;
       return acc;
-    }, {});
+    }, {} as Record<string, number>);
 
     // Group tasks by project for better organization
-    const tasksByProject = userTasks.reduce((acc, task) => {
+    const tasksByProject = userTasks.reduce((acc: Record<string, UserTask[]>, task) => {
       const projectName = task.projectName;
       if (!acc[projectName]) {
         acc[projectName] = [];
       }
       acc[projectName].push(task);
       return acc;
-    }, {});
+    }, {} as Record<string, UserTask[]>);
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -387,19 +463,23 @@ const UserTasksPDF = ({ projects, currentUser, onDownload }) => {
       </html>
     `;
 
-    printWindow.document.write(htmlContent);
-    printWindow.document.close();
-    
-    // Wait for content to load, then trigger print
-    printWindow.onload = () => {
-      setTimeout(() => {
-        printWindow.print();
-        // Close the window after printing (optional)
-        printWindow.onafterprint = () => {
-          printWindow.close();
-        };
-      }, 250);
-    };
+    if(printWindow) {
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+      
+      // Wait for content to load, then trigger print
+      printWindow.onload = () => {
+        setTimeout(() => {
+          printWindow.print();
+          // Close the window after printing (optional)
+          printWindow.onafterprint = () => {
+            printWindow.close();
+          };
+        }, 250);
+      };
+    } else {
+      console.error('Failed to open print window. It may have been blocked by the browser.');
+    }
 
     // Call the onDownload callback if provided
     if (onDownload) {
@@ -408,24 +488,40 @@ const UserTasksPDF = ({ projects, currentUser, onDownload }) => {
   };
 
   // Count tasks where current user is a TASK_COMPLETER
+  // const userTasksCount = projects.reduce((count, project) => {
+  //   if (project.milestones && project.milestones.length > 0) {
+  //     project.milestones.forEach(milestone => {
+  //       if (milestone.tasks && milestone.tasks.length > 0) {
+  //         milestone.tasks.forEach(task => {
+  //           if (task.assignments && task.assignments.length > 0) {
+  //             const userAssignment = task.assignments.find(assignment => 
+  //               assignment.user.email === currentUser?.email && 
+  //               assignment.role === 'TASK_COMPLETER'
+  //             );
+  //             if (userAssignment) {
+  //               count++;
+  //             }
+  //           }
+  //         });
+  //       }
+  //     });
+  //   }
+  //   return count;
+  // }, 0);
+
   const userTasksCount = projects.reduce((count, project) => {
-    if (project.milestones && project.milestones.length > 0) {
-      project.milestones.forEach(milestone => {
-        if (milestone.tasks && milestone.tasks.length > 0) {
-          milestone.tasks.forEach(task => {
-            if (task.assignments && task.assignments.length > 0) {
-              const userAssignment = task.assignments.find(assignment => 
-                assignment.user.email === currentUser?.email && 
-                assignment.role === 'TASK_COMPLETER'
-              );
-              if (userAssignment) {
-                count++;
-              }
-            }
-          });
-        }
+    const isTaskCompleter = project.members?.some(
+      member => member.user.email === currentUser?.email && member.role === 'TASK_COMPLETER'
+    );
+
+    if (!isTaskCompleter) return count;
+
+    project.milestones?.forEach(milestone => {
+      milestone.tasks?.forEach(task => {
+        count++; // Since the user is a TASK_COMPLETER in this project, count all tasks
       });
-    }
+    });
+
     return count;
   }, 0);
 

@@ -11,7 +11,7 @@
     "cron:status": "node scripts/railway-cron.js"
   },
   "dependencies": {
-    "@prisma/client": "^6.9.0",
+    "@prisma/client": "^6.12.0",
     "aws-sdk": "^2.1692.0",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
@@ -29,7 +29,7 @@
   "devDependencies": {
     "jest": "^29.6.2",
     "nodemon": "^3.0.2",
-    "prisma": "^6.9.0",
+    "prisma": "^6.12.0",
     "supertest": "^6.3.3"
   },
   "author": "",

@@ -4,7 +4,6 @@ import {
   HiUpload, 
   HiDocumentText, 
   HiEye, 
-  HiDownload, 
   HiCheckCircle,
   HiClock,
   HiExclamation
@@ -53,13 +52,7 @@ const TaskFileModal: React.FC<TaskFileModalProps> = ({
   const { callApi } = useApiCall();
 
   // Fetch existing files when modal opens
-  useEffect(() => {
-    if (isOpen && taskId) {
-      fetchTaskFiles();
-    }
-  }, [isOpen, taskId]);
-
-  const fetchTaskFiles = async () => {
+  const fetchTaskFiles = React.useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -100,7 +93,13 @@ const TaskFileModal: React.FC<TaskFileModalProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [callApi, taskId]);
+
+  useEffect(() => {
+    if (isOpen && taskId) {
+      fetchTaskFiles();
+    }
+  }, [isOpen, taskId, fetchTaskFiles]);
 
   const handleFileSelect = (selectedFiles: FileList | null) => {
     if (selectedFiles && selectedFiles.length > 0) {
@@ -325,6 +324,7 @@ const TaskFileModal: React.FC<TaskFileModalProps> = ({
               onDrop={handleDrop}
             >
               <input
+              title='File upload'
                 ref={fileInputRef}
                 type="file"
                 multiple

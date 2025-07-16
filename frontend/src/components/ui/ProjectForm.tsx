@@ -33,10 +33,10 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
   );
   
   // Workflow state management
-  const [currentStep, setCurrentStep] = useState<'project' | 'members' | 'milestones'>('project');
+  // const [currentStep, setCurrentStep] = useState<'project' | 'members' | 'milestones'>('project');
   const [createdProjectId, setCreatedProjectId] = useState<string | null>(null);
   const [projectMembers, setProjectMembers] = useState<Member[]>([]);
-  const [milestones, setMilestones] = useState<Milestone[]>([]);
+  // const [milestones, setMilestones] = useState<Milestone[]>([]);
   
   // Modal states
   const [showMemberModal, setShowMemberModal] = useState(false);
@@ -80,7 +80,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
       });
 
       // Move to member invitation step
-      setCurrentStep('members');
+      // setCurrentStep('members');
       setTimeout(() => {
         setShowMemberModal(true);
       }, 100);
@@ -118,7 +118,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
     // });
 
     // if (result.isConfirmed) {
-    setCurrentStep('milestones');
+    // setCurrentStep('milestones');
     setShowMilestoneModal(true);
     // } else {
     //   // Complete the workflow
@@ -211,7 +211,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
           }
         }
 
-        setMilestones(milestonesData);
+        // setMilestones(milestonesData);
 
         await MySwal.fire({
           title: 'Milestones & Tasks Added!',
@@ -253,8 +253,8 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
     // Reset all states
     setCreatedProjectId(null);
     setProjectMembers([]);
-    setMilestones([]);
-    setCurrentStep('project');
+    // setMilestones([]);
+    // setCurrentStep('project');
     
     // Call the parent's onCancel to close/reset the form
     onCancel();
