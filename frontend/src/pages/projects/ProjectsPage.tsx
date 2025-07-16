@@ -96,6 +96,7 @@ const ProjectsPage: React.FC = () => {
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [taskReviewModalOpen, setTaskReviewModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<{id: string, title: string, status: string} | null>(null);
+  const [roleFilter, setRoleFilter] = useState<string>('All');
   const { currentUser } = useAuth();
   const { callApi } = useApiCall();
 
