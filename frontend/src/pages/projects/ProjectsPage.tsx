@@ -91,8 +91,7 @@ const ProjectsPage: React.FC = () => {
   const [expandedMilestones, setExpandedMilestones] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
-  const [roleFilter, setRoleFilter] = useState<string>('All');
-  const [priorityFilter, setPriorityFilter] = useState<string>('All');
+  const [priorityFilter] = useState<string>('All');
   const [animatedItems, setAnimatedItems] = useState<string[]>([]);
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [taskReviewModalOpen, setTaskReviewModalOpen] = useState(false);
@@ -764,7 +763,7 @@ const deleteTask = async (projectId: string, taskId: string) => {
         })) || [];
 
         setProjects(transformedProjects);
-        console.log('Fetched projects:', transformedProjects);
+        // console.log('Fetched projects:', transformedProjects);
         
         setTimeout(() => {
           transformedProjects.forEach((project: Project, index: number) => {

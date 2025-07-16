@@ -156,8 +156,8 @@ class ProjectController {
       const { id } = req.params;
       const userEmail = req.user.email;
       const members = Array.isArray(req.body) ? req.body : [req.body];
-      console.log('Adding members to project:', id, 'by user:', userEmail, 'Members:', members);
-      
+      // console.log('Adding members to project:', id, 'by user:', userEmail, 'Members:', members);
+          
       const results = [];
       
       // Get project details first for email context
@@ -166,11 +166,11 @@ class ProjectController {
         return errorResponse(res, 'Project not found or access denied', 404);
       }
 
-      console.log('Project details retrieved:', projectDetails);
+      // console.log('Project details retrieved:', projectDetails);
       
       const inviterUser = await projectService.getUserByEmail(userEmail);
 
-      console.log('Inviter user details:', inviterUser);
+      // console.log('Inviter user details:', inviterUser);
       
       for (const { email, role } of members) {
         try {

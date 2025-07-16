@@ -11,6 +11,7 @@ interface MemberModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSaveMembers: (members: Member[]) => Promise<void>;
+  isLoading?: boolean;
 }
 
 const MemberModal: React.FC<MemberModalProps> = ({

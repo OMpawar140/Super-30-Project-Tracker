@@ -16,6 +16,9 @@ model User {
   taskReviews     TaskReview[]
   assignedTasks   Task[]          @relation("TaskAssignee")
 
+  // Notifications received by this user
+  notifications Notification[]
+
   @@map("users")
 }
 
@@ -33,6 +36,9 @@ model Project {
   notifications notifications[]
   members       ProjectMember[]
   creator       User            @relation("ProjectCreator", fields: [creatorId], references: [email], onDelete: Cascade)
+
+  // Notifications related to this project
+  notifications Notification[]
 
   @@map("projects")
 }
@@ -85,6 +91,9 @@ model Task {
   assignee      User?            @relation("TaskAssignee", fields: [assigneeId], references: [email])
   milestone     Milestone        @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
 
+  // Notifications related to this task
+  notifications Notification[]
+
   @@map("tasks")
 }
 
@@ -99,6 +108,9 @@ model TaskReview {
   notifications notifications[]
   reviewer      User             @relation(fields: [reviewerId], references: [email], onDelete: Cascade)
   task          Task             @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  // Notifications related to this task review
+  notifications Notification[]
 
   @@map("task_reviews")
 }
@@ -116,25 +128,36 @@ model TaskAttachment {
   @@map("task_attachments")
 }
 
-model notifications {
-  id           String           @id
-  type         NotificationType
-  title        String
-  message      String
-  isRead       Boolean          @default(false)
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime
-  userId       String
-  projectId    String?
-  taskId       String?
+model Notification {
+  id        String           @id @default(cuid())
+  type      NotificationType
+  title     String
+  message   String
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  // User who receives the notification
+  userId String
+  user   User   @relation(fields: [userId], references: [email], onDelete: Cascade)
+
+  // Optional relationships to relevant entities
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  taskId String?
+  task   Task?   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
   taskReviewId String?
-  metadata     Json?
-  projects     Project?         @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  tasks        Task?            @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  task_reviews TaskReview?      @relation(fields: [taskReviewId], references: [id], onDelete: Cascade)
-  users        User             @relation(fields: [userId], references: [email], onDelete: Cascade)
+  taskReview   TaskReview? @relation(fields: [taskReviewId], references: [id], onDelete: Cascade)
+
+  // Additional metadata for notifications
+  metadata Json? // For storing additional context-specific data
+
+  @@map("notifications")
 }
 
+// Enums
 enum ProjectStatus {
   ACTIVE
   COMPLETED
@@ -177,11 +200,11 @@ enum TaskReviewStatus {
 }
 
 enum NotificationType {
-  PROJECT_MEMBER_ADDED
-  TASK_APPROVED
-  TASK_REJECTED
-  TASK_REVIEW_REQUESTED
-  TASK_STARTED
-  TASK_OVERDUE
-  TASK_DUE_REMINDER
+  PROJECT_MEMBER_ADDED     // You have been added to a new project
+  TASK_APPROVED           // Your task has been approved
+  TASK_REJECTED           // Your task has been rejected
+  TASK_REVIEW_REQUESTED   // Task document submitted for review
+  TASK_STARTED            // Task has been started
+  TASK_OVERDUE            // Task is overdue
+  TASK_DUE_REMINDER       // Task due date reminder (3 days before)
 }

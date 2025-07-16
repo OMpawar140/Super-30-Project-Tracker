@@ -2,6 +2,7 @@ import React from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import LoginSignupForm from './components/ui/LoginSignupForm';
 import DashboardLayout from './layouts/DashboardLayout';
+import { NotificationProvider } from './pages/notifications/NotificationProvider';
 import { NavigationProvider } from '@/hooks/useNavigation';
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -40,9 +41,11 @@ const AppContent: React.FC = () => {
 const App: React.FC = () => {
   return (
     <AuthProvider>
-      <div className="App">
+      <div className="App"> 
+        <NotificationProvider>
         <AppContent />
-      </div>
+        </NotificationProvider>
+      </div> 
     </AuthProvider>
   );
 };

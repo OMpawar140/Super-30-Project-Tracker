@@ -1,4 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
+const NotificationTriggers = require('../utils/notificationTriggers');
 const prisma = new PrismaClient();
 
 class ProjectService {
@@ -405,9 +406,31 @@ class ProjectService {
               email: true,
               skillset: true
             }
+          },
+
+       // Include project data for notification
+          project: {
+            select: {
+              id: true,
+              name: true,
+              creator: {
+                select: {
+                  email: true
+                }
+              }
+            }
           }
         }
       });
+
+      // Send notification to the new member
+      try {
+        await NotificationTriggers.projectMemberAdded(member.project, memberUserId);
+        console.log(`Notification sent for member added: ${memberUserId} to project ${member.project.name}`);
+      } catch (notificationError) {
+        console.error('Failed to send notification:', notificationError);
+        // Don't throw - member was added successfully, notification failure shouldn't break the flow
+      }
 
       return member;
     } catch (error) {
