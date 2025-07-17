@@ -48,22 +48,6 @@ const handleRegisterEmail = async (email?: string) => {
   }
 };
 
-  const syncUserWithBackend = async () => {
-    try {
-      // The auth token is automatically attached by your apiService
-      await callApi(() => apiService.auth.verifyToken());
-      console.log('User synced with backend successfully.');
-    } catch (err) {
-      // We can ignore conflicts (user already exists), but log other errors
-      // This check might need adjustment based on your apiService error handling
-      if ((err as any)?.response?.status !== 409) {
-        console.error('Failed to sync user with backend:', err);
-        // Optionally, set an error state to inform the user
-        // setError('Could not sync your account. Please try again.');
-      }
-    }
-  };
-
   const validateForm = () => {
     if (!formData.email || !formData.password) {
       setError('Please fill in all required fields');
@@ -99,11 +83,10 @@ const handleRegisterEmail = async (email?: string) => {
     try {
       if (isLogin) {
         await login(formData.email, formData.password);
-        await syncUserWithBackend(); // Sync after login
         setSuccess('Successfully logged in!');
       } else {
         await signup(formData.email, formData.password, formData.displayName);
-        await syncUserWithBackend(); // Sync after signup
+        await handleRegisterEmail();
         setSuccess('Account created successfully!');
       }
       
@@ -130,9 +113,7 @@ const handleGoogleSignIn = async () => {
   
   try {
     const user = await loginWithGoogle();
-    await syncUserWithBackend(); // Sync after Google sign-in
     setSuccess('Successfully signed in with Google!');
-    onSuccess?.();
     const email = user?.email || formData.email;
     if (email) {
       await handleRegisterEmail(email);

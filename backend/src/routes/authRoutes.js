@@ -7,49 +7,6 @@ const prisma = new PrismaClient();
 
 const router = express.Router();
 
-// This new /sync route replaces the old /register route.
-// It's designed to be called on every login/signup.
-router.post('/sync', authenticateToken, async (req, res) => {
-  try {
-    const { uid, email, name } = req.user;
-
-    if (!uid || !email) {
-      return res.status(400).json({
-        success: false,
-        message: 'UID and email are required from the token.',
-      });
-    }
-
-    // Use `upsert` to create the user if they don't exist, 
-    // or update them if they do. This is safe to call multiple times.
-    const user = await prisma.user.upsert({
-      where: { email: email },
-      update: {
-        firebaseUid: uid,
-        name: name || undefined, // Update name if it exists in token
-      },
-      create: {
-        email: email,
-        firebaseUid: uid,
-        name: name || 'New User', // Set a default name on creation
-      },
-    });
-
-    res.json({
-      success: true,
-      message: 'User synced successfully',
-      data: user,
-    });
-  } catch (error) {
-    console.error('Error syncing user:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to sync user',
-      error: error.message,
-    });
-  }
-});
-
 // POST /api/auth/register - store unique user on signup by frontend
 router.post('/register', authenticateToken, async (req, res) => {
   try {
