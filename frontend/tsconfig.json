@@ -14,20 +14,18 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
-    /* Type Checking */
+    /* Linting */
     "strict": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
-    
-    /* Paths */
+
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     }
   },
   "include": ["src"]
-}
 }
