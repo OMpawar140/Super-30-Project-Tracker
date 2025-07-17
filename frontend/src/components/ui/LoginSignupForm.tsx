@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Eye, EyeOff, Mail, Lock, User, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { apiService, useApiCall } from '../../services/api';
@@ -25,6 +25,10 @@ const LoginSignupForm: React.FC<LoginSignupFormProps> = ({ onSuccess }) => {
   });
 
   const { login, signup, loginWithGoogle, resetPassword } = useAuth();
+
+  useEffect(() => {
+    document.title = "Project Tracker";
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -163,7 +167,7 @@ const handleGoogleSignIn = async () => {
                   setError('');
                   setSuccess('');
                 }}
-                className="font-medium text-indigo-600 hover:text-indigo-500 transition-colors"
+                className="font-medium text-indigo-600 hover:text-indigo-500 transition-colors cursor-pointer"
               >
                 {isLogin ? 'Sign up' : 'Sign in'}
               </button>
@@ -258,9 +262,9 @@ const handleGoogleSignIn = async () => {
                     className="absolute inset-y-0 right-0 pr-3 flex items-center"
                   >
                     {showPassword ? (
-                      <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                      <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600 cursor-pointer" />
                     ) : (
-                      <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                      <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600 cursor-pointer" />
                     )}
                   </button>
                 </div>
@@ -292,9 +296,9 @@ const handleGoogleSignIn = async () => {
                       className="absolute inset-y-0 right-0 pr-3 flex items-center"
                     >
                       {showConfirmPassword ? (
-                        <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                        <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600 cursor-pointer" />
                       ) : (
-                        <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                        <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600 cursor-pointer" />
                       )}
                     </button>
                   </div>
@@ -308,7 +312,7 @@ const handleGoogleSignIn = async () => {
                 <button
                   type="button"
                   onClick={handleForgotPassword}
-                  className="text-sm text-indigo-600 hover:text-indigo-500 transition-colors"
+                  className="text-sm text-indigo-600 hover:text-indigo-500 transition-colors hover:cursor-pointer hover:underline"
                 >
                   Forgot your password?
                 </button>
@@ -321,7 +325,7 @@ const handleGoogleSignIn = async () => {
                 type="submit"
                 onClick={handleSubmit}
                 disabled={loading}
-                className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
               >
                 {loading ? (
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
@@ -347,7 +351,7 @@ const handleGoogleSignIn = async () => {
                 type="button"
                 onClick={handleGoogleSignIn}
                 disabled={loading}
-                className="group relative w-full flex justify-center items-center py-3 px-4 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="group relative w-full flex justify-center items-center py-3 px-4 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
               >
                 <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
                   <path

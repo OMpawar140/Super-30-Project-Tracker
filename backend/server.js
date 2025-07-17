@@ -3,13 +3,21 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const errorHandler = require('./src/middlewares/errorHandler');
+require('./src/services/statusUpdateService.js');
+require('./src/jobs/notificationJobs');
 
 // Import Firebase config
 const { initializeFirebase } = require('./src/config/firebase');
 
 // Import routes
 const authRoutes = require('./src/routes/authRoutes');
+const projectRoutes = require('./src/routes/projectRoutes');
 const protectedRoutes = require('./src/routes/protectedRoutes');
+const milestoneRoutes = require('./src/routes/milestoneRoutes');
+const taskRoutes = require('./src/routes/taskRoutes');
+const fileRoutes = require('./src/routes/fileRoutes');
+const notificationRoutes = require('./src/routes/notificationRoutes');
 
 // Initialize Express app
 const app = express();
@@ -37,8 +45,8 @@ app.use(limiter);
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control']
 }));
 
 // Body parsing middleware
@@ -57,7 +65,12 @@ app.get('/health', (req, res) => {
 
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/projects', projectRoutes);
+app.use('/api/milestones', milestoneRoutes);
+app.use('/api/tasks', taskRoutes);
 app.use('/api', protectedRoutes);
+app.use('/api/files', fileRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
@@ -79,10 +92,14 @@ app.use((error, req, res, next) => {
   });
 });
 
+app.use(errorHandler);
+
+
 // Start server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Health check: http://localhost:${PORT}/health`);
   console.log(`Auth routes: http://localhost:${PORT}/api/auth`);
+  console.log(`Project routes: http://localhost:${PORT}/api/projects`);
   console.log(`Protected routes: http://localhost:${PORT}/api`);
 });
