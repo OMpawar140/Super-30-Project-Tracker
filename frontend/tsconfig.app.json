@@ -5,7 +5,7 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "skipLibCheck": true,
-    "exactOptionalPropertyTypes": false
+    "strict": false
   },
   "include": ["src"]
 }
