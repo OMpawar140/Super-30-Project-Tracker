@@ -74,5 +74,5 @@ module.exports = {
       },
     },
   },
-  plugins: [require("tailwindcss-animate"), require('tw-animate-css')],
+  plugins: [require("tailwindcss-animate")],
 }
