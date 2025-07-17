@@ -130,6 +130,13 @@ export const apiService = {
         body: JSON.stringify(projectData),
       }),
     
+    // Update project status (maps to PATCH /api/projects/:id/status)
+    updateProjectStatus: (id: string, status: string) =>
+      apiCall(`/projects/${id}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status }),
+      }),
+    
     // Delete project (maps to DELETE /api/projects/:id)
     deleteProject: (id: string) =>
       apiCall(`/projects/${id}`, { method: 'DELETE' }),

@@ -526,7 +526,37 @@ const deleteTask = async (projectId: string, taskId: string) => {
   }
 };
 
+// Add this function to handle status change
+const handleStatusChange = async (projectId: string, newStatus: string) => {
+  try {
+    const response = await callApi(() => apiService.projects.updateProjectStatus(projectId, newStatus));
 
+    if (response.success) {
+      // Update the local state
+      setProjects(prev => prev.map(project => 
+        project.id === projectId 
+          ? { ...project, status: newStatus }
+          : project
+      ));
+      
+      // Show success message
+      Swal.fire({
+        title: "Status updated!",
+        text: `Project status changed to ${newStatus.replace('_', ' ')}`,
+        icon: "success",
+        timer: 2000,
+        showConfirmButton: false
+      });
+    }
+  } catch (error) {
+    console.error(`Error changing project status to ${newStatus}:`, error);
+    Swal.fire({
+      title: "Error",
+      text: `Failed to change project status to ${newStatus}`,
+      icon: "error",
+    });
+  }
+};
 
   useEffect(() => {
     document.title = "Project Panel - Project Tracker";
@@ -868,7 +898,7 @@ const deleteTask = async (projectId: string, taskId: string) => {
         return 'text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20';
       case 'high':
         return 'text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20';
-      case 'MEDIUM':
+      case 'medium':
         return 'text-yellow-700 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20';
       case 'low':
         return 'text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20';
@@ -1283,6 +1313,61 @@ const deleteTask = async (projectId: string, taskId: string) => {
                             </div>
                           )}
                         </div>
+
+                        {/* Add Status Change Buttons - only for project creators */}
+                        {currentUser && currentUser.email === project.creatorId && (
+                          <div className="flex gap-2 mt-3" onClick={(e) => e.stopPropagation()}>
+                            {project.status !== 'ON_HOLD' && project.status !== 'ARCHIVED' && (
+                              <button
+                                onClick={() => handleStatusChange(project.id, 'ON_HOLD')}
+                                className="px-3 py-1 bg-yellow-500 hover:bg-yellow-600 text-white text-xs rounded transition-colors"
+                                title="Put project on hold - pause all activities"
+                              >
+                                Put On Hold
+                              </button>
+                            )}
+
+                            {project.status === 'ON_HOLD' && (
+                              <button
+                                onClick={() => handleStatusChange(project.id, 'ACTIVE')}
+                                className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white text-xs rounded transition-colors"
+                                title="Resume project activities"
+                              >
+                                Resume Project
+                              </button>
+                            )}
+                            
+                            {project.status !== 'COMPLETED' && project.status !== 'ARCHIVED' && (
+                              <button
+                                onClick={() => handleStatusChange(project.id, 'COMPLETED')}
+                                className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded transition-colors"
+                                title="Mark project as completed"
+                              >
+                                Mark Completed
+                              </button>
+                            )}
+
+                            {project.status !== 'ARCHIVED' && (
+                              <button
+                                onClick={() => handleStatusChange(project.id, 'ARCHIVED')}
+                                className="px-3 py-1 bg-gray-500 hover:bg-gray-600 text-white text-xs rounded transition-colors"
+                                title="Archive project - read only"
+                              >
+                                Archive (Read-only)
+                              </button>
+                            )}
+
+                            {project.status === 'ARCHIVED' && (
+                              <button
+                                onClick={() => handleStatusChange(project.id, 'ACTIVE')}
+                                className="px-3 py-1 bg-purple-500 hover:bg-purple-600 text-white text-xs rounded transition-colors"
+                                title="Restore project from archive"
+                              >
+                                Restore Project
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </>
                     )}
                   </div>

@@ -52,6 +52,9 @@ router.post('/:id/permission', projectIdValidator, projectController.checkProjec
 // POST /api/projects/:id/access - Check project access
 router.post('/:id/access', projectIdValidator, projectController.checkProjectAccess);
 
+// PATCH /api/projects/:id/status - Update project status
+router.patch('/:id/status', projectIdValidator, projectController.updateProjectStatus);
+
 // DELETE /api/projects/:id/archive - Archive project (soft delete)
 router.delete('/:id/archive', projectIdValidator, projectController.archiveProject);
 

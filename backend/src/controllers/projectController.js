@@ -396,6 +396,38 @@ class ProjectController {
     }
   };
 
+  // Update project status
+  async updateProjectStatus(req, res) {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      const userEmail = req.user.email;
+
+      // Validate status value
+      if (!['ACTIVE', 'COMPLETED', 'ARCHIVED', 'ON_HOLD'].includes(status)) {
+        return errorResponse(res, 'Invalid status value. Must be one of: ACTIVE, COMPLETED, ARCHIVED, ON_HOLD', 400);
+      }
+
+      // Check if user has permission (only creator or admin can update status)
+      const hasPermission = await projectService.checkProjectPermission(id, userEmail, ['CREATOR', 'ADMIN']);
+      if (!hasPermission) {
+        return errorResponse(res, 'Project not found or access denied', 404);
+      }
+
+      // Update project status
+      const project = await projectService.updateProject(id, userEmail, { status });
+
+      if (!project) {
+        return errorResponse(res, 'Project not found or access denied', 404);
+      }
+
+      return successResponse(res, 'Project status updated successfully', project);
+    } catch (error) {
+      console.error('Error updating project status:', error);
+      return errorResponse(res, 'Failed to update project status', 500);
+    }
+  }
+
   // Update the existing delete method to use archive instead
   async deleteProject (req, res) {
     try {
