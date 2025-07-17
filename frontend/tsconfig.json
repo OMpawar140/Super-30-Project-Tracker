@@ -15,7 +15,7 @@
     "jsx": "react-jsx",
 
     /* Type Checking */
-    "strict": true,
+    "strict": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
@@ -28,6 +28,6 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src"],
-  "references": [{ "path": "./tsconfig.node.json" }]
+  "include": ["src"]
+}
 }

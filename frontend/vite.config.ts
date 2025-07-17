@@ -13,7 +13,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
-    // Ignore TypeScript errors during build
+    // Explicitly tell Vite to ignore TypeScript errors during the build
     typescript: {
       ignoreBuildErrors: true,
     },
