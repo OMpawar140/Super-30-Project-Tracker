@@ -4,6 +4,8 @@ import type { Notification, NotificationStats, StreamMessage } from '../types/no
 import { notificationService } from '@/services/notificationService';
 import { auth } from '../lib/firebase';
 import { toast } from 'sonner';
+import { API_BASE_URL } from '../services/api'; 
+
 
 interface UseNotificationsReturn {
   notifications: Notification[];
@@ -136,7 +138,7 @@ class EventSourceWithHeaders {
 }
 
 export const useNotifications = (): UseNotificationsReturn => {
-  const apiBaseUrl = 'http://localhost:5000/api';
+  const apiBaseUrl = `${API_BASE_URL}/api`; 
 
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState(auth.currentUser);

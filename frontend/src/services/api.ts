@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { auth } from '../lib/firebase';
 
-const API_BASE_URL = 'https://super-30-project-tracker.onrender.com';
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://super-30-project-tracker.onrender.com';
 
 // Get auth token for API calls
 const getAuthToken = async (): Promise<string | null> => {

@@ -1,8 +1,9 @@
 import type { Notification, NotificationResponse, NotificationStats } from '../types/notification.types';
 import { auth } from '../lib/firebase';
+import { API_BASE_URL } from './api';
 
 class NotificationService {
-  private baseUrl = "https://super-30-project-tracker.onrender.com/api";
+  private baseUrl = `${API_BASE_URL}/api`;
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
 
