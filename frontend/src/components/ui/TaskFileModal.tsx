@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { 
   HiX, 
   HiUpload, 
@@ -9,6 +9,10 @@ import {
   HiExclamation
 } from 'react-icons/hi';
 import { apiService, useApiCall } from '@/services/api';
+import Swal from 'sweetalert2';
+import withReactContent from 'sweetalert2-react-content';
+
+const MySwal = withReactContent(Swal);
 
 interface TaskFile {
   id: string;
@@ -35,6 +39,16 @@ interface UploadResponse {
   location: string;
 }
 
+const theme = localStorage.getItem('theme');
+
+const sweetAlertOptions: Record<string, unknown> = {
+    background: theme === "dark" ? 'rgba(0, 0, 0, 0.9)' : '#fff', 
+    color: theme === "dark" ? '#fff' : '#000', 
+    confirmButtonText: 'OK', 
+    confirmButtonColor: theme === "dark" ? '#3085d6' : '#0069d9', 
+    cancelButtonColor: theme === "dark" ? '#d33' : '#dc3545', 
+};
+
 const TaskFileModal: React.FC<TaskFileModalProps> = ({
   isOpen,
   onClose,
@@ -48,8 +62,25 @@ const TaskFileModal: React.FC<TaskFileModalProps> = ({
   const [requestingReview, setRequestingReview] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
+  const [filesLoaded, setFilesLoaded] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { callApi } = useApiCall();
+
+  const showSuccessToast = useCallback(async (title: string, text: string) => {
+    await MySwal.fire({
+        ...sweetAlertOptions,
+      title,
+      text,
+      icon: 'success',
+      // confirmButtonColor: '#6366f1',
+      // background: '#18181b',
+      // color: '#fff',
+      timer: 2000,
+      showConfirmButton: false,
+      toast: true,
+      position: 'top-end',
+    });
+  }, []);
 
   // Fetch existing files when modal opens
   const fetchTaskFiles = React.useCallback(async () => {
@@ -75,31 +106,49 @@ const TaskFileModal: React.FC<TaskFileModalProps> = ({
       //   return [...currentFiles, response.data];
       // });
 
-      setFiles(prevFiles => {
-        const currentFiles = Array.isArray(prevFiles) ? prevFiles : [];
-        const newFile = response.data;
+      const fileData = response.data;
+    
+      if (Array.isArray(fileData)) {
+        setFiles(fileData);
+      } else {
+        setFiles(prevFiles => {
+          const currentFiles = Array.isArray(prevFiles) ? prevFiles : [];
+          const newFile = fileData;
+          const filteredFiles = currentFiles.filter(file => 
+            file.id !== newFile.id
+          );
+          return [...filteredFiles, newFile];
+        });
+      }
+      
+      setFilesLoaded(true);
+
+      // setFiles(prevFiles => {
+      //   const currentFiles = Array.isArray(prevFiles) ? prevFiles : [];
+      //   const newFile = response.data;
         
-        // Remove duplicates based on file ID or name (adjust the key as needed)
-        const filteredFiles = currentFiles.filter(file => 
-          file.id !== newFile.id // Change 'id' to whatever unique identifier your files have
-        );
+      //   // Remove duplicates based on file ID or name (adjust the key as needed)
+      //   const filteredFiles = currentFiles.filter(file => 
+      //     file.id !== newFile.id // Change 'id' to whatever unique identifier your files have
+      //   );
         
-        // Add the new file
-        return [...filteredFiles, newFile];
-      });
+      //   // Add the new file
+      //   return [...filteredFiles, newFile];
+      // });
+
     } catch (err) {
       console.error('Error fetching task files:', err);
       setError('No task files previously uploaded');
     } finally {
       setLoading(false);
     }
-  }, [callApi, taskId]);
+  }, [callApi, taskId, loading, filesLoaded]);
 
   useEffect(() => {
-    if (isOpen && taskId) {
+    if (isOpen && taskId && !filesLoaded && !loading) {
       fetchTaskFiles();
     }
-  }, [isOpen, taskId, fetchTaskFiles]);
+  }, [isOpen, taskId, filesLoaded, loading, fetchTaskFiles]);
 
   const handleFileSelect = (selectedFiles: FileList | null) => {
     if (selectedFiles && selectedFiles.length > 0) {
@@ -165,8 +214,18 @@ const TaskFileModal: React.FC<TaskFileModalProps> = ({
         const taskFile: TaskFile = transformUploadResponseToTaskFile(response.data, file);
         
         // Safely update files array
+        // setFiles(prevFiles => {
+        //   const currentFiles = Array.isArray(prevFiles) ? prevFiles : [];
+        //   return [...currentFiles, taskFile];
+        // });
+
         setFiles(prevFiles => {
           const currentFiles = Array.isArray(prevFiles) ? prevFiles : [];
+          // Check if file already exists to prevent duplicates
+          const existingFile = currentFiles.find(f => f.id === taskFile.id);
+          if (existingFile) {
+            return currentFiles;
+          }
           return [...currentFiles, taskFile];
         });
       }
@@ -186,7 +245,7 @@ const TaskFileModal: React.FC<TaskFileModalProps> = ({
       await callApi(() => apiService.tasks.updateTaskStatus(taskId, 'IN_REVIEW'));
       
       // Show success message or update UI as needed
-      alert('Review request sent successfully!');
+      await showSuccessToast('Review requested!', 'Your review request has been sent successfully. You will be notified once the review is completed.');
       onClose();
     } catch (err) {
       console.error('Error requesting review:', err);
