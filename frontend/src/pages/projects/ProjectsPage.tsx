@@ -15,10 +15,11 @@ import UserProjectsPDF from '@/components/ui/UserProjectsPDF';
 import UserTasksPDF from '@/components/ui/UserTasksPDF';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
+import { type User as FirebaseUser } from 'firebase/auth';
 const MySwal = withReactContent(Swal);
 
 // Types for our data (updated to match backend structure)
-interface User {
+interface ProjectUser {
   email: string;
   skillset?: string | null;
 }
@@ -30,7 +31,7 @@ interface ProjectMember {
   joinedAt: string;
   updatedAt: string;
   projectId: string;
-  user: User;
+  user: ProjectUser;
 }
 
 interface Task {
@@ -66,7 +67,7 @@ interface Project {
   createdAt: string;
   updatedAt: string;
   creatorId: string;
-  creator: User;
+  creator: ProjectUser;
   members: ProjectMember[];
   milestones: Milestone[];
   _count: {
@@ -1040,13 +1041,13 @@ const handleStatusChange = async (projectId: string, newStatus: string) => {
             <div onClick={(e) => e.stopPropagation()}
               className='flex gap-3'>
                 <UserTasksPDF 
-                  projects={projects} 
-                  currentUser={currentUser} 
+                  projects={projects as any} 
+                  currentUser={currentUser as any} 
                   onDownload={() => console.log('PDF generated')} 
                 />
                 <UserProjectsPDF 
-                  projects={projects}
-                  currentUser={currentUser}
+                  projects={projects as any}
+                  currentUser={currentUser as any}
                   onDownload={() => {
                     console.log(`PDF report downloaded for all projects created by ${currentUser?.email}`);
                   }}

@@ -10,7 +10,6 @@ datasource db {
 model User {
   email           String          @id
   skillset        String?
-  notifications   notifications[]
   projectMembers  ProjectMember[]
   createdProjects Project[]       @relation("ProjectCreator")
   taskReviews     TaskReview[]
@@ -33,7 +32,6 @@ model Project {
   updatedAt     DateTime        @updatedAt
   creatorId     String
   milestones    Milestone[]
-  notifications notifications[]
   members       ProjectMember[]
   creator       User            @relation("ProjectCreator", fields: [creatorId], references: [email], onDelete: Cascade)
 
@@ -85,7 +83,6 @@ model Task {
   updatedAt     DateTime         @updatedAt
   milestoneId   String
   assigneeId    String?
-  notifications notifications[]
   attachments   TaskAttachment[]
   reviews       TaskReview[]
   assignee      User?            @relation("TaskAssignee", fields: [assigneeId], references: [email])
@@ -105,7 +102,6 @@ model TaskReview {
   updatedAt     DateTime         @updatedAt
   taskId        String
   reviewerId    String
-  notifications notifications[]
   reviewer      User             @relation(fields: [reviewerId], references: [email], onDelete: Cascade)
   task          Task             @relation(fields: [taskId], references: [id], onDelete: Cascade)
 
