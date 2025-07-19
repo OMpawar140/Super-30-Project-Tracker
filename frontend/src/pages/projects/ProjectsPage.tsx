@@ -1083,9 +1083,9 @@ const handleStatusChange = async (projectId: string, newStatus: string) => {
               >
                 <option value="All">All Status</option>
                 <option value="ACTIVE">Active</option>
-                <option value=""></option>
                 <option value="COMPLETED">Completed</option>
                 <option value="ON_HOLD">On Hold</option>
+                <option value="ARCHIVED">Archived</option>
               </select>
               <HiFilter className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-4 h-4 pointer-events-none" />
             </div>
@@ -1345,16 +1345,6 @@ const handleStatusChange = async (projectId: string, newStatus: string) => {
                                 title="Mark project as completed"
                               >
                                 Mark Completed
-                              </button>
-                            )}
-
-                            {project.status !== 'ARCHIVED' && (
-                              <button
-                                onClick={() => handleStatusChange(project.id, 'ARCHIVED')}
-                                className="px-3 py-1 bg-gray-500 hover:bg-gray-600 text-white text-xs rounded transition-colors"
-                                title="Archive project - read only"
-                              >
-                                Archive (Read-only)
                               </button>
                             )}
 
