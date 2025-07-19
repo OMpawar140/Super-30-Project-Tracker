@@ -44,6 +44,7 @@ app.use(limiter);
 const allowedOrigins = [
   'https://super-30-project-tracker-4kji.vercel.app',
   'https://super-30-project-tracker.onrender.com',
+  'https://super-30-project-tracker.vercel.app/',
   'https://www.shripadkhandare.in',
   'http://localhost:5173'
 ];
