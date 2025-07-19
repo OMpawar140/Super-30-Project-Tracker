@@ -434,7 +434,7 @@ const UserTasksPDF = ({ projects, currentUser, onDownload }: {projects: Project[
                   </div>
                   <div class="meta-item">
                     <span class="meta-label">Assigned On:</span>
-                    <span class="meta-value">${formatDateTime(task.assignment?.assignedAt)}</span>
+                    <span class="meta-value">${formatDateTime(task.createdAt || '')}</span>
                   </div>
                   <div class="meta-item">
                     <span class="meta-label">Project Status:</span>
