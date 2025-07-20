@@ -145,6 +145,12 @@ router.delete('/:id',
   taskController.deleteTask
 );
 
+// GET /api/tasks/:id/reviews - Get task reviews (for task completer to see feedback)
+router.get('/:id/reviews', 
+  validateTaskId, 
+  taskController.getTaskReviews
+);
+
 // POST /api/tasks/:id/review - Submit review
 router.post('/:id/review',
   validateTaskId,

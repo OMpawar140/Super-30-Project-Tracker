@@ -5,7 +5,8 @@ import React, { useState, useEffect } from 'react';
 import { HiClipboardList, HiFlag, HiUser, HiCalendar, HiChevronDown, HiChevronUp, HiSearch, HiFilter, HiCheckCircle, HiTrash,
   HiClock, HiExclamation, HiUpload, HiEye, HiPencil, HiCheck, HiX,HiPlus, 
   HiRefresh,
-  HiUserAdd} from 'react-icons/hi';
+  HiUserAdd,
+  HiChatAlt} from 'react-icons/hi';
 import { apiService, useApiCall } from '@/services/api';
 import TaskFileModal from '../../components/ui/TaskFileModal';
 import { useAuth } from '@/context/AuthContext';
@@ -174,6 +175,7 @@ const [showAddMember, setShowAddMember] = useState(false);
 const [newMemberEmail, setNewMemberEmail] = useState('');
 const [newMemberRole, setNewMemberRole] = useState('TASK_COMPLETER');
 const [isAddingMember, setIsAddingMember] = useState(false);
+const [taskReviews, setTaskReviews] = useState<Record<string, any[]>>({});
 
 // Function to toggle edit mode
 const toggleEditMode = () => {
@@ -723,6 +725,29 @@ const handleStatusChange = async (projectId: string, newStatus: string) => {
       console.error('Error updating task:', error);
     }
   };
+
+  // Function to fetch task reviews
+const fetchTaskReviews = async (taskId: string) => {
+  try {
+    const response = await callApi(() => apiService.tasks.getTaskReviews(taskId));
+    if (response.success) {
+      setTaskReviews(prev => ({
+        ...prev,
+        [taskId]: response.data
+      }));
+    }
+  } catch (error) {
+    console.error('Error fetching task reviews:', error);
+  }
+};
+
+// Function to toggle task reviews visibility
+const toggleTaskReviews = (taskId: string) => {
+  if (!taskReviews[taskId]) {
+    fetchTaskReviews(taskId);
+  }
+  // Toggle visibility in UI state
+};
 
   // Utility functions
   const calculateTotalTasks = (project: any): number => {
@@ -1991,6 +2016,57 @@ const handleStatusChange = async (projectId: string, newStatus: string) => {
                                                   </span>
                                                 )}
                                               </div>
+
+                                              {/* Task Reviews Section - Show if user is task assignee */}
+                                              {currentUser && currentUser.email === task.assigneeId && (
+                                                <div className="mt-3 border-t border-gray-200 dark:border-gray-600 pt-2">
+                                                  <button
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      toggleTaskReviews(task.id);
+                                                    }}
+                                                    className="flex items-center gap-2 text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                                                  >
+                                                    <HiChatAlt className="w-3 h-3" />
+                                                    View Feedback & Reviews
+                                                  </button>
+                                                  
+                                                  {taskReviews[task.id] && taskReviews[task.id].length > 0 && (
+                                                    <div className="mt-2 space-y-2">
+                                                      {taskReviews[task.id].map((review: any, index: number) => (
+                                                        <div key={index} className="bg-gray-50 dark:bg-gray-700 rounded p-2 border-l-4 border-l-blue-500">
+                                                          <div className="flex items-center justify-between mb-1">
+                                                            <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                                                              Review by {review.reviewer.email}
+                                                            </span>
+                                                            <span className={`text-xs px-2 py-1 rounded ${
+                                                              review.status === 'APPROVED' 
+                                                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                                                : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                                            }`}>
+                                                              {review.status}
+                                                            </span>
+                                                          </div>
+                                                          {review.comment && (
+                                                            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                                                              {review.comment}
+                                                            </p>
+                                                          )}
+                                                          <span className="text-xs text-gray-500 dark:text-gray-500">
+                                                            {formatDate(review.createdAt)}
+                                                          </span>
+                                                        </div>
+                                                      ))}
+                                                    </div>
+                                                  )}
+                                                  
+                                                  {taskReviews[task.id] && taskReviews[task.id].length === 0 && (
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                                                      No reviews yet.
+                                                    </p>
+                                                  )}
+                                                </div>
+                                              )}
                                             </>
                                           )}
                                         </div>

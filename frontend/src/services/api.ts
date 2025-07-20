@@ -329,6 +329,12 @@ export const apiService = {
         method: 'PUT',
         body: JSON.stringify({ updates }),
       }),
+
+    // Get task reviews (maps to GET /api/tasks/:taskId/reviews)
+    getTaskReviews: (taskId: string) => 
+      apiCall(`/tasks/${taskId}/reviews`, {
+        method: 'GET'
+      }),
   },
 
  files: {
