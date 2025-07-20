@@ -238,10 +238,33 @@ const addMember = async (projectId: string, email: string, role: string) => {
       setShowAddMember(false);
       
       console.log('Member added successfully');
+      await MySwal.fire({
+        title: 'Member added successfully',
+        icon: 'success',
+        confirmButtonColor: '#6366f1',
+        cancelButtonColor: '#6b7280',
+        background: '#18181b',
+        color: '#fff',
+        position: 'top-end',
+        toast: true,
+        timer: 3000,
+      });
     }
   } catch (error) {
     console.error('Error adding member:', error);
     alert('Failed to add member. Please try again.');
+    await MySwal.fire({
+      title: 'Failed to add member',
+      text: 'Please try again.',
+      icon: 'error',
+      confirmButtonColor: '#6366f1',
+      cancelButtonColor: '#6b7280',
+      background: '#18181b',
+      color: '#fff',
+      position: 'top-end',
+      toast: true,
+      timer: 3000,
+    });
   } finally {
     setIsAddingMember(false);
   }
@@ -249,7 +272,20 @@ const addMember = async (projectId: string, email: string, role: string) => {
 
 // Function to remove a member
 const removeMember = async (projectId: string, memberId: string) => {
-  if (!confirm('Are you sure you want to remove this member from the project?')) {
+  const result = await MySwal.fire({
+    title: 'Remove this member?',
+    text: `Are you sure you want to remove this member from the project?`,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'Yes, remove the member.',
+    cancelButtonText: 'No, keep the member.',
+    confirmButtonColor: '#6366f1',
+    cancelButtonColor: '#6b7280',
+    background: '#18181b',
+    color: '#fff',
+  });
+
+  if(!result.isConfirmed) {
     return;
   }
 
@@ -271,10 +307,32 @@ const removeMember = async (projectId: string, memberId: string) => {
       );
       
       console.log('Member removed successfully');
+      await MySwal.fire({
+        title: 'Member removed successfully',
+        icon: 'success',
+        confirmButtonColor: '#6366f1',
+        cancelButtonColor: '#6b7280',
+        background: '#18181b',
+        color: '#fff',
+        position: 'top-end',
+        toast: true,
+        timer: 3000,
+      });
     }
   } catch (error) {
     console.error('Error removing member:', error);
-    alert('Failed to remove member. Please try again. Check if the member is assigned any tasks before removing.');
+    await MySwal.fire({
+      title: 'Failed to remove member',
+      text: 'Please try again. Check if the member is assigned any tasks before removing.',
+      icon: 'error',
+      confirmButtonColor: '#6366f1',
+      cancelButtonColor: '#6b7280',
+      background: '#18181b',
+      color: '#fff',
+      position: 'top-end',
+      toast: true,
+      timer: 3000,
+    });
   }
 };
 
@@ -436,6 +494,8 @@ const restoreProject = async (projectId: string) => {
         title: "Project restored successfully!",
         text: 'Now you have all your data back.',
         icon: "success",
+        toast: true,
+        position: 'top-end',
       });
 
       setProjects(prevProjects =>
@@ -761,8 +821,8 @@ const handleStatusChange = async (projectId: string, newStatus: string) => {
     if (project.status) tags.push(project.status);
     
     if (project.members) {
-      project.members.forEach((member: ProjectMember) => {
-        if (member.role) {
+      project.members.some((member: ProjectMember) => {
+        if (member.user.email === currentUser?.email) {
           tags.push(member.role);
         }
         if (member.user.skillset) {
@@ -1035,7 +1095,7 @@ const handleStatusChange = async (projectId: string, newStatus: string) => {
                 title='Refresh projects'
                 className='cursor-pointer'
               >
-                <HiRefresh/>
+                <HiRefresh className='dark:text-white'/>
               </button>
             </div>
             <div onClick={(e) => e.stopPropagation()}
@@ -1174,7 +1234,11 @@ const handleStatusChange = async (projectId: string, newStatus: string) => {
                           <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
                             {project.name}
                           </h2>
-                          {currentUser && currentUser.email === project.creatorId && (
+                          {currentUser?.email && (currentUser.email === project?.creatorId ||
+                            project?.members?.some(
+                              (member) =>
+                                member?.user?.email === currentUser.email && member.role === 'ADMIN'
+                            )) && (
                             <>
                               {project.status !== 'ARCHIVED' ? (
                                 <>
@@ -1347,16 +1411,6 @@ const handleStatusChange = async (projectId: string, newStatus: string) => {
                                 Mark Completed
                               </button>
                             )}
-
-                            {project.status === 'ARCHIVED' && (
-                              <button
-                                onClick={() => handleStatusChange(project.id, 'ACTIVE')}
-                                className="px-3 py-1 bg-purple-500 hover:bg-purple-600 text-white text-xs rounded transition-colors"
-                                title="Restore project from archive"
-                              >
-                                Restore Project
-                              </button>
-                            )}
                           </div>
                         )}
                       </>
@@ -1437,7 +1491,11 @@ const handleStatusChange = async (projectId: string, newStatus: string) => {
     <HiFlag className="w-5 h-5" />
     Milestones ({project.milestones.length})
   </h3>
-  {currentUser && currentUser.email === project.creatorId && project.status !== 'ARCHIVED' && (
+  {currentUser && (currentUser.email === project?.creatorId ||
+    project?.members?.some(
+      (member) =>
+        member?.user?.email === currentUser.email && member.role === 'ADMIN'
+    )) && project.status !== 'ARCHIVED' && (
     <button
       onClick={() => toggleAddMilestoneForm(project.id)}
       className="flex items-center gap-2 px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors"
@@ -1596,7 +1654,11 @@ const handleStatusChange = async (projectId: string, newStatus: string) => {
                                     ) : (
                                       <>
                                         <h4 className="font-MEDIUM text-gray-900 dark:text-white">{milestone.name}</h4>
-                                        {currentUser && currentUser.email === project.creatorId && project.status !== 'ARCHIVED' && (
+                                        {currentUser && (currentUser.email === project?.creatorId ||
+                                          project?.members?.some(
+                                            (member) =>
+                                              member?.user?.email === currentUser.email && member.role === 'ADMIN'
+                                          )) && project.status !== 'ARCHIVED' && (
                                           <>
                                             <button
                                               onClick={(e) => {
@@ -1696,7 +1758,11 @@ const handleStatusChange = async (projectId: string, newStatus: string) => {
                                     <HiClipboardList className="w-4 h-4" />
                                     Tasks ({milestone.tasks.length})
                                   </h5>
-                                  {currentUser && currentUser.email === project.creatorId && project.status !== 'ARCHIVED' && (
+                                  {currentUser && (currentUser.email === project?.creatorId ||
+                                    project?.members?.some(
+                                      (member) =>
+                                        member?.user?.email === currentUser.email && member.role === 'ADMIN'
+                                    )) && project.status !== 'ARCHIVED' && (
                                     <button
                                       onClick={() => toggleAddTaskForm(milestone.id)}
                                       className="flex items-center gap-1 px-2 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded-lg transition-colors"
@@ -1844,7 +1910,11 @@ const handleStatusChange = async (projectId: string, newStatus: string) => {
                                             ) : (
                                               <>
                                                 <h6 className="text-sm font-MEDIUM text-gray-900 dark:text-white">{task.title}</h6>
-                                              {currentUser && currentUser.email === project.creatorId && project.status !== 'ARCHIVED' && (
+                                              {currentUser && (currentUser.email === project?.creatorId ||
+                                                project?.members?.some(
+                                                  (member) =>
+                                                    member?.user?.email === currentUser.email && member.role === 'ADMIN'
+                                                )) && project.status !== 'ARCHIVED' && task.status !== 'COMPLETED' && (
                                                 <>
                                                   <button
                                                     onClick={(e) => {
@@ -2022,7 +2092,7 @@ const handleStatusChange = async (projectId: string, newStatus: string) => {
                                             </button>
                                           )}
                                           {/* Review Files & Update Status */}
-                                          {currentUser && currentUser.email === project.creatorId && project.status !== 'ARCHIVED' && (
+                                          {currentUser && currentUser.email === project.creatorId && project.status !== 'ARCHIVED' && task.status !== 'UPCOMING' && task.status !== "IN_PROGRESS" && (
                                             <button
                                               onClick={(e) => {
                                                 e.stopPropagation();
@@ -2057,7 +2127,11 @@ const handleStatusChange = async (projectId: string, newStatus: string) => {
                     <div>
                       <div className="flex items-center justify-between mb-3">
                         <h3 className="text-lg font-medium text-gray-900 dark:text-white">Team Members</h3>
-                        {currentUser && currentUser.email === project.creatorId && (
+                        {currentUser && (currentUser.email === project?.creatorId ||
+                            project?.members?.some(
+                              (member) =>
+                                member?.user?.email === currentUser.email && member.role === 'ADMIN'
+                            )) && (
                           <>
                             {!isEditMode && project.status !== 'ARCHIVED' ? (
                               // Edit button (shown when not in edit mode)

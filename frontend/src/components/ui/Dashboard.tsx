@@ -227,9 +227,6 @@ const Dashboard: React.FC = () => {
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                   {project.name}
                 </h3>
-                <button className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300">
-                  <HiDotsVertical className="w-5 h-5 cursor-pointer" />
-                </button>
               </div>
 
               <div className="mb-4">
