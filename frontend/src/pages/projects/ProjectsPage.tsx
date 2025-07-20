@@ -176,6 +176,8 @@ const [newMemberEmail, setNewMemberEmail] = useState('');
 const [newMemberRole, setNewMemberRole] = useState('TASK_COMPLETER');
 const [isAddingMember, setIsAddingMember] = useState(false);
 const [taskReviews, setTaskReviews] = useState<Record<string, any[]>>({});
+const [reviewsLoading, setReviewsLoading] = useState<Record<string, boolean>>({});
+const [expandedReviews, setExpandedReviews] = useState<Record<string, boolean>>({});
 
 // Function to toggle edit mode
 const toggleEditMode = () => {
@@ -729,6 +731,7 @@ const handleStatusChange = async (projectId: string, newStatus: string) => {
   // Function to fetch task reviews
 const fetchTaskReviews = async (taskId: string) => {
   try {
+    setReviewsLoading(prev => ({ ...prev, [taskId]: true }));
     const response = await callApi(() => apiService.tasks.getTaskReviews(taskId));
     if (response.success) {
       setTaskReviews(prev => ({
@@ -738,15 +741,36 @@ const fetchTaskReviews = async (taskId: string) => {
     }
   } catch (error) {
     console.error('Error fetching task reviews:', error);
+  } finally {
+    setReviewsLoading(prev => ({ ...prev, [taskId]: false }));
   }
 };
 
 // Function to toggle task reviews visibility
 const toggleTaskReviews = (taskId: string) => {
-  if (!taskReviews[taskId]) {
+  const isExpanded = expandedReviews[taskId];
+  
+  setExpandedReviews(prev => ({
+    ...prev,
+    [taskId]: !isExpanded
+  }));
+  
+  // Only fetch if expanding and not already loaded
+  if (!isExpanded && !taskReviews[taskId]) {
     fetchTaskReviews(taskId);
   }
-  // Toggle visibility in UI state
+};
+
+// Function to get review status icon
+const getReviewStatusIcon = (status: string) => {
+  switch (status) {
+    case 'APPROVED':
+      return <HiCheckCircle className="w-3 h-3 text-green-500" />;
+    case 'REJECTED':
+      return <HiX className="w-3 h-3 text-red-500" />;
+    default:
+      return <HiClock className="w-3 h-3 text-gray-400" />;
+  }
 };
 
   // Utility functions
@@ -2017,53 +2041,102 @@ const toggleTaskReviews = (taskId: string) => {
                                                 )}
                                               </div>
 
-                                              {/* Task Reviews Section - Show if user is task assignee */}
-                                              {currentUser && currentUser.email === task.assigneeId && (
+                                              {/* Task Reviews Section - Show for both task assignee and project creator */}
+                                              {currentUser && (currentUser.email === task.assigneeId || currentUser.email === project.creatorId) && (
                                                 <div className="mt-3 border-t border-gray-200 dark:border-gray-600 pt-2">
                                                   <button
                                                     onClick={(e) => {
                                                       e.stopPropagation();
                                                       toggleTaskReviews(task.id);
                                                     }}
-                                                    className="flex items-center gap-2 text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                                                    className="flex items-center gap-2 text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
                                                   >
                                                     <HiChatAlt className="w-3 h-3" />
-                                                    View Feedback & Reviews
+                                                    <span>
+                                                      {currentUser.email === task.assigneeId 
+                                                        ? 'View Feedback & Reviews' 
+                                                        : 'View Task Reviews'
+                                                      }
+                                                    </span>
+                                                    {expandedReviews[task.id] ? 
+                                                      <HiChevronUp className="w-3 h-3" /> : 
+                                                      <HiChevronDown className="w-3 h-3" />
+                                                    }
                                                   </button>
                                                   
-                                                  {taskReviews[task.id] && taskReviews[task.id].length > 0 && (
-                                                    <div className="mt-2 space-y-2">
-                                                      {taskReviews[task.id].map((review: any, index: number) => (
-                                                        <div key={index} className="bg-gray-50 dark:bg-gray-700 rounded p-2 border-l-4 border-l-blue-500">
-                                                          <div className="flex items-center justify-between mb-1">
-                                                            <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                                                              Review by {review.reviewer.email}
-                                                            </span>
-                                                            <span className={`text-xs px-2 py-1 rounded ${
-                                                              review.status === 'APPROVED' 
-                                                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                                                : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                                                            }`}>
-                                                              {review.status}
-                                                            </span>
-                                                          </div>
-                                                          {review.comment && (
-                                                            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                                                              {review.comment}
-                                                            </p>
-                                                          )}
-                                                          <span className="text-xs text-gray-500 dark:text-gray-500">
-                                                            {formatDate(review.createdAt)}
+                                                  {expandedReviews[task.id] && (
+                                                    <div className="mt-2">
+                                                      {reviewsLoading[task.id] ? (
+                                                        <div className="flex items-center justify-center py-3">
+                                                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                                                          <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                                                            Loading reviews...
                                                           </span>
                                                         </div>
-                                                      ))}
+                                                      ) : taskReviews[task.id] && taskReviews[task.id].length > 0 ? (
+                                                        <div className="space-y-2">
+                                                          {taskReviews[task.id].map((review: any, index: number) => (
+                                                            <div key={index} className={`rounded p-2 border-l-4 ${
+                                                              review.status === 'APPROVED' 
+                                                                ? 'bg-green-50 dark:bg-green-900/20 border-l-green-500'
+                                                                : 'bg-red-50 dark:bg-red-900/20 border-l-red-500'
+                                                            }`}>
+                                                              <div className="flex items-center justify-between mb-1">
+                                                                <div className="flex items-center gap-2">
+                                                                  <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                                                                    Review by {review.reviewer.email}
+                                                                  </span>
+                                                                  {currentUser.email === project.creatorId && (
+                                                                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                                                                      (You)
+                                                                    </span>
+                                                                  )}
+                                                                </div>
+                                                                <div className="flex items-center gap-2">
+                                                                  {getReviewStatusIcon(review.status)}
+                                                                  <span className={`text-xs px-2 py-1 rounded font-medium ${
+                                                                    review.status === 'APPROVED' 
+                                                                      ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400'
+                                                                      : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400'
+                                                                  }`}>
+                                                                    {review.status}
+                                                                  </span>
+                                                                </div>
+                                                              </div>
+                                                              {review.comment && (
+                                                                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 bg-white dark:bg-gray-800 p-2 rounded border">
+                                                                  <span className="font-medium">Feedback:</span> {review.comment}
+                                                                </p>
+                                                              )}
+                                                              <div className="flex items-center justify-between mt-2">
+                                                                <span className="text-xs text-gray-500 dark:text-gray-500">
+                                                                  {formatDate(review.createdAt)}
+                                                                </span>
+                                                                {currentUser.email === task.assigneeId && (
+                                                                  <span className="text-xs text-gray-500 dark:text-gray-400 italic">
+                                                                    {review.status === 'APPROVED' 
+                                                                      ? '✓ Task approved - Well done!' 
+                                                                      : '✗ Needs improvement - Please address the feedback'
+                                                                    }
+                                                                  </span>
+                                                                )}
+                                                              </div>
+                                                            </div>
+                                                          ))}
+                                                        </div>
+                                                      ) : (
+                                                        <div className="text-center py-3">
+                                                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                            No reviews yet.
+                                                          </p>
+                                                          {currentUser.email === project.creatorId && (
+                                                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                                                              Reviews will appear here once submitted.
+                                                            </p>
+                                                          )}
+                                                        </div>
+                                                      )}
                                                     </div>
-                                                  )}
-                                                  
-                                                  {taskReviews[task.id] && taskReviews[task.id].length === 0 && (
-                                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                                                      No reviews yet.
-                                                    </p>
                                                   )}
                                                 </div>
                                               )}
