@@ -275,8 +275,8 @@ const Profile: React.FC = () => {
                 </div>
                 
                 <div className="flex items-center gap-2 mb-3">
-                  <Mail className="text-gray-400" size={18} />
-                  <span className="text-gray-600 text-lg">{profile.email}</span>
+                  <Mail className="text-black-400" size={18} />
+                  <span className="text-black-600 text-lg">{profile.email}</span>
                   <CheckCircle className="text-green-500" size={16} />
                 </div>
 
