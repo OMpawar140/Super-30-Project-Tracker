@@ -23,13 +23,13 @@ router.post('/', createUserValidator, userController.createUser);
 // GET /api/users/search/skills - Search users by skills
 router.get('/search/skills', userController.searchUsersBySkills);
 
+// GET /api/users/email/:email - Get user by email (MUST come before /:id route)
+router.get('/email/:email', emailValidator, userController.getUserByEmail);
+
 // GET /api/users/skill/:skill - Get users with specific skill
 router.get('/skill/:skill', userController.getUsersWithSkill);
 
-// GET /api/users/email/:email - Get user by email
-router.get('/email/:email', emailValidator, userController.getUserByEmail);
-
-// GET /api/users/:id - Get user details
+// GET /api/users/:id - Get user details (MUST come after specific routes)
 router.get('/:id', userIdValidator, userController.getUser);
 
 // PUT /api/users/:id - Update user

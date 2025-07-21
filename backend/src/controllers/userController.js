@@ -62,12 +62,21 @@ class UserController {
       const { email } = req.params;
       const currentUserEmail = req.user.email;
 
-      const user = await userService.getUserByEmail(email, currentUserEmail);
+      console.log('Getting user by email:', email);
+      console.log('Current user email:', currentUserEmail);
+
+      // Decode the email parameter
+      const decodedEmail = decodeURIComponent(email);
+      console.log('Decoded email:', decodedEmail);
+
+      const user = await userService.getUserByEmail(decodedEmail, currentUserEmail);
       
       if (!user) {
+        console.log('User not found for email:', decodedEmail);
         return errorResponse(res, 'User not found or access denied', 404);
       }
 
+      console.log('User found:', user);
       return successResponse(res, 'User retrieved successfully', user);
     } catch (error) {
       console.error('Error getting user by email:', error);
@@ -88,12 +97,20 @@ class UserController {
       const currentUserEmail = req.user.email;
       const updateData = req.body;
 
+      console.log('Update user request:', {
+        requestedUserId: id,
+        currentUserEmail,
+        updateData
+      });
+
       const user = await userService.updateUser(id, currentUserEmail, updateData);
       
       if (!user) {
+        console.log('Update failed: User not found or access denied');
         return errorResponse(res, 'User not found or access denied', 404);
       }
 
+      console.log('Update successful:', user);
       return successResponse(res, 'User updated successfully', user);
     } catch (error) {
       console.error('Error updating user:', error);

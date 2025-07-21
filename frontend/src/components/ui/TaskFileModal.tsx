@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { 
   HiX, 
   HiUpload, 
@@ -6,9 +6,14 @@ import {
   HiEye, 
   HiCheckCircle,
   HiClock,
-  HiExclamation
+  HiExclamation,
+  HiTrash
 } from 'react-icons/hi';
 import { apiService, useApiCall } from '@/services/api';
+import Swal from 'sweetalert2';
+import withReactContent from 'sweetalert2-react-content';
+
+const MySwal = withReactContent(Swal);
 
 interface TaskFile {
   id: string;
@@ -35,6 +40,16 @@ interface UploadResponse {
   location: string;
 }
 
+const theme = localStorage.getItem('theme');
+
+const sweetAlertOptions: Record<string, unknown> = {
+    background: theme === "dark" ? 'rgba(0, 0, 0, 0.9)' : '#fff', 
+    color: theme === "dark" ? '#fff' : '#000', 
+    confirmButtonText: 'OK', 
+    confirmButtonColor: theme === "dark" ? '#3085d6' : '#0069d9', 
+    cancelButtonColor: theme === "dark" ? '#d33' : '#dc3545', 
+};
+
 const TaskFileModal: React.FC<TaskFileModalProps> = ({
   isOpen,
   onClose,
@@ -46,10 +61,39 @@ const TaskFileModal: React.FC<TaskFileModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [requestingReview, setRequestingReview] = useState(false);
+  const [deletingFileId, setDeletingFileId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
+  const [filesLoaded, setFilesLoaded] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { callApi } = useApiCall();
+
+  const showSuccessToast = useCallback(async (title: string, text: string) => {
+    await MySwal.fire({
+        ...sweetAlertOptions,
+      title,
+      text,
+      icon: 'success',
+      timer: 2000,
+      showConfirmButton: false,
+      toast: true,
+      position: 'top-end',
+    });
+  }, []);
+
+  const showConfirmDialog = useCallback(async (title: string, text: string) => {
+    const result = await MySwal.fire({
+      ...sweetAlertOptions,
+      title,
+      text,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, delete it!',
+      cancelButtonText: 'Cancel',
+      reverseButtons: true,
+    });
+    return result.isConfirmed;
+  }, []);
 
   // Fetch existing files when modal opens
   const fetchTaskFiles = React.useCallback(async () => {
@@ -70,36 +114,37 @@ const TaskFileModal: React.FC<TaskFileModalProps> = ({
       if (!response?.data) {
         throw new Error('No file data received');
       }
-      // setFiles(prevFiles => {
-      //   const currentFiles = Array.isArray(prevFiles) ? prevFiles : [];
-      //   return [...currentFiles, response.data];
-      // });
 
-      setFiles(prevFiles => {
-        const currentFiles = Array.isArray(prevFiles) ? prevFiles : [];
-        const newFile = response.data;
-        
-        // Remove duplicates based on file ID or name (adjust the key as needed)
-        const filteredFiles = currentFiles.filter(file => 
-          file.id !== newFile.id // Change 'id' to whatever unique identifier your files have
-        );
-        
-        // Add the new file
-        return [...filteredFiles, newFile];
-      });
+      const fileData = response.data;
+    
+      if (Array.isArray(fileData)) {
+        setFiles(fileData);
+      } else {
+        setFiles(prevFiles => {
+          const currentFiles = Array.isArray(prevFiles) ? prevFiles : [];
+          const newFile = fileData;
+          const filteredFiles = currentFiles.filter(file => 
+            file.id !== newFile.id
+          );
+          return [...filteredFiles, newFile];
+        });
+      }
+      
+      setFilesLoaded(true);
+
     } catch (err) {
       console.error('Error fetching task files:', err);
       setError('No task files previously uploaded');
     } finally {
       setLoading(false);
     }
-  }, [callApi, taskId]);
+  }, [callApi, taskId, loading, filesLoaded]);
 
   useEffect(() => {
-    if (isOpen && taskId) {
+    if (isOpen && taskId && !filesLoaded && !loading) {
       fetchTaskFiles();
     }
-  }, [isOpen, taskId, fetchTaskFiles]);
+  }, [isOpen, taskId, filesLoaded, loading, fetchTaskFiles]);
 
   const handleFileSelect = (selectedFiles: FileList | null) => {
     if (selectedFiles && selectedFiles.length > 0) {
@@ -120,11 +165,9 @@ const TaskFileModal: React.FC<TaskFileModalProps> = ({
     const uploadedAt = new Date(parseInt(timestamp)).toISOString();
     
     // Extract original filename from key (everything after second dash)
-    // const originalName = keyParts.slice(1).join('-'); // Join back in case filename had dashes
     const originalName = originalFile.name;
     
     return {
-      // id: response.etag.replace(/"/g, ''),
       id: response.key,
       filename: response.key, // S3 key as filename
       originalName: originalName,
@@ -140,33 +183,22 @@ const TaskFileModal: React.FC<TaskFileModalProps> = ({
       setUploading(true);
       setError(null);
 
-      // const formData = new FormData();
-      // formData.append('file', file);
-      // formData.append('taskId', taskId);
-
       const response = await callApi(async () => apiService.files.uploadFile(taskId, file, {
         originalName: file.name,
         uploadedAt: new Date().toISOString(),
       }));
 
-      // if (response.data) {
-      //   setFiles(prev => [...prev, response.data]);
-      // }
-      // if (response.data) {
-      //   setFiles(prev => {
-      //     // Safety check: ensure prev is always an array
-      //     const currentFiles = Array.isArray(prev) ? prev : [];
-      //     return [...currentFiles, response.data];
-      //   });
-      // }
-
       if (response && response.data) {
         // Transform the response to match TaskFile interface
         const taskFile: TaskFile = transformUploadResponseToTaskFile(response.data, file);
         
-        // Safely update files array
         setFiles(prevFiles => {
           const currentFiles = Array.isArray(prevFiles) ? prevFiles : [];
+          // Check if file already exists to prevent duplicates
+          const existingFile = currentFiles.find(f => f.id === taskFile.id);
+          if (existingFile) {
+            return currentFiles;
+          }
           return [...currentFiles, taskFile];
         });
       }
@@ -178,6 +210,33 @@ const TaskFileModal: React.FC<TaskFileModalProps> = ({
     }
   };
 
+const deleteFile = async (file: TaskFile) => {
+  const confirmed = await showConfirmDialog(
+    'Delete File',
+    `Are you sure you want to delete "${file.originalName}"? This action cannot be undone.`
+  );
+
+  if (!confirmed) return;
+
+  try {
+    setDeletingFileId(file.id);
+    setError(null);
+
+    // Call your API to delete the file - CHANGED: Use file.id as the key, remove taskId
+    await callApi(() => apiService.files.deleteFile(file.id));
+
+    // Remove the file from the local state
+    setFiles(prevFiles => prevFiles.filter(f => f.id !== file.id));
+
+    await showSuccessToast('File Deleted', 'File has been successfully deleted.');
+  } catch (err) {
+    console.error('Error deleting file:', err);
+    setError(`Failed to delete ${file.originalName}`);
+  } finally {
+    setDeletingFileId(null);
+  }
+};
+
   const requestReview = async () => {
     try {
       setRequestingReview(true);
@@ -186,7 +245,7 @@ const TaskFileModal: React.FC<TaskFileModalProps> = ({
       await callApi(() => apiService.tasks.updateTaskStatus(taskId, 'IN_REVIEW'));
       
       // Show success message or update UI as needed
-      alert('Review request sent successfully!');
+      await showSuccessToast('Review requested!', 'Your review request has been sent successfully. You will be notified once the review is completed.');
       onClose();
     } catch (err) {
       console.error('Error requesting review:', err);
@@ -272,6 +331,7 @@ const TaskFileModal: React.FC<TaskFileModalProps> = ({
   };
 
   const canRequestReview = files.length > 0 && taskStatus.toLowerCase() !== 'completed';
+  const canDeleteFiles = taskStatus.toLowerCase() !== 'completed' && taskStatus.toLowerCase() !== 'in_review';
 
   if (!isOpen) return null;
 
@@ -391,18 +451,20 @@ const TaskFileModal: React.FC<TaskFileModalProps> = ({
                       >
                         <HiEye className="w-4 h-4" />
                       </button>
-                      {/* <button
-                        onClick={() => {
-                          const link = document.createElement('a');
-                          link.href = file.url;
-                          link.download = file.originalName;
-                          link.click();
-                        }}
-                        className="p-1 text-gray-400 hover:text-green-600 dark:hover:text-green-400 transition-colors"
-                        title="Download file"
-                      >
-                        <HiDownload className="w-4 h-4" />
-                      </button> */}
+                      {canDeleteFiles && (
+                        <button
+                          onClick={() => deleteFile(file)}
+                          disabled={deletingFileId === file.id}
+                          className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="Delete file"
+                        >
+                          {deletingFileId === file.id ? (
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
+                          ) : (
+                            <HiTrash className="w-4 h-4" />
+                          )}
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}

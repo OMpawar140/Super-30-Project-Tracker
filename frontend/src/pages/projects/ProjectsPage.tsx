@@ -5,7 +5,8 @@ import React, { useState, useEffect } from 'react';
 import { HiClipboardList, HiFlag, HiUser, HiCalendar, HiChevronDown, HiChevronUp, HiSearch, HiFilter, HiCheckCircle, HiTrash,
   HiClock, HiExclamation, HiUpload, HiEye, HiPencil, HiCheck, HiX,HiPlus, 
   HiRefresh,
-  HiUserAdd} from 'react-icons/hi';
+  HiUserAdd,
+  HiChatAlt} from 'react-icons/hi';
 import { apiService, useApiCall } from '@/services/api';
 import TaskFileModal from '../../components/ui/TaskFileModal';
 import { useAuth } from '@/context/AuthContext';
@@ -15,10 +16,11 @@ import UserProjectsPDF from '@/components/ui/UserProjectsPDF';
 import UserTasksPDF from '@/components/ui/UserTasksPDF';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
+import { type User as FirebaseUser } from 'firebase/auth';
 const MySwal = withReactContent(Swal);
 
 // Types for our data (updated to match backend structure)
-interface User {
+interface ProjectUser {
   email: string;
   skillset?: string | null;
 }
@@ -30,7 +32,7 @@ interface ProjectMember {
   joinedAt: string;
   updatedAt: string;
   projectId: string;
-  user: User;
+  user: ProjectUser;
 }
 
 interface Task {
@@ -66,7 +68,7 @@ interface Project {
   createdAt: string;
   updatedAt: string;
   creatorId: string;
-  creator: User;
+  creator: ProjectUser;
   members: ProjectMember[];
   milestones: Milestone[];
   _count: {
@@ -173,6 +175,9 @@ const [showAddMember, setShowAddMember] = useState(false);
 const [newMemberEmail, setNewMemberEmail] = useState('');
 const [newMemberRole, setNewMemberRole] = useState('TASK_COMPLETER');
 const [isAddingMember, setIsAddingMember] = useState(false);
+const [taskReviews, setTaskReviews] = useState<Record<string, any[]>>({});
+const [reviewsLoading, setReviewsLoading] = useState<Record<string, boolean>>({});
+const [expandedReviews, setExpandedReviews] = useState<Record<string, boolean>>({});
 
 // Function to toggle edit mode
 const toggleEditMode = () => {
@@ -237,10 +242,33 @@ const addMember = async (projectId: string, email: string, role: string) => {
       setShowAddMember(false);
       
       console.log('Member added successfully');
+      await MySwal.fire({
+        title: 'Member added successfully',
+        icon: 'success',
+        confirmButtonColor: '#6366f1',
+        cancelButtonColor: '#6b7280',
+        background: '#18181b',
+        color: '#fff',
+        position: 'top-end',
+        toast: true,
+        timer: 3000,
+      });
     }
   } catch (error) {
     console.error('Error adding member:', error);
     alert('Failed to add member. Please try again.');
+    await MySwal.fire({
+      title: 'Failed to add member',
+      text: 'Please try again.',
+      icon: 'error',
+      confirmButtonColor: '#6366f1',
+      cancelButtonColor: '#6b7280',
+      background: '#18181b',
+      color: '#fff',
+      position: 'top-end',
+      toast: true,
+      timer: 3000,
+    });
   } finally {
     setIsAddingMember(false);
   }
@@ -248,7 +276,20 @@ const addMember = async (projectId: string, email: string, role: string) => {
 
 // Function to remove a member
 const removeMember = async (projectId: string, memberId: string) => {
-  if (!confirm('Are you sure you want to remove this member from the project?')) {
+  const result = await MySwal.fire({
+    title: 'Remove this member?',
+    text: `Are you sure you want to remove this member from the project?`,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'Yes, remove the member.',
+    cancelButtonText: 'No, keep the member.',
+    confirmButtonColor: '#6366f1',
+    cancelButtonColor: '#6b7280',
+    background: '#18181b',
+    color: '#fff',
+  });
+
+  if(!result.isConfirmed) {
     return;
   }
 
@@ -270,10 +311,32 @@ const removeMember = async (projectId: string, memberId: string) => {
       );
       
       console.log('Member removed successfully');
+      await MySwal.fire({
+        title: 'Member removed successfully',
+        icon: 'success',
+        confirmButtonColor: '#6366f1',
+        cancelButtonColor: '#6b7280',
+        background: '#18181b',
+        color: '#fff',
+        position: 'top-end',
+        toast: true,
+        timer: 3000,
+      });
     }
   } catch (error) {
     console.error('Error removing member:', error);
-    alert('Failed to remove member. Please try again. Check if the member is assigned any tasks before removing.');
+    await MySwal.fire({
+      title: 'Failed to remove member',
+      text: 'Please try again. Check if the member is assigned any tasks before removing.',
+      icon: 'error',
+      confirmButtonColor: '#6366f1',
+      cancelButtonColor: '#6b7280',
+      background: '#18181b',
+      color: '#fff',
+      position: 'top-end',
+      toast: true,
+      timer: 3000,
+    });
   }
 };
 
@@ -435,6 +498,8 @@ const restoreProject = async (projectId: string) => {
         title: "Project restored successfully!",
         text: 'Now you have all your data back.',
         icon: "success",
+        toast: true,
+        position: 'top-end',
       });
 
       setProjects(prevProjects =>
@@ -723,6 +788,51 @@ const handleStatusChange = async (projectId: string, newStatus: string) => {
     }
   };
 
+  // Function to fetch task reviews
+const fetchTaskReviews = async (taskId: string) => {
+  try {
+    setReviewsLoading(prev => ({ ...prev, [taskId]: true }));
+    const response = await callApi(() => apiService.tasks.getTaskReviews(taskId));
+    if (response.success) {
+      setTaskReviews(prev => ({
+        ...prev,
+        [taskId]: response.data
+      }));
+    }
+  } catch (error) {
+    console.error('Error fetching task reviews:', error);
+  } finally {
+    setReviewsLoading(prev => ({ ...prev, [taskId]: false }));
+  }
+};
+
+// Function to toggle task reviews visibility
+const toggleTaskReviews = (taskId: string) => {
+  const isExpanded = expandedReviews[taskId];
+  
+  setExpandedReviews(prev => ({
+    ...prev,
+    [taskId]: !isExpanded
+  }));
+  
+  // Only fetch if expanding and not already loaded
+  if (!isExpanded && !taskReviews[taskId]) {
+    fetchTaskReviews(taskId);
+  }
+};
+
+// Function to get review status icon
+const getReviewStatusIcon = (status: string) => {
+  switch (status) {
+    case 'APPROVED':
+      return <HiCheckCircle className="w-3 h-3 text-green-500" />;
+    case 'REJECTED':
+      return <HiX className="w-3 h-3 text-red-500" />;
+    default:
+      return <HiClock className="w-3 h-3 text-gray-400" />;
+  }
+};
+
   // Utility functions
   const calculateTotalTasks = (project: any): number => {
     if (!project.milestones || project.milestones.length === 0) return 0;
@@ -760,8 +870,8 @@ const handleStatusChange = async (projectId: string, newStatus: string) => {
     if (project.status) tags.push(project.status);
     
     if (project.members) {
-      project.members.forEach((member: ProjectMember) => {
-        if (member.role) {
+      project.members.some((member: ProjectMember) => {
+        if (member.user.email === currentUser?.email) {
           tags.push(member.role);
         }
         if (member.user.skillset) {
@@ -844,6 +954,21 @@ const handleStatusChange = async (projectId: string, newStatus: string) => {
   const closeTaskReviewModal = () => {
     setTaskReviewModalOpen(false);
     setSelectedTask(null);
+  };
+
+  // Add this new function to handle task status updates
+  const handleTaskStatusUpdate = (taskId: string, newStatus: string) => {
+    setProjects(prev => prev.map(project => ({
+      ...project,
+      milestones: project.milestones.map(milestone => ({
+        ...milestone,
+        tasks: milestone.tasks.map(task => 
+          task.id === taskId 
+            ? { ...task, status: newStatus }
+            : task
+        )
+      }))
+    })));
   };
 
   // UI helper functions
@@ -1034,19 +1159,19 @@ const handleStatusChange = async (projectId: string, newStatus: string) => {
                 title='Refresh projects'
                 className='cursor-pointer'
               >
-                <HiRefresh/>
+                <HiRefresh className='dark:text-white'/>
               </button>
             </div>
             <div onClick={(e) => e.stopPropagation()}
               className='flex gap-3'>
                 <UserTasksPDF 
-                  projects={projects} 
-                  currentUser={currentUser} 
+                  projects={projects as any} 
+                  currentUser={currentUser as any} 
                   onDownload={() => console.log('PDF generated')} 
                 />
                 <UserProjectsPDF 
-                  projects={projects}
-                  currentUser={currentUser}
+                  projects={projects as any}
+                  currentUser={currentUser as any}
                   onDownload={() => {
                     console.log(`PDF report downloaded for all projects created by ${currentUser?.email}`);
                   }}
@@ -1082,9 +1207,9 @@ const handleStatusChange = async (projectId: string, newStatus: string) => {
               >
                 <option value="All">All Status</option>
                 <option value="ACTIVE">Active</option>
-                <option value=""></option>
                 <option value="COMPLETED">Completed</option>
                 <option value="ON_HOLD">On Hold</option>
+                <option value="ARCHIVED">Archived</option>
               </select>
               <HiFilter className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-4 h-4 pointer-events-none" />
             </div>
@@ -1173,7 +1298,11 @@ const handleStatusChange = async (projectId: string, newStatus: string) => {
                           <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
                             {project.name}
                           </h2>
-                          {currentUser && currentUser.email === project.creatorId && (
+                          {currentUser?.email && (currentUser.email === project?.creatorId ||
+                            project?.members?.some(
+                              (member) =>
+                                member?.user?.email === currentUser.email && member.role === 'ADMIN'
+                            )) && (
                             <>
                               {project.status !== 'ARCHIVED' ? (
                                 <>
@@ -1346,26 +1475,6 @@ const handleStatusChange = async (projectId: string, newStatus: string) => {
                                 Mark Completed
                               </button>
                             )}
-
-                            {project.status !== 'ARCHIVED' && (
-                              <button
-                                onClick={() => handleStatusChange(project.id, 'ARCHIVED')}
-                                className="px-3 py-1 bg-gray-500 hover:bg-gray-600 text-white text-xs rounded transition-colors"
-                                title="Archive project - read only"
-                              >
-                                Archive (Read-only)
-                              </button>
-                            )}
-
-                            {project.status === 'ARCHIVED' && (
-                              <button
-                                onClick={() => handleStatusChange(project.id, 'ACTIVE')}
-                                className="px-3 py-1 bg-purple-500 hover:bg-purple-600 text-white text-xs rounded transition-colors"
-                                title="Restore project from archive"
-                              >
-                                Restore Project
-                              </button>
-                            )}
                           </div>
                         )}
                       </>
@@ -1446,7 +1555,11 @@ const handleStatusChange = async (projectId: string, newStatus: string) => {
     <HiFlag className="w-5 h-5" />
     Milestones ({project.milestones.length})
   </h3>
-  {currentUser && currentUser.email === project.creatorId && project.status !== 'ARCHIVED' && (
+  {currentUser && (currentUser.email === project?.creatorId ||
+    project?.members?.some(
+      (member) =>
+        member?.user?.email === currentUser.email && member.role === 'ADMIN'
+    )) && project.status !== 'ARCHIVED' && (
     <button
       onClick={() => toggleAddMilestoneForm(project.id)}
       className="flex items-center gap-2 px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors"
@@ -1605,7 +1718,11 @@ const handleStatusChange = async (projectId: string, newStatus: string) => {
                                     ) : (
                                       <>
                                         <h4 className="font-MEDIUM text-gray-900 dark:text-white">{milestone.name}</h4>
-                                        {currentUser && currentUser.email === project.creatorId && project.status !== 'ARCHIVED' && (
+                                        {currentUser && (currentUser.email === project?.creatorId ||
+                                          project?.members?.some(
+                                            (member) =>
+                                              member?.user?.email === currentUser.email && member.role === 'ADMIN'
+                                          )) && project.status !== 'ARCHIVED' && (
                                           <>
                                             <button
                                               onClick={(e) => {
@@ -1705,7 +1822,11 @@ const handleStatusChange = async (projectId: string, newStatus: string) => {
                                     <HiClipboardList className="w-4 h-4" />
                                     Tasks ({milestone.tasks.length})
                                   </h5>
-                                  {currentUser && currentUser.email === project.creatorId && project.status !== 'ARCHIVED' && (
+                                  {currentUser && (currentUser.email === project?.creatorId ||
+                                    project?.members?.some(
+                                      (member) =>
+                                        member?.user?.email === currentUser.email && member.role === 'ADMIN'
+                                    )) && project.status !== 'ARCHIVED' && (
                                     <button
                                       onClick={() => toggleAddTaskForm(milestone.id)}
                                       className="flex items-center gap-1 px-2 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded-lg transition-colors"
@@ -1853,7 +1974,11 @@ const handleStatusChange = async (projectId: string, newStatus: string) => {
                                             ) : (
                                               <>
                                                 <h6 className="text-sm font-MEDIUM text-gray-900 dark:text-white">{task.title}</h6>
-                                              {currentUser && currentUser.email === project.creatorId && project.status !== 'ARCHIVED' && (
+                                              {currentUser && (currentUser.email === project?.creatorId ||
+                                                project?.members?.some(
+                                                  (member) =>
+                                                    member?.user?.email === currentUser.email && member.role === 'ADMIN'
+                                                )) && project.status !== 'ARCHIVED' && task.status !== 'COMPLETED' && (
                                                 <>
                                                   <button
                                                     onClick={(e) => {
@@ -2000,6 +2125,106 @@ const handleStatusChange = async (projectId: string, newStatus: string) => {
                                                   </span>
                                                 )}
                                               </div>
+
+                                              {/* Task Reviews Section - Show for both task assignee and project creator */}
+                                              {currentUser && (currentUser.email === task.assigneeId || currentUser.email === project.creatorId) && (
+                                                <div className="mt-3 border-t border-gray-200 dark:border-gray-600 pt-2">
+                                                  <button
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      toggleTaskReviews(task.id);
+                                                    }}
+                                                    className="flex items-center gap-2 text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                                                  >
+                                                    <HiChatAlt className="w-3 h-3" />
+                                                    <span>
+                                                      {currentUser.email === task.assigneeId 
+                                                        ? 'View Feedback & Reviews' 
+                                                        : 'View Task Reviews'
+                                                      }
+                                                    </span>
+                                                    {expandedReviews[task.id] ? 
+                                                      <HiChevronUp className="w-3 h-3" /> : 
+                                                      <HiChevronDown className="w-3 h-3" />
+                                                    }
+                                                  </button>
+                                                  
+                                                  {expandedReviews[task.id] && (
+                                                    <div className="mt-2">
+                                                      {reviewsLoading[task.id] ? (
+                                                        <div className="flex items-center justify-center py-3">
+                                                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                                                          <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                                                            Loading reviews...
+                                                          </span>
+                                                        </div>
+                                                      ) : taskReviews[task.id] && taskReviews[task.id].length > 0 ? (
+                                                        <div className="space-y-2">
+                                                          {taskReviews[task.id].map((review: any, index: number) => (
+                                                            <div key={index} className={`rounded p-2 border-l-4 ${
+                                                              review.status === 'APPROVED' 
+                                                                ? 'bg-green-50 dark:bg-green-900/20 border-l-green-500'
+                                                                : 'bg-red-50 dark:bg-red-900/20 border-l-red-500'
+                                                            }`}>
+                                                              <div className="flex items-center justify-between mb-1">
+                                                                <div className="flex items-center gap-2">
+                                                                  <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                                                                    Review by {review.reviewer.email}
+                                                                  </span>
+                                                                  {currentUser.email === project.creatorId && (
+                                                                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                                                                      (You)
+                                                                    </span>
+                                                                  )}
+                                                                </div>
+                                                                <div className="flex items-center gap-2">
+                                                                  {getReviewStatusIcon(review.status)}
+                                                                  <span className={`text-xs px-2 py-1 rounded font-medium ${
+                                                                    review.status === 'APPROVED' 
+                                                                      ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400'
+                                                                      : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400'
+                                                                  }`}>
+                                                                    {review.status}
+                                                                  </span>
+                                                                </div>
+                                                              </div>
+                                                              {review.comment && (
+                                                                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 bg-white dark:bg-gray-800 p-2 rounded border">
+                                                                  <span className="font-medium">Feedback:</span> {review.comment}
+                                                                </p>
+                                                              )}
+                                                              <div className="flex items-center justify-between mt-2">
+                                                                <span className="text-xs text-gray-500 dark:text-gray-500">
+                                                                  {formatDate(review.createdAt)}
+                                                                </span>
+                                                                {currentUser.email === task.assigneeId && (
+                                                                  <span className="text-xs text-gray-500 dark:text-gray-400 italic">
+                                                                    {review.status === 'APPROVED' 
+                                                                      ? '✓ Task approved - Well done!' 
+                                                                      : '✗ Needs improvement - Please address the feedback'
+                                                                    }
+                                                                  </span>
+                                                                )}
+                                                              </div>
+                                                            </div>
+                                                          ))}
+                                                        </div>
+                                                      ) : (
+                                                        <div className="text-center py-3">
+                                                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                            No reviews yet.
+                                                          </p>
+                                                          {currentUser.email === project.creatorId && (
+                                                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                                                              Reviews will appear here once submitted.
+                                                            </p>
+                                                          )}
+                                                        </div>
+                                                      )}
+                                                    </div>
+                                                  )}
+                                                </div>
+                                              )}
                                             </>
                                           )}
                                         </div>
@@ -2031,7 +2256,7 @@ const handleStatusChange = async (projectId: string, newStatus: string) => {
                                             </button>
                                           )}
                                           {/* Review Files & Update Status */}
-                                          {currentUser && currentUser.email === project.creatorId && project.status !== 'ARCHIVED' && (
+                                          {currentUser && currentUser.email === project.creatorId && project.status !== 'ARCHIVED' && task.status !== 'UPCOMING' && task.status !== "IN_PROGRESS" && (
                                             <button
                                               onClick={(e) => {
                                                 e.stopPropagation();
@@ -2066,7 +2291,11 @@ const handleStatusChange = async (projectId: string, newStatus: string) => {
                     <div>
                       <div className="flex items-center justify-between mb-3">
                         <h3 className="text-lg font-medium text-gray-900 dark:text-white">Team Members</h3>
-                        {currentUser && currentUser.email === project.creatorId && (
+                        {currentUser && (currentUser.email === project?.creatorId ||
+                            project?.members?.some(
+                              (member) =>
+                                member?.user?.email === currentUser.email && member.role === 'ADMIN'
+                            )) && (
                           <>
                             {!isEditMode && project.status !== 'ARCHIVED' ? (
                               // Edit button (shown when not in edit mode)
@@ -2241,6 +2470,7 @@ const handleStatusChange = async (projectId: string, newStatus: string) => {
           taskId={selectedTask.id}
           taskTitle={selectedTask.title}
           taskStatus={selectedTask.status}
+          onTaskStatusUpdate={handleTaskStatusUpdate}
         />
       )}
     </div>

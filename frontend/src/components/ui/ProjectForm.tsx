@@ -225,18 +225,6 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
 
       await showSuccessToast('Project Created!', 'Your project was created successfully.');
 
-      // Show success message
-      await MySwal.fire({
-        title: 'Project Created!',
-        text: 'Your project was created successfully.',
-        icon: 'success',
-        confirmButtonColor: '#6366f1',
-        background: '#18181b',
-        color: '#fff',
-        timer: 2000,
-        showConfirmButton: false,
-      });
-
       // Move to member invitation step
       // setCurrentStep('members');
       setTimeout(() => {
@@ -279,13 +267,15 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
     try {
       if (members.length > 0) {
         const formattedMembers = members.map(member => ({
-          userId: member.userId,
+          email: member.userId,
           role: member.role?.toUpperCase() === 'ADMIN' ? 'ADMIN' : 'TASK_COMPLETER'
         }));
 
-        await callApi(() => 
-          apiService.projects.addProjectMember(createdProjectId, formattedMembers)
-        );
+        for (const member of formattedMembers) {
+          await callApi(() =>
+            apiService.projects.addProjectMember(createdProjectId, member)
+          );
+        }
 
         setProjectMembers(members);
 
@@ -388,16 +378,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
 
   // Complete workflow
   const completeWorkflow = useCallback(async () => {
-    await MySwal.fire({
-      title: 'Project Setup Complete!',
-      text: 'Your project has been successfully created and configured.',
-      icon: 'success',
-      confirmButtonColor: '#6366f1',
-      background: '#18181b',
-      color: '#fff',
-      timer: 3000,
-      showConfirmButton: false,
-    });
+    await showSuccessToast('Project Setup Complete!', 'Your project has been successfully created and configured.');
 
     // Reset all states
     setCreatedProjectId(null);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   HiX, 
   HiDocumentText, 
@@ -10,6 +10,10 @@ import {
   HiChat
 } from 'react-icons/hi';
 import { apiService, useApiCall } from '@/services/api';
+import Swal from 'sweetalert2';
+import withReactContent from 'sweetalert2-react-content';
+
+const MySwal = withReactContent(Swal);
 
 interface TaskFile {
   id: string;
@@ -27,14 +31,26 @@ interface TaskReviewModalProps {
   taskId: string;
   taskTitle: string;
   taskStatus: string;
+  onTaskStatusUpdate?: (taskId: string, newStatus: string) => void; // Add this line
 }
+
+const theme = localStorage.getItem('theme');
+
+const sweetAlertOptions: Record<string, unknown> = {
+    background: theme === "dark" ? 'rgba(0, 0, 0, 0.9)' : '#fff', 
+    color: theme === "dark" ? '#fff' : '#000', 
+    confirmButtonText: 'OK', 
+    confirmButtonColor: theme === "dark" ? '#3085d6' : '#0069d9', 
+    cancelButtonColor: theme === "dark" ? '#d33' : '#dc3545', 
+};
 
 const TaskReviewModal: React.FC<TaskReviewModalProps> = ({
   isOpen,
   onClose,
   taskId,
   taskTitle,
-  taskStatus
+  taskStatus,
+  onTaskStatusUpdate // Add this line
 }) => {
   const [files, setFiles] = useState<TaskFile[]>([]);
   const [loading, setLoading] = useState(false);
@@ -44,6 +60,22 @@ const TaskReviewModal: React.FC<TaskReviewModalProps> = ({
   const [feedback, setFeedback] = useState('');
   const [showFeedbackForm, setShowFeedbackForm] = useState(false);
   const { callApi } = useApiCall();
+
+  const showSuccessToast = useCallback(async (title: string, text: string) => {
+    await MySwal.fire({
+        ...sweetAlertOptions,
+      title,
+      text,
+      icon: 'success',
+      // confirmButtonColor: '#6366f1',
+      // background: '#18181b',
+      // color: '#fff',
+      timer: 2000,
+      showConfirmButton: false,
+      toast: true,
+      position: 'top-end',
+    });
+  }, []);
 
   // Fetch existing files when modal opens
   useEffect(() => {
@@ -133,7 +165,13 @@ const TaskReviewModal: React.FC<TaskReviewModalProps> = ({
       }));
       
       // Show success message
-      alert(`Task ${reviewDecision === 'approved' ? 'approved' : 'rejected'} successfully!`);
+      await showSuccessToast(`Task ${reviewDecision === 'approved' ? 'approved' : 'rejected'}!`, `This task has been ${reviewDecision === 'approved' ? 'approved successfully' : 'rejected'}. The task completer will be notified about the same.`);
+      
+      // Call the onTaskStatusUpdate prop if provided
+      if (onTaskStatusUpdate) {
+        onTaskStatusUpdate(taskId, newTaskStatus);
+      }
+
       onClose();
     } catch (err) {
       console.error('Error submitting review:', err);
