@@ -7,29 +7,67 @@ class UserService {
     try {
       const users = await prisma.user.findMany({
         select: {
-          id: true,
           email: true,
           skillset: true,
-          name: true,
-          bio: true,
-          status: true,
-          createdAt: true,
-          updatedAt: true,
           _count: {
             select: {
               createdProjects: true,
-              projectMemberships: true
+              projectMembers: true
             }
           }
         },
         orderBy: {
-          createdAt: 'desc'
+          email: 'asc'
         }
       });
 
-      return users;
+      // Parse skillset for each user
+      return users.map(user => ({
+        ...user,
+        id: user.email, // Use email as id for frontend compatibility
+        skillset: user.skillset ? user.skillset.split(',').filter(Boolean) : []
+      }));
     } catch (error) {
       console.error('Error in getAllUsers:', error);
+      throw error;
+    }
+  }
+
+  // Get user by ID (email)
+  async getUserById(userId, currentUserEmail) {
+    try {
+      const user = await prisma.user.findUnique({
+        where: { email: userId },
+        select: {
+          email: true,
+          skillset: true,
+          _count: {
+            select: {
+              createdProjects: true,
+              projectMembers: true
+            }
+          }
+        }
+      });
+
+      if (!user) {
+        return null;
+      }
+
+      // Check if current user has access to view this user
+      const hasAccess = await this.checkProfileAccess(user.email, currentUserEmail);
+      if (!hasAccess) {
+        return null;
+      }
+
+      return {
+        ...user,
+        id: user.email,
+        name: user.email.split('@')[0],
+        skillset: user.skillset ? user.skillset.split(',').filter(Boolean) : []
+      };
+    } catch (error) {
+      console.error('Error in getUserById:', error);
       throw error;
     }
   }
@@ -49,91 +87,22 @@ class UserService {
       const user = await prisma.user.create({
         data: {
           email: userData.email,
-          skillset: userData.skillset || [],
-          name: userData.name || null,
-          bio: userData.bio || null,
-          status: userData.status || 'ACTIVE'
+          skillset: Array.isArray(userData.skillset) ? userData.skillset.join(',') : (userData.skillset || '')
         },
         select: {
-          id: true,
           email: true,
-          skillset: true,
-          name: true,
-          bio: true,
-          status: true,
-          createdAt: true,
-          updatedAt: true
+          skillset: true
         }
       });
 
-      return user;
+      // Parse skillset back to array for response
+      return {
+        ...user,
+        id: user.email, // Use email as id for frontend compatibility
+        skillset: user.skillset ? user.skillset.split(',').filter(Boolean) : []
+      };
     } catch (error) {
       console.error('Error in createUser:', error);
-      throw error;
-    }
-  }
-
-  // Get user by ID (with access control)
-  async getUserById(userId, currentUserEmail) {
-    try {
-      // Check if current user has access to view this user
-      const hasAccess = await this.checkProfileAccess(userId, currentUserEmail);
-      if (!hasAccess) {
-        return null;
-      }
-
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: {
-          id: true,
-          email: true,
-          skillset: true,
-          name: true,
-          bio: true,
-          status: true,
-          createdAt: true,
-          updatedAt: true,
-          createdProjects: {
-            select: {
-              id: true,
-              name: true,
-              status: true,
-              createdAt: true
-            },
-            orderBy: {
-              createdAt: 'desc'
-            },
-            take: 5
-          },
-          projectMemberships: {
-            select: {
-              role: true,
-              joinedAt: true,
-              project: {
-                select: {
-                  id: true,
-                  name: true,
-                  status: true
-                }
-              }
-            },
-            orderBy: {
-              joinedAt: 'desc'
-            },
-            take: 5
-          },
-          _count: {
-            select: {
-              createdProjects: true,
-              projectMemberships: true
-            }
-          }
-        }
-      });
-
-      return user;
-    } catch (error) {
-      console.error('Error in getUserById:', error);
       throw error;
     }
   }
@@ -142,7 +111,17 @@ class UserService {
   async getUserByEmail(email, currentUserEmail) {
     try {
       const user = await prisma.user.findUnique({
-        where: { email: email }
+        where: { email: email },
+        select: {
+          email: true,
+          skillset: true,
+          _count: {
+            select: {
+              createdProjects: true,
+              projectMembers: true
+            }
+          }
+        }
       });
 
       if (!user) {
@@ -150,32 +129,17 @@ class UserService {
       }
 
       // Check if current user has access to view this user
-      const hasAccess = await this.checkProfileAccess(user.id, currentUserEmail);
+      const hasAccess = await this.checkProfileAccess(user.email, currentUserEmail);
       if (!hasAccess) {
         return null;
       }
 
-      const userWithDetails = await prisma.user.findUnique({
-        where: { email: email },
-        select: {
-          id: true,
-          email: true,
-          skillset: true,
-          name: true,
-          bio: true,
-          status: true,
-          createdAt: true,
-          updatedAt: true,
-          _count: {
-            select: {
-              createdProjects: true,
-              projectMemberships: true
-            }
-          }
-        }
-      });
-
-      return userWithDetails;
+      return {
+        ...user,
+        id: user.email, // Use email as id for frontend compatibility
+        name: email.split('@')[0], // Extract name from email for display
+        skillset: user.skillset ? user.skillset.split(',').map(skill => skill.trim()).filter(Boolean) : []
+      };
     } catch (error) {
       console.error('Error in getUserByEmail:', error);
       throw error;
@@ -185,45 +149,56 @@ class UserService {
   // Update user (with access control)
   async updateUser(userId, currentUserEmail, updateData) {
     try {
+      console.log('UpdateUser called with:', { userId, currentUserEmail, updateData });
+      
       // Check if current user has permission to update
       const hasPermission = await this.checkUserPermission(userId, currentUserEmail, ['OWNER', 'ADMIN']);
       if (!hasPermission) {
+        console.log('Permission denied for update');
         return null;
       }
 
-      // If updating email, check if it already exists
-      if (updateData.email) {
-        const existingUser = await prisma.user.findUnique({
-          where: { email: updateData.email }
-        });
-
-        if (existingUser && existingUser.id !== userId) {
-          throw new Error('Email already exists');
-        }
+      const updatePayload = {};
+      if (updateData.skillset !== undefined) {
+        updatePayload.skillset = Array.isArray(updateData.skillset) 
+          ? updateData.skillset.join(',') 
+          : updateData.skillset;
       }
 
+      console.log('Updating user with payload:', updatePayload);
+      console.log('Skillset being saved as string:', updatePayload.skillset);
+
       const user = await prisma.user.update({
-        where: { id: userId },
-        data: {
-          ...(updateData.email && { email: updateData.email }),
-          ...(updateData.skillset !== undefined && { skillset: updateData.skillset }),
-          ...(updateData.name !== undefined && { name: updateData.name }),
-          ...(updateData.bio !== undefined && { bio: updateData.bio }),
-          ...(updateData.status && { status: updateData.status })
-        },
+        where: { email: userId }, // userId is actually email in our schema
+        data: updatePayload,
         select: {
-          id: true,
           email: true,
           skillset: true,
-          name: true,
-          bio: true,
-          status: true,
-          createdAt: true,
-          updatedAt: true
+          _count: {
+            select: {
+              createdProjects: true,
+              projectMembers: true
+            }
+          }
         }
       });
 
-      return user;
+      console.log('User updated in database:', user);
+      console.log('Raw skillset from DB:', user.skillset);
+
+      // Parse skillset back to array for response - trim whitespace
+      const parsedSkillset = user.skillset ? user.skillset.split(',').map(skill => skill.trim()).filter(Boolean) : [];
+      console.log('Parsed skillset array:', parsedSkillset);
+
+      const result = {
+        ...user,
+        id: user.email, // Use email as id for frontend compatibility
+        name: user.email.split('@')[0], // Extract name from email for display
+        skillset: parsedSkillset
+      };
+
+      console.log('Final result to return:', result);
+      return result;
     } catch (error) {
       console.error('Error in updateUser:', error);
       throw error;
@@ -233,24 +208,14 @@ class UserService {
   // Delete user (with access control)
   async deleteUser(userId, currentUserEmail) {
     try {
-      // Check if current user has permission to delete (only owner or admin)
+      // Check if current user has permission to delete
       const hasPermission = await this.checkUserPermission(userId, currentUserEmail, ['OWNER', 'ADMIN']);
       if (!hasPermission) {
         return false;
       }
 
-      // Check if user exists
-      const user = await prisma.user.findUnique({
-        where: { id: userId }
-      });
-
-      if (!user) {
-        return false;
-      }
-
-      // In a real application, you might want to handle cascading deletes or archive instead
       await prisma.user.delete({
-        where: { id: userId }
+        where: { email: userId }
       });
 
       return true;
@@ -266,41 +231,22 @@ class UserService {
       const users = await prisma.user.findMany({
         where: {
           skillset: {
-            hasSome: skills
-          },
-          status: 'ACTIVE' // Only return active users
-        },
-        select: {
-          id: true,
-          email: true,
-          skillset: true,
-          name: true,
-          bio: true,
-          status: true,
-          createdAt: true,
-          _count: {
-            select: {
-              createdProjects: true,
-              projectMemberships: true
-            }
+            contains: skills.join(','),
+            mode: 'insensitive'
           }
         },
-        orderBy: {
-          createdAt: 'desc'
+        select: {
+          email: true,
+          skillset: true
         }
       });
 
-      // Sort by number of matching skills
-      const usersWithMatchCount = users.map(user => ({
+      return users.map(user => ({
         ...user,
-        matchingSkills: user.skillset.filter(skill => 
-          skills.some(searchSkill => 
-            skill.toLowerCase().includes(searchSkill.toLowerCase())
-          )
-        ).length
+        id: user.email,
+        name: user.email.split('@')[0],
+        skillset: user.skillset ? user.skillset.split(',').filter(Boolean) : []
       }));
-
-      return usersWithMatchCount.sort((a, b) => b.matchingSkills - a.matchingSkills);
     } catch (error) {
       console.error('Error in searchUsersBySkills:', error);
       throw error;
@@ -313,31 +259,22 @@ class UserService {
       const users = await prisma.user.findMany({
         where: {
           skillset: {
-            has: skill
-          },
-          status: 'ACTIVE' // Only return active users
-        },
-        select: {
-          id: true,
-          email: true,
-          skillset: true,
-          name: true,
-          bio: true,
-          status: true,
-          createdAt: true,
-          _count: {
-            select: {
-              createdProjects: true,
-              projectMemberships: true
-            }
+            contains: skill,
+            mode: 'insensitive'
           }
         },
-        orderBy: {
-          createdAt: 'desc'
+        select: {
+          email: true,
+          skillset: true
         }
       });
 
-      return users;
+      return users.map(user => ({
+        ...user,
+        id: user.email,
+        name: user.email.split('@')[0],
+        skillset: user.skillset ? user.skillset.split(',').filter(Boolean) : []
+      }));
     } catch (error) {
       console.error('Error in getUsersWithSkill:', error);
       throw error;
@@ -347,14 +284,13 @@ class UserService {
   // Add skill to user
   async addUserSkill(userId, currentUserEmail, skill) {
     try {
-      // Check if current user has permission to modify skills
-      const hasPermission = await this.checkUserPermission(userId, currentUserEmail, ['OWNER', 'ADMIN']);
+      const hasPermission = await this.checkUserPermission(userId, currentUserEmail, ['OWNER']);
       if (!hasPermission) {
         return null;
       }
 
       const user = await prisma.user.findUnique({
-        where: { id: userId },
+        where: { email: userId },
         select: { skillset: true }
       });
 
@@ -362,34 +298,27 @@ class UserService {
         return null;
       }
 
-      // Check if skill already exists (case-insensitive)
-      const skillExists = user.skillset.some(
-        existingSkill => existingSkill.toLowerCase() === skill.toLowerCase()
-      );
-
-      if (skillExists) {
+      const currentSkills = user.skillset ? user.skillset.split(',').filter(Boolean) : [];
+      if (currentSkills.includes(skill)) {
         throw new Error('Skill already exists');
       }
 
+      const updatedSkills = [...currentSkills, skill];
       const updatedUser = await prisma.user.update({
-        where: { id: userId },
-        data: {
-          skillset: {
-            push: skill.trim()
-          }
-        },
+        where: { email: userId },
+        data: { skillset: updatedSkills.join(',') },
         select: {
-          id: true,
           email: true,
-          skillset: true,
-          name: true,
-          bio: true,
-          status: true,
-          updatedAt: true
+          skillset: true
         }
       });
 
-      return updatedUser;
+      return {
+        ...updatedUser,
+        id: updatedUser.email,
+        name: updatedUser.email.split('@')[0],
+        skillset: updatedUser.skillset ? updatedUser.skillset.split(',').filter(Boolean) : []
+      };
     } catch (error) {
       console.error('Error in addUserSkill:', error);
       throw error;
@@ -399,32 +328,26 @@ class UserService {
   // Update user skillset
   async updateUserSkillset(userId, currentUserEmail, skillset) {
     try {
-      // Check if current user has permission to modify skills
-      const hasPermission = await this.checkUserPermission(userId, currentUserEmail, ['OWNER', 'ADMIN']);
+      const hasPermission = await this.checkUserPermission(userId, currentUserEmail, ['OWNER']);
       if (!hasPermission) {
         return null;
       }
 
-      // Remove duplicates and trim skills
-      const cleanSkillset = [...new Set(skillset.map(skill => skill.trim()))];
-
       const updatedUser = await prisma.user.update({
-        where: { id: userId },
-        data: {
-          skillset: cleanSkillset
-        },
+        where: { email: userId },
+        data: { skillset: skillset.join(',') },
         select: {
-          id: true,
           email: true,
-          skillset: true,
-          name: true,
-          bio: true,
-          status: true,
-          updatedAt: true
+          skillset: true
         }
       });
 
-      return updatedUser;
+      return {
+        ...updatedUser,
+        id: updatedUser.email,
+        name: updatedUser.email.split('@')[0],
+        skillset: updatedUser.skillset ? updatedUser.skillset.split(',').filter(Boolean) : []
+      };
     } catch (error) {
       console.error('Error in updateUserSkillset:', error);
       throw error;
@@ -434,14 +357,13 @@ class UserService {
   // Remove skill from user
   async removeUserSkill(userId, currentUserEmail, skill) {
     try {
-      // Check if current user has permission to modify skills
-      const hasPermission = await this.checkUserPermission(userId, currentUserEmail, ['OWNER', 'ADMIN']);
+      const hasPermission = await this.checkUserPermission(userId, currentUserEmail, ['OWNER']);
       if (!hasPermission) {
         return null;
       }
 
       const user = await prisma.user.findUnique({
-        where: { id: userId },
+        where: { email: userId },
         select: { skillset: true }
       });
 
@@ -449,28 +371,24 @@ class UserService {
         return null;
       }
 
-      // Remove skill (case-insensitive)
-      const updatedSkillset = user.skillset.filter(
-        existingSkill => existingSkill.toLowerCase() !== skill.toLowerCase()
-      );
+      const currentSkills = user.skillset ? user.skillset.split(',').filter(Boolean) : [];
+      const updatedSkills = currentSkills.filter(s => s !== skill);
 
       const updatedUser = await prisma.user.update({
-        where: { id: userId },
-        data: {
-          skillset: updatedSkillset
-        },
+        where: { email: userId },
+        data: { skillset: updatedSkills.join(',') },
         select: {
-          id: true,
           email: true,
-          skillset: true,
-          name: true,
-          bio: true,
-          status: true,
-          updatedAt: true
+          skillset: true
         }
       });
 
-      return updatedUser;
+      return {
+        ...updatedUser,
+        id: updatedUser.email,
+        name: updatedUser.email.split('@')[0],
+        skillset: updatedUser.skillset ? updatedUser.skillset.split(',').filter(Boolean) : []
+      };
     } catch (error) {
       console.error('Error in removeUserSkill:', error);
       throw error;
@@ -480,66 +398,14 @@ class UserService {
   // Helper method to check profile access
   async checkProfileAccess(userId, currentUserEmail) {
     try {
-      // Get current user
-      const currentUser = await prisma.user.findUnique({
-        where: { email: currentUserEmail }
-      });
-
-      if (!currentUser) {
-        return false;
-      }
-
       // Users can always view their own profile
-      if (currentUser.id === userId) {
+      if (userId === currentUserEmail) {
         return true;
       }
 
-      // Check if users are in the same project
-      const sharedProjects = await prisma.project.findFirst({
-        where: {
-          OR: [
-            {
-              AND: [
-                { creatorId: currentUserEmail },
-                {
-                  members: {
-                    some: {
-                      user: { id: userId }
-                    }
-                  }
-                }
-              ]
-            },
-            {
-              AND: [
-                {
-                  members: {
-                    some: {
-                      userId: currentUserEmail
-                    }
-                  }
-                },
-                {
-                  OR: [
-                    {
-                      creator: { id: userId }
-                    },
-                    {
-                      members: {
-                        some: {
-                          user: { id: userId }
-                        }
-                      }
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
-        }
-      });
-
-      return !!sharedProjects;
+      // For now, allow all authenticated users to view each other's profiles
+      // You can add more restrictive logic here if needed
+      return true;
     } catch (error) {
       console.error('Error in checkProfileAccess:', error);
       return false;
@@ -549,26 +415,22 @@ class UserService {
   // Helper method to check user permission
   async checkUserPermission(userId, currentUserEmail, allowedRoles) {
     try {
-      const currentUser = await prisma.user.findUnique({
-        where: { email: currentUserEmail }
-      });
-
-      if (!currentUser) {
-        return false;
-      }
-
+      console.log('Checking permission:', { userId, currentUserEmail, allowedRoles });
+      
       // Check if user is trying to access their own profile
-      if (allowedRoles.includes('OWNER') && currentUser.id === userId) {
+      if (allowedRoles.includes('OWNER') && userId === currentUserEmail) {
+        console.log('Permission granted: User owns this profile');
         return true;
       }
 
       // Check if current user is admin (you can implement admin logic here)
       if (allowedRoles.includes('ADMIN')) {
         // For now, assume no admin role exists
-        // You can add admin logic here based on your requirements
+        console.log('Admin check: No admin role implemented');
         return false;
       }
 
+      console.log('Permission denied: No matching conditions');
       return false;
     } catch (error) {
       console.error('Error in checkUserPermission:', error);
