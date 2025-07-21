@@ -248,6 +248,7 @@ const TaskReviewModal: React.FC<TaskReviewModalProps> = ({
       // Show success message
       await showSuccessToast(`Task ${reviewDecision === 'approved' ? 'approved' : 'rejected'}!`, `This task has been ${reviewDecision === 'approved' ? 'approved successfully' : 'rejected'}. The task completer will be notified about the same.`);
       onClose();
+      window.location.reload();
     } catch (err) {
       console.error('Error submitting review:', err);
       setError('Failed to submit review');
