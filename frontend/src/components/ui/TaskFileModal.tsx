@@ -142,13 +142,21 @@ const TaskFileModal: React.FC<TaskFileModalProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [callApi, taskId, loading, filesLoaded]);
+  }, [callApi, taskId]);
+
+  // Use a ref to track if we've already initiated a fetch
+  const fetchInitiatedRef = useRef(false);
 
   useEffect(() => {
-    if (isOpen && taskId && !filesLoaded && !loading) {
+    if (isOpen && taskId && !filesLoaded && !loading && !fetchInitiatedRef.current) {
+      fetchInitiatedRef.current = true;
       fetchTaskFiles();
     }
-  }, [isOpen, taskId, filesLoaded, loading, fetchTaskFiles]);
+
+    if (!isOpen) {
+      fetchInitiatedRef.current = false;
+    }
+  }, [isOpen, taskId, filesLoaded, loading]);
 
   const handleFileSelect = (selectedFiles: FileList | null) => {
     if (selectedFiles && selectedFiles.length > 0) {

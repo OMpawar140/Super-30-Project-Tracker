@@ -873,9 +873,6 @@ const TimeLinePage: React.FC = () => {
                                 `}>
                                   {event.status}
                                 </span>
-                                <span className="text-xs text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-700 px-2 py-1 rounded border border-gray-300 dark:border-gray-600">
-                                  {event.type}
-                                </span>
                               </div>
                             </div>
                           </div>
