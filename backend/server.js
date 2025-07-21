@@ -18,6 +18,7 @@ const milestoneRoutes = require('./src/routes/milestoneRoutes');
 const taskRoutes = require('./src/routes/taskRoutes');
 const fileRoutes = require('./src/routes/fileRoutes');
 const notificationRoutes = require('./src/routes/notificationRoutes');
+const userRoutes = require('./src/routes/userRoutes'); // Add this line
 
 // Initialize Express app
 const app = express();
@@ -30,20 +31,21 @@ initializeFirebase();
 app.use(helmet());
 
 // Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: {
-    success: false,
-    message: 'Too many requests from this IP, please try again later.'
-  }
-});
+// const limiter = rateLimit({
+//   windowMs: 15 * 60 * 1000, // 15 minutes
+//   max: 100, // limit each IP to 100 requests per windowMs
+//   message: {
+//     success: false,
+//     message: 'Too many requests from this IP, please try again later.'
+//   }
+// });
 
-app.use(limiter);
+// app.use(limiter);
 
 const allowedOrigins = [
   'https://super-30-project-tracker-4kji.vercel.app',
   'https://super-30-project-tracker.onrender.com',
+  'https://super-30-project-tracker.vercel.app/',
   'https://www.shripadkhandare.in',
   'http://localhost:5173'
 ];
@@ -94,6 +96,7 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api', protectedRoutes);
 app.use('/api/files', fileRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/users', userRoutes); // Add this line
 
 // 404 handler
 app.use('*', (req, res) => {
