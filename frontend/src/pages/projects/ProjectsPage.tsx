@@ -956,6 +956,21 @@ const getReviewStatusIcon = (status: string) => {
     setSelectedTask(null);
   };
 
+  // Add this new function to handle task status updates
+  const handleTaskStatusUpdate = (taskId: string, newStatus: string) => {
+    setProjects(prev => prev.map(project => ({
+      ...project,
+      milestones: project.milestones.map(milestone => ({
+        ...milestone,
+        tasks: milestone.tasks.map(task => 
+          task.id === taskId 
+            ? { ...task, status: newStatus }
+            : task
+        )
+      }))
+    })));
+  };
+
   // UI helper functions
   const toggleProjectExpansion = (projectId: string) => {
     setExpandedProjects(prev => 
@@ -2455,6 +2470,7 @@ const getReviewStatusIcon = (status: string) => {
           taskId={selectedTask.id}
           taskTitle={selectedTask.title}
           taskStatus={selectedTask.status}
+          onTaskStatusUpdate={handleTaskStatusUpdate}
         />
       )}
     </div>

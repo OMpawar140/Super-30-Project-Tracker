@@ -31,6 +31,7 @@ interface TaskReviewModalProps {
   taskId: string;
   taskTitle: string;
   taskStatus: string;
+  onTaskStatusUpdate?: (taskId: string, newStatus: string) => void; // Add this line
 }
 
 const theme = localStorage.getItem('theme');
@@ -48,7 +49,8 @@ const TaskReviewModal: React.FC<TaskReviewModalProps> = ({
   onClose,
   taskId,
   taskTitle,
-  taskStatus
+  taskStatus,
+  onTaskStatusUpdate // Add this line
 }) => {
   const [files, setFiles] = useState<TaskFile[]>([]);
   const [loading, setLoading] = useState(false);
@@ -164,6 +166,12 @@ const TaskReviewModal: React.FC<TaskReviewModalProps> = ({
       
       // Show success message
       await showSuccessToast(`Task ${reviewDecision === 'approved' ? 'approved' : 'rejected'}!`, `This task has been ${reviewDecision === 'approved' ? 'approved successfully' : 'rejected'}. The task completer will be notified about the same.`);
+      
+      // Call the onTaskStatusUpdate prop if provided
+      if (onTaskStatusUpdate) {
+        onTaskStatusUpdate(taskId, newTaskStatus);
+      }
+
       onClose();
     } catch (err) {
       console.error('Error submitting review:', err);
