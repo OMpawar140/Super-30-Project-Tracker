@@ -3,8 +3,6 @@ import { auth } from '../lib/firebase';
 import { API_BASE_URL } from './api';
 
 class NotificationService {
-  private baseUrl = API_BASE_URL;
-
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
 
     const user = auth.currentUser;
@@ -13,7 +11,7 @@ class NotificationService {
     }
     const token = await user.getIdToken();
     
-    const response = await fetch(`${this.baseUrl}${endpoint}`, {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
@@ -40,28 +38,28 @@ class NotificationService {
     if (params.unreadOnly) queryParams.append('unreadOnly', 'true');
 
     return this.request<NotificationResponse>(
-      `/notifications?${queryParams.toString()}`
+      `/api/notifications?${queryParams.toString()}`
     );
   }
 
   async getStats(): Promise<NotificationStats> {
-    return this.request<NotificationStats>('/notifications/stats');
+    return this.request<NotificationStats>('/api/notifications/stats');
   }
 
   async markAsRead(id: string): Promise<Notification> {
-    return this.request<Notification>(`/notifications/${id}/read`, {
+    return this.request<Notification>(`/api/notifications/${id}/read`, {
       method: 'PUT',
     });
   }
 
   async markAllAsRead(): Promise<{ updated: number }> {
-    return this.request<{ updated: number }>('/notifications/read-all', {
+    return this.request<{ updated: number }>('/api/notifications/read-all', {
       method: 'PUT',
     });
   }
 
   async deleteNotification(id: string): Promise<void> {
-    return this.request<void>(`/notifications/${id}`, {
+    return this.request<void>(`/api/notifications/${id}`, {
       method: 'DELETE',
     });
   }
