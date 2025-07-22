@@ -31,14 +31,14 @@ const Profile: React.FC = () => {
   const [newSkill, setNewSkill] = useState('');
   
   const skillColors = [
-    "bg-gradient-to-r from-blue-500 to-blue-600 text-white",
-    "bg-gradient-to-r from-green-500 to-green-600 text-white",
-    "bg-gradient-to-r from-purple-500 to-purple-600 text-white",
-    "bg-gradient-to-r from-orange-500 to-orange-600 text-white",
-    "bg-gradient-to-r from-pink-500 to-pink-600 text-white",
-    "bg-gradient-to-r from-indigo-500 to-indigo-600 text-white",
-    "bg-gradient-to-r from-teal-500 to-teal-600 text-white",
-    "bg-gradient-to-r from-red-500 to-red-600 text-white"
+    "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg",
+    "bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg",
+    "bg-gradient-to-r from-violet-500 to-violet-600 text-white shadow-lg",
+    "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg",
+    "bg-gradient-to-r from-rose-500 to-pink-600 text-white shadow-lg",
+    "bg-gradient-to-r from-indigo-500 to-indigo-600 text-white shadow-lg",
+    "bg-gradient-to-r from-teal-500 to-cyan-600 text-white shadow-lg",
+    "bg-gradient-to-r from-red-500 to-red-600 text-white shadow-lg"
   ];
 
 
@@ -213,10 +213,10 @@ const Profile: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 flex items-center justify-center">
         <div className="text-center">
-          <Loader className="animate-spin h-12 w-12 text-blue-600 dark:text-blue-400 mx-auto mb-4" />
-          <p className="text-gray-600 dark:text-gray-300 text-lg">Loading your profile...</p>
+          <Loader className="animate-spin h-12 w-12 text-blue-600 mx-auto mb-4" />
+          <p className="text-slate-600 dark:text-slate-300 text-lg font-medium">Loading your profile...</p>
         </div>
       </div>
     );
@@ -225,12 +225,12 @@ const Profile: React.FC = () => {
 
   if (error || !profile) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center">
-        <div className="text-center bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg border-0 dark:border dark:border-gray-700">
-          <p className="text-gray-500 dark:text-gray-300 text-lg">{error || 'Failed to load profile'}</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 flex items-center justify-center">
+        <div className="text-center bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700">
+          <p className="text-slate-600 dark:text-slate-300 text-lg">{error || 'Failed to load profile'}</p>
           <button 
             onClick={loadProfile}
-            className="mt-4 px-6 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
+            className="mt-4 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
           >
             Try Again
           </button>
@@ -241,16 +241,62 @@ const Profile: React.FC = () => {
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 py-8">
       <div className="max-w-6xl mx-auto px-6">
         {/* Header Card */}
-        <div className="bg-white dark:bg-gray-800 dark:border dark:border-gray-700 rounded-2xl shadow-xl overflow-hidden mb-8">
+        <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden mb-8">
           {/* Cover Image */}
-          <div className="h-48 bg-gradient-to-r from-yellow-300 via-white-300 to-yellow-300 dark:bg-gradient-to-r dark:from-gray-700 dark:via-gray-600 dark:to-gray-700 relative">
-            <div className="absolute inset-0 bg-black opacity-20 dark:opacity-40"></div>
+          <div className="h-48 bg-gradient-to-r from-blue-400 via-indigo-400 to-violet-400 dark:from-blue-600 dark:via-indigo-600 dark:to-violet-600 relative w-full">
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-50/20 via-transparent to-violet-50/20 dark:from-slate-900/20 dark:via-transparent dark:to-slate-900/20"></div>
+            
+            {/* Avatar positioned on the left */}
+            <div className="absolute bottom-6 left-8">
+              <div className="w-32 h-32 bg-gradient-to-br from-blue-500 to-violet-600 rounded-full border-4 border-white dark:border-slate-800 shadow-2xl flex items-center justify-center">
+                {currentUser?.photoURL ? (
+                  <img 
+                    src={currentUser.photoURL} 
+                    alt={profile.name || 'User'}
+                    className="w-full h-full rounded-full object-cover"
+                  />
+                ) : (
+                  <User size={48} className="text-white" />
+                )}
+              </div>
+            </div>
+            
+            {/* Profile Info positioned to the right of avatar */}
+            <div className="absolute bottom-6 left-48 right-8 text-slate-900 dark:text-white">
+              <div className="flex items-center gap-3 mb-3">
+                <h1 className="text-3xl font-bold">
+                  {currentUser?.displayName || profile.email.split('@')[0]}
+                </h1>
+                <span className="text-sm bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full border border-white/30 text-black">
+                  <CheckCircle size={14} className="inline mr-1" />
+                  Verified
+                </span>
+              </div>
+              
+              <div className="flex items-center gap-2 mb-2">
+                <Mail size={18} />
+                <span className="text-lg">{profile.email}</span>
+                <CheckCircle className="text-emerald-500" size={16} />
+              </div>
+
+              <div className="flex items-center gap-4 text-sm">
+                <div className="flex items-center gap-1">
+                  <Calendar size={14} />
+                  <span>Member since {new Date().toLocaleDateString()}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Star size={14} />
+                  <span>{getSkillset().length} Skills</span>
+                </div>
+              </div>
+            </div>
+            
             <div className="absolute top-6 right-6">
               {saving && (
-                <div className="flex items-center gap-2 text-white text-sm bg-black bg-opacity-20 dark:bg-opacity-30 rounded-full px-4 py-2">
+                <div className="flex items-center gap-2 text-white text-sm bg-black/20 backdrop-blur-sm rounded-full px-4 py-2">
                   <Loader className="animate-spin" size={16} />
                   <span>Saving...</span>
                 </div>
@@ -260,52 +306,8 @@ const Profile: React.FC = () => {
           
           {/* Profile Content */}
           <div className="relative px-8 pb-8">
-            {/* Avatar and Basic Info */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-end -mt-20 mb-8">
-              <div className="relative mb-6 sm:mb-0">
-                <div className="w-32 h-32 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full border-4 border-white dark:border-gray-800 shadow-2xl flex items-center justify-center">
-                  {currentUser?.photoURL ? (
-                    <img 
-                      src={currentUser.photoURL} 
-                      alt={profile.name || 'User'}
-                      className="w-full h-full rounded-full object-cover"
-                    />
-                  ) : (
-                    <User size={48} className="text-white" />
-                  )}
-                </div>
-              </div>
-              
-              <div className="sm:ml-8 flex-1">
-                <div className="flex items-center gap-3 mb-4">
-                  <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                    {currentUser?.displayName || profile.email.split('@')[0]}
-                  </h1>
-                  <span className="text-sm text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full border border-blue-200 dark:border-blue-700">
-                    <CheckCircle size={14} className="inline mr-1" />
-                    Verified
-                  </span>
-                </div>
-                
-                <div className="flex items-center gap-2 mb-3">
-                  <Mail className="text-gray-400 dark:text-gray-500" size={18} />
-                  <span className="text-gray-600 dark:text-gray-300 text-lg">{profile.email}</span>
-                  <CheckCircle className="text-green-500" size={16} />
-                </div>
-
-
-                <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
-                  <div className="flex items-center gap-1">
-                    <Calendar size={14} />
-                    <span>Member since {new Date().toLocaleDateString()}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Star size={14} />
-                    <span>{getSkillset().length} Skills</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+            {/* Empty space since avatar is now in the cover */}
+            <div className="h-16"></div>
           </div>
         </div>
 
@@ -314,17 +316,17 @@ const Profile: React.FC = () => {
           {/* Left Column - Main Content */}
           <div className="lg:col-span-2 space-y-8">
             {/* Skills Section */}
-            <div className="bg-white dark:bg-gray-800 dark:border dark:border-gray-700 rounded-2xl shadow-lg p-8">
+            <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-lg border border-slate-200 dark:border-slate-700 p-8">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                  <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
                     <Award className="text-blue-600 dark:text-blue-400" size={24} />
                   </div>
-                  <h3 className="text-xl font-semibold text-gray-800 dark:text-white">Skills & Technologies</h3>
+                  <h3 className="text-xl font-semibold text-slate-900 dark:text-white">Skills & Technologies</h3>
                 </div>
                 <button
                   onClick={() => setIsEditingSkills(!isEditingSkills)}
-                  className="flex items-center gap-2 px-4 py-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-700 rounded-xl transition-all duration-200 font-medium"
                 >
                   <Edit3 size={16} />
                   {isEditingSkills ? 'Done' : 'Edit'}
@@ -338,14 +340,14 @@ const Profile: React.FC = () => {
                     console.log('Rendering skill:', skill, 'at index:', index);
                     return (
                       <div 
-                        key={`${skill}-${index}`} // Use index to force re-render
-                        className={`px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 shadow-sm transform hover:scale-105 transition-all ${skillColors[index % skillColors.length]}`}
+                        key={`${skill}-${index}`}
+                        className={`px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 transform hover:scale-105 transition-all duration-200 ${skillColors[index % skillColors.length]}`}
                       >
                         {skill}
                         {isEditingSkills && (
                           <X 
                             size={14} 
-                            className="cursor-pointer hover:bg-white hover:bg-opacity-20 rounded-full p-0.5 transition-colors"
+                            className="cursor-pointer hover:bg-white/20 rounded-full p-0.5 transition-all duration-200"
                             onClick={() => removeSkill(skill)}
                           />
                         )}
@@ -353,35 +355,39 @@ const Profile: React.FC = () => {
                     );
                   })}
                   {getSkillset().length === 0 && (
-                    <p className="text-gray-400 dark:text-gray-500 italic text-center w-full py-8">
-                      No skills added yet. Add your first skill below to showcase your expertise!
-                    </p>
+                    <div className="text-center w-full py-12">
+                      <div className="inline-flex items-center justify-center w-16 h-16 bg-slate-100 dark:bg-slate-700 rounded-full mb-4">
+                        <Award className="text-slate-400 dark:text-slate-500" size={24} />
+                      </div>
+                      <p className="text-slate-500 dark:text-slate-400 text-lg font-medium mb-2">No skills added yet</p>
+                      <p className="text-slate-400 dark:text-slate-500 text-sm">Add your first skill below to showcase your expertise!</p>
+                    </div>
                   )}
                 </div>
                 
                 {/* Add New Skill */}
                 {isEditingSkills && (
-                  <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-4">
+                  <div className="bg-slate-50 dark:bg-slate-700/50 rounded-2xl p-6 border border-slate-200 dark:border-slate-600">
                     <div className="flex gap-3">
                       <input
                         type="text"
                         placeholder="Add new skill (e.g., React, Python, AWS)..."
                         value={newSkill}
                         onChange={(e) => setNewSkill(e.target.value)}
-                        className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="flex-1 px-4 py-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                         onKeyPress={(e) => e.key === 'Enter' && addSkill()}
                         disabled={saving}
                       />
                       <button
                         onClick={addSkill}
                         disabled={saving || !newSkill.trim()}
-                        className="px-6 py-3 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-all duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
                       >
                         <Plus size={16} />
                         Add
                       </button>
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-3">
                       Add skills that represent your expertise and interests. This helps others understand your capabilities.
                     </p>
                   </div>
@@ -391,29 +397,29 @@ const Profile: React.FC = () => {
 
 
             {/* Activity Section */}
-            <div className="bg-white dark:bg-gray-800 dark:border dark:border-gray-700 rounded-2xl shadow-lg p-8">
+            <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-lg border border-slate-200 dark:border-slate-700 p-8">
               <div className="flex items-center gap-3 mb-6">
-                <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                  <Activity className="text-green-600 dark:text-green-400" size={24} />
+                <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl">
+                  <Activity className="text-emerald-600 dark:text-emerald-400" size={24} />
                 </div>
-                <h3 className="text-xl font-semibold text-gray-800 dark:text-white">Recent Activity</h3>
+                <h3 className="text-xl font-semibold text-slate-900 dark:text-white">Recent Activity</h3>
               </div>
               <div className="space-y-4">
-                <div className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl border border-slate-200 dark:border-slate-600">
+                  <div className="w-3 h-3 bg-emerald-500 rounded-full shadow-lg"></div>
                   <div className="flex-1">
-                    <p className="text-gray-700 dark:text-gray-200 font-medium">Profile created</p>
-                    <p className="text-gray-500 dark:text-gray-400 text-sm">Welcome to the platform!</p>
+                    <p className="text-slate-800 dark:text-slate-200 font-medium">Profile created</p>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm">Welcome to the platform!</p>
                   </div>
-                  <span className="text-gray-400 dark:text-gray-500 text-sm">Today</span>
+                  <span className="text-slate-400 dark:text-slate-500 text-sm">Today</span>
                 </div>
-                <div className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl border border-slate-200 dark:border-slate-600">
+                  <div className="w-3 h-3 bg-blue-500 rounded-full shadow-lg"></div>
                   <div className="flex-1">
-                    <p className="text-gray-700 dark:text-gray-200 font-medium">Connected Google account</p>
-                    <p className="text-gray-500 dark:text-gray-400 text-sm">Secure authentication enabled</p>
+                    <p className="text-slate-800 dark:text-slate-200 font-medium">Connected Google account</p>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm">Secure authentication enabled</p>
                   </div>
-                  <span className="text-gray-400 dark:text-gray-500 text-sm">Today</span>
+                  <span className="text-slate-400 dark:text-slate-500 text-sm">Today</span>
                 </div>
               </div>
             </div>
@@ -423,38 +429,38 @@ const Profile: React.FC = () => {
           {/* Right Column - Sidebar */}
           <div className="space-y-8">
             {/* Profile Completion */}
-            <div className="bg-white dark:bg-gray-800 dark:border dark:border-gray-700 rounded-2xl shadow-lg p-6">
+            <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-lg border border-slate-200 dark:border-slate-700 p-6">
               <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                  <TrendingUp className="text-purple-600 dark:text-purple-400" size={20} />
+                <div className="p-2 bg-violet-100 dark:bg-violet-900/30 rounded-xl">
+                  <TrendingUp className="text-violet-600 dark:text-violet-400" size={20} />
                 </div>
-                <h3 className="font-semibold text-gray-800 dark:text-white">Profile Completion</h3>
+                <h3 className="font-semibold text-slate-900 dark:text-white">Profile Completion</h3>
               </div>
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-600 dark:text-gray-300">Progress</span>
-                  <span className="font-bold text-lg text-purple-600 dark:text-purple-400">
+                  <span className="text-slate-600 dark:text-slate-300">Progress</span>
+                  <span className="font-bold text-lg text-violet-600 dark:text-violet-400">
                     {getProfileCompletionPercentage()}%
                   </span>
                 </div>
-                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+                <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3">
                   <div 
-                    className="bg-gradient-to-r from-purple-500 to-blue-600 h-3 rounded-full transition-all duration-500 ease-out"
+                    className="bg-gradient-to-r from-violet-500 to-blue-600 h-3 rounded-full transition-all duration-500 ease-out shadow-sm"
                     style={{ width: `${getProfileCompletionPercentage()}%` }}
                   ></div>
                 </div>
                 <div className="space-y-2 text-sm">
                   <div className="flex items-center gap-2">
-                    <CheckCircle size={14} className="text-green-500" />
-                    <span className="text-gray-600 dark:text-gray-300">Email verified</span>
+                    <CheckCircle size={14} className="text-emerald-500" />
+                    <span className="text-slate-600 dark:text-slate-300">Email verified</span>
                   </div>
                   <div className="flex items-center gap-2">
                     {getSkillset().length > 0 ? (
-                      <CheckCircle size={14} className="text-green-500" />
+                      <CheckCircle size={14} className="text-emerald-500" />
                     ) : (
-                      <div className="w-3.5 h-3.5 border-2 border-gray-300 dark:border-gray-600 rounded-full"></div>
+                      <div className="w-3.5 h-3.5 border-2 border-slate-300 dark:border-slate-600 rounded-full"></div>
                     )}
-                    <span className={`${getSkillset().length > 0 ? "text-gray-600 dark:text-gray-300" : "text-gray-400 dark:text-gray-500"}`}>
+                    <span className={`${getSkillset().length > 0 ? "text-slate-600 dark:text-slate-300" : "text-slate-400 dark:text-slate-500"}`}>
                       Skills added ({getSkillset().length})
                     </span>
                   </div>
@@ -464,40 +470,40 @@ const Profile: React.FC = () => {
 
 
             {/* Statistics */}
-            <div className="bg-white dark:bg-gray-800 dark:border dark:border-gray-700 rounded-2xl shadow-lg p-6">
-              <h3 className="font-semibold text-gray-800 dark:text-white mb-4">Statistics</h3>
+            <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-lg border border-slate-200 dark:border-slate-700 p-6">
+              <h3 className="font-semibold text-slate-900 dark:text-white mb-4">Statistics</h3>
               <div className="space-y-4">
-                <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  <span className="text-gray-600 dark:text-gray-300">Projects Created</span>
-                  <span className="font-bold text-blue-600 dark:text-blue-400">{getProjectsCount()}</span>
+                <div className="flex justify-between items-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+                  <span className="text-slate-700 dark:text-slate-300 font-medium">Projects Created</span>
+                  <span className="font-bold text-blue-600 dark:text-blue-400 text-lg">{getProjectsCount()}</span>
                 </div>
-                <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  <span className="text-gray-600 dark:text-gray-300">Project Memberships</span>
-                  <span className="font-bold text-green-600 dark:text-green-400">{getMembershipsCount()}</span>
+                <div className="flex justify-between items-center p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-200 dark:border-emerald-800">
+                  <span className="text-slate-700 dark:text-slate-300 font-medium">Project Memberships</span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400 text-lg">{getMembershipsCount()}</span>
                 </div>
-                <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  <span className="text-gray-600 dark:text-gray-300">Skills</span>
-                  <span className="font-bold text-purple-600 dark:text-purple-400">{getSkillset().length}</span>
+                <div className="flex justify-between items-center p-4 bg-violet-50 dark:bg-violet-900/20 rounded-xl border border-violet-200 dark:border-violet-800">
+                  <span className="text-slate-700 dark:text-slate-300 font-medium">Skills</span>
+                  <span className="font-bold text-violet-600 dark:text-violet-400 text-lg">{getSkillset().length}</span>
                 </div>
               </div>
             </div>
 
 
             {/* Account Status */}
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 rounded-2xl shadow-lg p-6 border border-blue-100 dark:border-gray-600">
-              <h3 className="font-semibold text-gray-800 dark:text-white mb-4">Account Status</h3>
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-700 rounded-3xl shadow-lg p-6 border border-blue-200 dark:border-slate-600">
+              <h3 className="font-semibold text-slate-900 dark:text-white mb-4">Account Status</h3>
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
-                  <CheckCircle className="text-green-500" size={18} />
-                  <span className="text-gray-700 dark:text-gray-200">Email verified</span>
+                  <CheckCircle className="text-emerald-500" size={18} />
+                  <span className="text-slate-700 dark:text-slate-200">Email verified</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <CheckCircle className="text-green-500" size={18} />
-                  <span className="text-gray-700 dark:text-gray-200">Google connected</span>
+                  <CheckCircle className="text-emerald-500" size={18} />
+                  <span className="text-slate-700 dark:text-slate-200">Google connected</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <CheckCircle className="text-green-500" size={18} />
-                  <span className="text-gray-700 dark:text-gray-200">Profile active</span>
+                  <CheckCircle className="text-emerald-500" size={18} />
+                  <span className="text-slate-700 dark:text-slate-200">Profile active</span>
                 </div>
               </div>
             </div>

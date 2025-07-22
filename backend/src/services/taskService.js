@@ -608,123 +608,240 @@ async createTask(milestoneId, userEmail, taskData) {
     }
   }
 
-  // Submit task review
+  // // Submit task review
+  // async submitTaskReview(taskId, userEmail, reviewData) {
+  //   try {
+  //     // Check if user has permission to review tasks in this milestone
+  //     const task = await prisma.task.findUnique({
+  //       where: { id: taskId },
+  //       include: {
+  //         milestone: {
+  //           select: {
+  //             id: true,
+  //             projectId: true
+  //           }
+  //         },
+  //         assignee: {
+  //           select: {
+  //             email: true
+  //           }
+  //         }
+  //       }
+  //     });
+
+  //     if (!task) {
+  //       return null; // Task not found
+  //     }
+
+  //     const hasPermission = await this.checkMilestonePermission(
+  //       task.milestone.id, 
+  //       userEmail, 
+  //       ['CREATOR', 'ADMIN']
+  //     );
+      
+  //     if (!hasPermission) {
+  //       return null;
+  //     }
+
+  //     // Update task status based on review status
+  //     const taskUpdateData = {};
+  //     if (reviewData.status === 'APPROVED') {
+  //       taskUpdateData.status = 'COMPLETED';
+  //     } else if (reviewData.status === 'REJECTED') {
+  //       taskUpdateData.status = 'IN_PROGRESS'; // Send back to in progress for rework
+  //     }
+
+  //     // Create review and update task in a transaction
+  //     const result = await prisma.$transaction(async (tx) => {
+  //       // Create the review
+  //       const taskReview = await tx.taskReview.create({
+  //         data: {
+  //           status: reviewData.status,
+  //           comment: reviewData.comment || null,
+  //           taskId,
+  //           reviewerId: userEmail,
+  //           createdAt: new Date(),
+  //           updatedAt: new Date()
+  //         },
+  //         include: {
+  //           task: {
+  //             select: {
+  //               id: true,
+  //               title: true,
+  //               milestone: {
+  //                 select: {
+  //                   id: true,
+  //                   name: true,
+  //                   project: {
+  //                     select: {
+  //                       id: true,
+  //                       name: true
+  //                     }
+  //                   }
+  //                 }
+  //               }
+  //             }
+  //           },
+  //           reviewer: {
+  //             select: {
+  //               email: true,
+  //               skillset: true
+  //             }
+  //           }
+  //         }
+  //       });
+
+  //       // Update task status if needed
+  //       if (Object.keys(taskUpdateData).length > 0) {
+  //         await tx.task.update({
+  //           where: { id: taskId },
+  //           data: {
+  //             ...taskUpdateData,
+  //             updatedAt: new Date()
+  //           }
+  //         });
+  //       }
+
+  //       return taskReview;
+  //     });
+      
+  //     // Send notification to task assignee about review completion
+  //     try {
+  //       console.log(result);
+  //       await NotificationTriggers.taskReviewCompleted(result.task, {
+  //         id: result.id,
+  //         status: result.status,
+  //         comment: result.comment,
+  //         reviewerId: result.reviewerId
+  //       });
+  //       console.log(`Notification sent for task review: ${result.task.title} - ${result.status}`);
+  //     } catch (notificationError) {
+  //       console.error('Failed to send task review notification:', notificationError);
+  //     }
+
+  //     return result;
+      
+  //   } catch (error) {
+  //     console.error('Error in submitTaskReview:', error);
+  //     throw error;
+  //   }
+  // }
+
   async submitTaskReview(taskId, userEmail, reviewData) {
-    try {
-      // Check if user has permission to review tasks in this milestone
-      const task = await prisma.task.findUnique({
-        where: { id: taskId },
-        include: {
-          milestone: {
-            select: {
-              id: true,
-              projectId: true
-            }
-          },
-          assignee: {
-            select: {
-              email: true
-            }
-          }
-        }
+  try {
+    // -------------------------------------------------------------------
+    // 1. All PRE-CHECKS remain the same (this part is already good)
+    // -------------------------------------------------------------------
+    const task = await prisma.task.findUnique({
+      where: { id: taskId },
+      include: {
+        milestone: { select: { id: true, projectId: true } },
+        assignee: { select: { email: true } }
+      }
+    });
+
+    if (!task) {
+      return null;
+    }
+
+    const hasPermission = await this.checkMilestonePermission(
+      task.milestone.id,
+      userEmail,
+      ['CREATOR', 'ADMIN']
+    );
+
+    if (!hasPermission) {
+      return null;
+    }
+
+    const taskUpdateData = {};
+    if (reviewData.status === 'APPROVED') {
+      taskUpdateData.status = 'COMPLETED';
+    } else if (reviewData.status === 'REJECTED') {
+      taskUpdateData.status = 'IN_PROGRESS';
+    }
+
+    // -------------------------------------------------------------------
+    // 2. Perform a FAST transaction with WRITES ONLY
+    // -------------------------------------------------------------------
+    const newReview = await prisma.$transaction(async (tx) => {
+      // Create the review WITHOUT the large 'include'
+      const taskReview = await tx.taskReview.create({
+        data: {
+          status: reviewData.status,
+          comment: reviewData.comment || null,
+          taskId,
+          reviewerId: userEmail,
+        },
       });
 
-      if (!task) {
-        return null; // Task not found
-      }
-
-      const hasPermission = await this.checkMilestonePermission(
-        task.milestone.id, 
-        userEmail, 
-        ['CREATOR', 'ADMIN']
-      );
-      
-      if (!hasPermission) {
-        return null;
-      }
-
-      // Update task status based on review status
-      const taskUpdateData = {};
-      if (reviewData.status === 'APPROVED') {
-        taskUpdateData.status = 'COMPLETED';
-      } else if (reviewData.status === 'REJECTED') {
-        taskUpdateData.status = 'IN_PROGRESS'; // Send back to in progress for rework
-      }
-
-      // Create review and update task in a transaction
-      const result = await prisma.$transaction(async (tx) => {
-        // Create the review
-        const taskReview = await tx.taskReview.create({
+      // Update task status if needed
+      if (Object.keys(taskUpdateData).length > 0) {
+        await tx.task.update({
+          where: { id: taskId },
           data: {
-            status: reviewData.status,
-            comment: reviewData.comment || null,
-            taskId,
-            reviewerId: userEmail,
-            createdAt: new Date(),
+            ...taskUpdateData,
             updatedAt: new Date()
-          },
-          include: {
-            task: {
-              select: {
+          }
+        });
+      }
+
+      // Return the simple review object (it will have the new 'id')
+      return taskReview;
+    });
+
+    // -------------------------------------------------------------------
+    // 3. Fetch data for the notification AFTER the transaction
+    // -------------------------------------------------------------------
+    const notificationData = await prisma.taskReview.findUnique({
+    where: { id: newReview.id },
+    include: {
+        task: {
+            select: {
                 id: true,
                 title: true,
+                assigneeId: true, // <-- ADD THIS LINE
                 milestone: {
-                  select: {
-                    id: true,
-                    name: true,
-                    project: {
-                      select: {
+                    select: {
                         id: true,
-                        name: true
-                      }
+                        name: true,
+                        project: { select: { id: true, name: true } }
                     }
-                  }
                 }
-              }
-            },
-            reviewer: {
+            }
+        },
+          reviewer: {
               select: {
-                email: true,
-                skillset: true
+                  email: true,
+                  skillset: true
               }
-            }
           }
-        });
-
-        // Update task status if needed
-        if (Object.keys(taskUpdateData).length > 0) {
-          await tx.task.update({
-            where: { id: taskId },
-            data: {
-              ...taskUpdateData,
-              updatedAt: new Date()
-            }
-          });
-        }
-
-        return taskReview;
-      });
-      // Send notification to task assignee about review completion
-      try {
-        console.log(taskReview);
-        await NotificationTriggers.taskReviewCompleted(taskReview.task, {
-          id: taskReview.id,
-          status: taskReview.status,
-          comment: taskReview.comment,
-          reviewerId: taskReview.reviewerId
-        });
-        console.log(`Notification sent for task review: ${taskReview.task.title} - ${taskReview.status}`);
-      } catch (notificationError) {
-        console.error('Failed to send task review notification:', notificationError);
       }
+  });
 
-      return result;
-      
-    } catch (error) {
-      console.error('Error in submitTaskReview:', error);
-      throw error;
+
+    // 4. Send the notification using the fully-loaded data
+    try {
+      if (notificationData) {
+        await NotificationTriggers.taskReviewCompleted(notificationData.task, {
+          id: notificationData.id,
+          status: notificationData.status,
+          comment: notificationData.comment,
+          reviewerId: notificationData.reviewerId
+        });
+        console.log(`Notification sent for task review: ${notificationData.task.title} - ${notificationData.status}`);
+      }
+    } catch (notificationError) {
+      console.error('Failed to send task review notification:', notificationError);
     }
+
+    return notificationData;
+
+  } catch (error) {
+    console.error('Error in submitTaskReview:', error);
+    throw error;
   }
+}
 
   // Update task status
   async updateTaskStatus(taskId, userEmail, status) {
