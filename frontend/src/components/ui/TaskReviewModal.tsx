@@ -94,6 +94,49 @@ const TaskReviewModal: React.FC<TaskReviewModalProps> = ({
     }
   }, [isOpen]);
 
+  // const fetchTaskFiles = async () => {
+  //   try {
+  //     setLoading(true);
+  //     setError(null);
+  //     const response = await callApi(() => apiService.files.getFileDetails(taskId));
+  //     console.log('Fetched task files:', response);
+
+  //     // Check if response indicates a 404 error
+  //     if (response?.status === 404 || 
+  //         (response?.message && response.message.toLowerCase().includes('no files found')) ||
+  //         (!response?.data && response?.status >= 400)) {
+  //       setError('Task files not found');
+  //       return;
+  //     }
+      
+  //     // Validate response data exists
+  //     if (!response?.data) {
+  //       throw new Error('No file data received');
+  //     }
+  //     // setFiles(prevFiles => {
+  //     //   const currentFiles = Array.isArray(prevFiles) ? prevFiles : [];
+  //     //   return [...currentFiles, response.data];
+  //     // });
+  //     setFiles(prevFiles => {
+  //       const currentFiles = Array.isArray(prevFiles) ? prevFiles : [];
+  //       const newFile = response.data;
+        
+  //       // Remove duplicates based on file ID or name (adjust the key as needed)
+  //       const filteredFiles = currentFiles.filter(file => 
+  //         file.id !== newFile.id // Change 'id' to whatever unique identifier your files have
+  //       );
+        
+  //       // Add the new file
+  //       return [...filteredFiles, newFile];
+  //     });
+  //   } catch (err) {
+  //     console.error('Error fetching task files:', err);
+  //     setError('No task files available');
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
   const fetchTaskFiles = async () => {
     try {
       setLoading(true);
@@ -113,22 +156,62 @@ const TaskReviewModal: React.FC<TaskReviewModalProps> = ({
       if (!response?.data) {
         throw new Error('No file data received');
       }
-      // setFiles(prevFiles => {
-      //   const currentFiles = Array.isArray(prevFiles) ? prevFiles : [];
-      //   return [...currentFiles, response.data];
-      // });
-      setFiles(prevFiles => {
-        const currentFiles = Array.isArray(prevFiles) ? prevFiles : [];
-        const newFile = response.data;
-        
-        // Remove duplicates based on file ID or name (adjust the key as needed)
-        const filteredFiles = currentFiles.filter(file => 
-          file.id !== newFile.id // Change 'id' to whatever unique identifier your files have
-        );
-        
-        // Add the new file
-        return [...filteredFiles, newFile];
-      });
+
+      // Handle the new multiple files response structure
+      const responseData = response.data;
+      
+      // Check if it's the new format with multiple files
+      if (responseData.files && Array.isArray(responseData.files)) {
+        // New format: response.data contains { taskId, totalFiles, files: [...] }
+        const newFiles = responseData.files.map((file, index) => ({
+          // Create a consistent structure for each file
+          id: file.filename || `${taskId}-${index}`, // Use filename as ID, fallback to index
+          filename: file.filename,
+          preview: file.preview,
+          metadata: file.metadata,
+          content: file.content,
+          message: file.message,
+          error: file.error,
+          taskId: responseData.taskId,
+          // Add any other properties your frontend expects
+        }));
+
+        setFiles(prevFiles => {
+          const currentFiles = Array.isArray(prevFiles) ? prevFiles : [];
+          
+          // Remove any existing files for this taskId to avoid duplicates
+          const filteredFiles = currentFiles.filter(file => 
+            file.taskId !== taskId
+          );
+          
+          // Add all new files for this task
+          return [...filteredFiles, ...newFiles];
+        });
+
+        console.log(`Successfully loaded ${newFiles.length} files for task ${taskId}`);
+      } else {
+        // Fallback: Handle old format (single file) for backward compatibility
+        const newFile = {
+          id: responseData.filename || responseData.id || Date.now().toString(),
+          ...responseData,
+          taskId: taskId
+        };
+
+        setFiles(prevFiles => {
+          const currentFiles = Array.isArray(prevFiles) ? prevFiles : [];
+          
+          // Remove duplicates based on file ID
+          const filteredFiles = currentFiles.filter(file => 
+            file.id !== newFile.id
+          );
+          
+          // Add the new file
+          return [...filteredFiles, newFile];
+        });
+
+        console.log('Successfully loaded single file for task', taskId);
+      }
+
     } catch (err) {
       console.error('Error fetching task files:', err);
       setError('No task files available');
@@ -173,6 +256,7 @@ const TaskReviewModal: React.FC<TaskReviewModalProps> = ({
       }
 
       onClose();
+      window.location.reload();
     } catch (err) {
       console.error('Error submitting review:', err);
       setError('Failed to submit review');

@@ -6,6 +6,10 @@ import type {
   Member, 
   Task, 
 } from '@/types/project';
+import Swal from 'sweetalert2';
+import withReactContent from 'sweetalert2-react-content';
+
+const MySwal = withReactContent(Swal);
 
 interface TaskFormProps {
   tasks: Task[];
@@ -16,6 +20,16 @@ interface TaskFormProps {
   onRemoveTask: (index: number) => void;
   onUpdateTask: (index: number, task: Task) => void;
 }
+
+const theme = localStorage.getItem('theme');
+
+const sweetAlertOptions: Record<string, unknown> = {
+    background: theme === "dark" ? 'rgba(0, 0, 0, 0.9)' : '#fff', 
+    color: theme === "dark" ? '#fff' : '#000', 
+    confirmButtonText: 'OK', 
+    confirmButtonColor: theme === "dark" ? '#3085d6' : '#0069d9', 
+    cancelButtonColor: theme === "dark" ? '#d33' : '#dc3545', 
+};
 
 const TaskForm: React.FC<TaskFormProps> = ({
   tasks,
@@ -44,9 +58,18 @@ const TaskForm: React.FC<TaskFormProps> = ({
     { value: 'URGENT', label: 'Urgent', color: 'text-red-600' },
   ];
 
-  const handleAddTask = () => {
+  const handleAddTask = async () => {
     if (!newTask.title.trim() || !newTask.description.trim()) {
       alert('Please fill in task title and description.');
+      await MySwal.fire({
+        ...sweetAlertOptions,
+      title: 'Please fill in task title and description.',
+      icon: 'success',
+      timer: 2000,
+      showConfirmButton: false,
+      toast: true,
+      position: 'top-end',
+    });
       return;
     }
 

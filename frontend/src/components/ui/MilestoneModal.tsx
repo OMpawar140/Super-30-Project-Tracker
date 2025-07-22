@@ -10,6 +10,7 @@ import type {
   Task, 
   Milestone,
 } from '@/types/project';
+import Swal from 'sweetalert2';
 
 interface MilestoneModalProps {
   isOpen: boolean;
@@ -118,8 +119,20 @@ const MilestoneModal: React.FC<MilestoneModalProps> = ({
       (milestone) => milestone.title.trim() && milestone.description.trim()
     );
 
-    if (validMilestones.length === 0) {
-      alert('Please add at least one milestone with title and description.');
+    if(validMilestones.length === 0) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'No Milestones',
+        text: 'You have not added any milestones. Do you want to skip this step?',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, skip',
+        cancelButtonText: 'No, go back',
+        position: 'top-end',
+        toast: true,
+        timer: 5000,
+        timerProgressBar: true,
+      })
+
       return;
     }
 
