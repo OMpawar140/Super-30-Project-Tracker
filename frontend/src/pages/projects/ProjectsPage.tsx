@@ -377,6 +377,40 @@ const toggleAddTaskForm = (milestoneId : string) => {
 
 const addMilestone = async (projectId: string) => {
   try {
+    if( !newMilestoneData.name.trim() || !newMilestoneData.startDate || !newMilestoneData.endDate) {
+      await MySwal.fire({
+        title: 'Please fill in all required fields.',
+        text: 'Milestone name, start date, and end date are required.',
+        icon: 'warning',
+        confirmButtonColor: '#6366f1',
+        cancelButtonColor: '#6b7280',
+        background: '#18181b',
+        color: '#fff',
+        timer: 2000,
+        showConfirmButton: false,
+        toast: true,
+        position: 'top-end',
+      });
+      return;
+    }
+
+    if (new Date(newMilestoneData.startDate) > new Date(newMilestoneData.endDate)) {
+      await MySwal.fire({
+        title: 'Invalid date range',
+        text: 'Start date cannot be after end date.',
+        icon: 'error',
+        confirmButtonColor: '#6366f1',
+        cancelButtonColor: '#6b7280',
+        background: '#18181b',
+        color: '#fff',
+        timer: 2000,
+        showConfirmButton: false,
+        toast: true,
+        position: 'top-end',
+      });
+      return;
+    }
+
     const response = await callApi(() => apiService.milestones.createMilestone(projectId, newMilestoneData));
     if (response.success) {
       const newMilestone = response.data;
@@ -407,7 +441,21 @@ const addMilestone = async (projectId: string) => {
 };
 
 const deleteMilestone = async (projectId: string, milestoneId: string) => { 
-  if (!confirm('Are you sure you want to delete this milestone? This will also delete all associated tasks.')) {
+
+  const result = await MySwal.fire({
+    title: 'Delete this milestone?',
+    text: `This will also delete all tasks associated with this milestone.`,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'Yes, delete it',
+    cancelButtonText: 'No, keep it',
+    confirmButtonColor: '#6366f1',
+    cancelButtonColor: '#6b7280',
+    background: '#18181b',
+    color: '#fff',
+  });
+
+  if(!result.isConfirmed) {
     return;
   }
 
@@ -418,6 +466,18 @@ const deleteMilestone = async (projectId: string, milestoneId: string) => {
 
     if (response.success) {
       console.log(`Milestone with id ${milestoneId} deleted successfully.`);
+
+      await MySwal.fire({
+        title: 'Milestone deleted successfully',
+        icon: 'success',
+        confirmButtonColor: '#6366f1',
+        cancelButtonColor: '#6b7280',
+        background: '#18181b',
+        color: '#fff',
+        position: 'top-end',
+        toast: true,
+        timer: 3000,
+      });
 
       setProjects(prevProjects =>
         prevProjects.map(project =>
@@ -436,9 +496,6 @@ const deleteMilestone = async (projectId: string, milestoneId: string) => {
 };
 
 const deleteProject = async (projectId: string) => { 
-  // if (!confirm('Are you sure you want to delete this project? This project will be archived for 7 days before permanent deletion. You still have the option to restore it during this period.')) {
-  //   return;
-  // }
 
   const result = await MySwal.fire({
       title: 'Delete this project?',
@@ -520,11 +577,56 @@ const restoreProject = async (projectId: string) => {
 
 const addTask = async (projectId: string, milestoneId: string) => {
   try {
+    if (!newTaskData.title.trim() || !newTaskData.description.trim() || !newTaskData.assigneeId || !newTaskData.startDate || !newTaskData.endDate) {
+      await MySwal.fire({
+        title: 'Please fill in all required fields.',
+        text: 'All fields task title, description, start date, end date, assignee are required.',
+        icon: 'warning',
+        confirmButtonColor: '#6366f1',
+        cancelButtonColor: '#6b7280',
+        background: '#18181b',
+        color: '#fff',
+        timer: 2000,
+        showConfirmButton: false,
+        toast: true,
+        position: 'top-end',
+      });
+      return;
+    }
+
+    if (new Date(newTaskData.startDate) > new Date(newTaskData.endDate)) {
+      await MySwal.fire({
+        title: 'Invalid date range',
+        text: 'Start date cannot be after end date.',
+        icon: 'error',
+        confirmButtonColor: '#6366f1',
+        cancelButtonColor: '#6b7280',
+        background: '#18181b',
+        color: '#fff',
+        timer: 2000,
+        showConfirmButton: false,
+        toast: true,
+        position: 'top-end',
+      });
+      return;
+    }
     const response = await callApi(() => apiService.tasks.createTask(milestoneId, newTaskData));
     console.log(response);
-    window.location.reload();
+    // window.location.reload();
     if (response.success) {
       const newTask = response.data; // The newly created task
+
+      await MySwal.fire({
+        title: 'Task added successfully',
+        icon: 'success',
+        confirmButtonColor: '#6366f1',
+        cancelButtonColor: '#6b7280',
+        background: '#18181b',
+        color: '#fff',
+        position: 'top-end',
+        toast: true,
+        timer: 3000,
+      });
       
       setProjects(prev => prev.map(project => {
         if (project.id === projectId) {
@@ -561,7 +663,19 @@ const addTask = async (projectId: string, milestoneId: string) => {
 };
 
 const deleteTask = async (projectId: string, taskId: string) => {
-  if (!confirm('Are you sure you want to delete this task?')) {
+  const result = await MySwal.fire({
+    title: 'Delete this task?',
+    text: `Are you sure you want to delete this task? This action cannot be undone.`,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'Yes, delete it',
+    cancelButtonText: 'No, keep it',
+    confirmButtonColor: '#6366f1',
+    cancelButtonColor: '#6b7280',
+    background: '#18181b',
+    color: '#fff',
+  });
+  if(!result.isConfirmed) {
     return;
   }
 
@@ -571,6 +685,17 @@ const deleteTask = async (projectId: string, taskId: string) => {
     console.log(response);
     if (response.success) {
       console.log(`Task with id ${taskId} deleted successfully.`);
+      await MySwal.fire({
+        title: 'Task deleted successfully',
+        icon: 'success',
+        confirmButtonColor: '#6366f1',
+        cancelButtonColor: '#6b7280',
+        background: '#18181b',
+        color: '#fff',
+        position: 'top-end',
+        toast: true,
+        timer: 3000,
+      });
       setProjects(prevProjects =>
         prevProjects.map(project =>
           project.id === projectId
@@ -584,10 +709,21 @@ const deleteTask = async (projectId: string, taskId: string) => {
             : project
         )
       );
-     
     }
   } catch (error) {
     console.error('Error deleting task:', error);
+    await MySwal.fire({
+      title: 'Failed to delete task',
+      text: 'Please try again.',
+      icon: 'error',
+      confirmButtonColor: '#6366f1',
+      cancelButtonColor: '#6b7280',
+      background: '#18181b',
+      color: '#fff',
+      position: 'top-end',
+      toast: true,
+      timer: 3000,
+    });
   }
 };
 
@@ -1219,7 +1355,7 @@ const getReviewStatusIcon = (status: string) => {
           title='Role Filter'
           value={roleFilter}
           onChange={(e) => setRoleFilter(e.target.value)}
-          className="appearance-none bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 pr-8 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-300"
+          className="appearance-none bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 pr-8 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-300 cursor-pointer"
         >
           <option value="All">All Roles</option>
           <option value="ADMIN">Admin</option>

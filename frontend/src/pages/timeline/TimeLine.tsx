@@ -282,9 +282,6 @@ const ProjectDetailsModal: React.FC<{
             `}>
               {event.status}
             </span>
-            <span className="text-sm text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-700 px-2 py-1 rounded border border-gray-300 dark:border-gray-600">
-              {event.type}
-            </span>
           </div>
           
           {/* Dates */}
@@ -862,9 +859,6 @@ const TimeLinePage: React.FC = () => {
                                   {formatDate(event.startDate)}
                                   {event.type !== 'milestone' && ` - ${formatDate(event.endDate)}`}
                                 </p>
-                                <p className="text-sm text-gray-700 dark:text-gray-300">
-                                  {event.description}
-                                </p>
                               </div>
                               <div className="flex flex-col items-end gap-2 ml-4">
                                 <span className={`
@@ -872,9 +866,6 @@ const TimeLinePage: React.FC = () => {
                                   ${getStatusColor(event.status)}
                                 `}>
                                   {event.status}
-                                </span>
-                                <span className="text-xs text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-700 px-2 py-1 rounded border border-gray-300 dark:border-gray-600">
-                                  {event.type}
                                 </span>
                               </div>
                             </div>
