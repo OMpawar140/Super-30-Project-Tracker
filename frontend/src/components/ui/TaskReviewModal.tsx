@@ -105,16 +105,21 @@ const TaskReviewModal: React.FC<TaskReviewModalProps> = ({
         console.log('Successfully loaded', response.data.files?.length || 0, 'files for task', taskId);
         
         // Transform the response data to match expected format
-        const transformedFiles = response.data.files?.map((file: any) => ({
-          id: file.id || file.filename,
-          filename: file.filename || file.originalName || 'Unknown filename',
-          originalName: file.originalName || file.filename || 'Unknown file',
-          size: file.size || file.metadata?.size || 0,
-          uploadedAt: file.uploadedAt || file.metadata?.lastModified || new Date().toISOString(),
-          url: file.url || '',
-          mimeType: file.mimeType || file.metadata?.contentType || 'application/octet-stream',
-          preview: file.preview !== undefined ? file.preview : true
-        })) || [];
+        const transformedFiles = response.data.files?.map((file: any) => {
+          // Handle the nested content structure
+          const fileData = file.content || file;
+          
+          return {
+            id: fileData.id || fileData.filename,
+            filename: fileData.filename || fileData.originalName || 'Unknown filename',
+            originalName: fileData.originalName || fileData.filename || 'Unknown file',
+            size: fileData.size || file.metadata?.size || 0,
+            uploadedAt: fileData.uploadedAt || file.metadata?.lastModified || new Date().toISOString(),
+            url: fileData.url || '',
+            mimeType: fileData.mimeType || file.metadata?.contentType || 'application/octet-stream',
+            preview: fileData.preview !== undefined ? fileData.preview : true
+          };
+        }) || [];
         
         setFiles(transformedFiles);
       } else {
