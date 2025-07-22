@@ -1,4 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
+const NotificationTriggers = require('../utils/notificationTriggers');
 const prisma = new PrismaClient();
 
 class TaskService {
@@ -703,8 +704,21 @@ async createTask(milestoneId, userEmail, taskData) {
 
         return taskReview;
       });
+      // Send notification to task assignee about review completion
+      try {
+        await NotificationTriggers.taskReviewCompleted(taskReview.task, {
+          id: taskReview.id,
+          status: taskReview.status,
+          comment: taskReview.comment,
+          reviewerId: taskReview.reviewerId
+        });
+        console.log(`Notification sent for task review: ${taskReview.task.title} - ${taskReview.status}`);
+      } catch (notificationError) {
+        console.error('Failed to send task review notification:', notificationError);
+      }
 
       return result;
+      
     } catch (error) {
       console.error('Error in submitTaskReview:', error);
       throw error;
@@ -719,9 +733,12 @@ async createTask(milestoneId, userEmail, taskData) {
       if (!task) {
         return null;
       }
-
       // Allow if user is assignee or has management permissions
-      const hasPermission = await this.checkTaskPermission(taskId, userEmail, ['CREATOR', 'ADMIN', 'TASK_MANAGER']);
+      const hasPermission = await this.checkTaskPermission(taskId, userEmail, [
+        "CREATOR",
+        "ADMIN",
+        "TASK_MANAGER",
+      ]);
       const isAssignee = task.assigneeId === userEmail;
 
       if (!hasPermission && !isAssignee) {
@@ -730,32 +747,72 @@ async createTask(milestoneId, userEmail, taskData) {
 
       const updatedTask = await prisma.task.update({
         where: { id: taskId },
-        data: { 
+        data: {
           status,
-          updatedAt: new Date()
+          updatedAt: new Date(),
         },
         include: {
           milestone: {
-            select: {
-              id: true,
-              name: true
-            }
+            include: {
+              project: {
+                select: {
+                  id: true,
+                  name: true,
+                  members: {
+                    where: {
+                      role: {
+                        in: ["CREATOR", "ADMIN"],
+                      },
+                    },
+                    select: {
+                      userId: true,
+                    },
+                  },
+                },
+              },
+            },
           },
           assignee: {
             select: {
               email: true,
-              skillset: true
-            }
-          }
-        }
+              skillset: true,
+            },
+          },
+        },
       });
+
+      // Trigger notification when task is submitted for review
+      if (status === "IN_REVIEW") {
+        try {
+          const reviewerEmails = updatedTask.milestone.project.members
+            .map((member) => member.userId)
+            .filter((email) => email !== userEmail); 
+
+          if (reviewerEmails.length > 0) {
+            await NotificationTriggers.taskReviewRequested(
+              updatedTask,
+              reviewerEmails
+            );
+            console.log(
+              `Review request notifications sent for task: ${updatedTask.title}`
+            );
+          }
+        } catch (notificationError) {
+          console.error(
+            "Failed to send task review request notification:",
+            notificationError
+          );
+          // Don't throw - task status was updated successfully, notification failure shouldn't break the flow
+        }
+      }
 
       return updatedTask;
     } catch (error) {
-      console.error('Error in updateTaskStatus:', error);
+      console.error("Error in updateTaskStatus:", error);
       throw error;
     }
   }
+
 
   // Assign task to user
   async assignTask(taskId, userEmail, assigneeId) {
