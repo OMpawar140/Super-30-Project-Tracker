@@ -16,7 +16,7 @@ import UserProjectsPDF from '@/components/ui/UserProjectsPDF';
 import UserTasksPDF from '@/components/ui/UserTasksPDF';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
-import { type User as FirebaseUser } from 'firebase/auth';
+// import { type User as FirebaseUser } from 'firebase/auth';
 const MySwal = withReactContent(Swal);
 
 // Types for our data (updated to match backend structure)
@@ -1281,7 +1281,7 @@ const getReviewStatusIcon = (status: string) => {
       `}</style>
 
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-40 transition-colors duration-300">
+      <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
@@ -1364,7 +1364,6 @@ const getReviewStatusIcon = (status: string) => {
         </select>
         <HiFilter className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-4 h-4 pointer-events-none" />
       </div>
-
           </div>
         </div>
 

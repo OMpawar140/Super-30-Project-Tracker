@@ -26,12 +26,12 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({ isConnected,
         ) : (
           <WifiOff className="h-4 w-4 text-red-500" />
         )}
-        <span className="text-sm text-muted-foreground">
+        <span className="text-sm text-muted-foreground dark:text-gray-200">
           Real-time notifications
         </span>
       </div>
       
-      <Badge variant={isConnected ? "default" : "secondary"}>
+      <Badge variant={isConnected ? "default" : "secondary"} className="text-xs font-medium dark:text-gray-300">
         {isConnected ? "Connected" : "Disconnected"}
       </Badge>
     </div>

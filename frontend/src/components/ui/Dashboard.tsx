@@ -1,6 +1,6 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useState, useEffect } from 'react';
-import { HiPlus, HiDotsVertical, HiClock, HiUsers, HiCheck } from 'react-icons/hi';
+import { HiPlus, HiClock, HiUsers, HiCheck } from 'react-icons/hi';
 import  Card  from './Card';
 import Button from './Button type 2';
 import Modal from './Modal';

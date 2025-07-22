@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // MilestoneModal.tsx
 import React, { useState } from 'react';
-import { HiPlus, HiTrash, HiCalendar } from 'react-icons/hi';
+import { HiPlus, HiTrash } from 'react-icons/hi';
 import { Button } from './button';
 import Input from './Input type 2';
 import TaskForm from './TaskForm';
@@ -175,6 +175,7 @@ const MilestoneModal: React.FC<MilestoneModalProps> = ({
                       type="button"
                       variant="outline"
                       size="sm"
+                      className="text-gray-600 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-200"
                       onClick={() =>
                         setExpandedMilestone(
                           expandedMilestone === milestoneIndex ? null : milestoneIndex
@@ -206,6 +207,7 @@ const MilestoneModal: React.FC<MilestoneModalProps> = ({
                     }
                     placeholder="Enter milestone title"
                     required
+                    className={`block w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-gray-200`}
                   />
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -229,10 +231,12 @@ const MilestoneModal: React.FC<MilestoneModalProps> = ({
                     onChange={(e) =>
                       updateMilestone(milestoneIndex, 'startDate', e.target.value)
                     }
-                    icon={<HiCalendar className="w-5 h-5" />}
+                   
                     min={projectDateRange.startDate}
                     max={projectDateRange.endDate}
                     required
+                  className={`block w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-gray-200`}
+
                   />
                   <Input
                     type="date"
@@ -241,10 +245,10 @@ const MilestoneModal: React.FC<MilestoneModalProps> = ({
                     onChange={(e) =>
                       updateMilestone(milestoneIndex, 'endDate', e.target.value)
                     }
-                    icon={<HiCalendar className="w-5 h-5" />}
                     min={milestone.startDate || projectDateRange.startDate}
                     max={projectDateRange.endDate}
                     required
+                  className={`block w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-gray-200`}
                   />
                 </div>
 
@@ -270,7 +274,7 @@ const MilestoneModal: React.FC<MilestoneModalProps> = ({
               type="button"
               variant="outline"
               onClick={addMilestone}
-              className="w-full border-dashed"
+              className="w-full border-dashed border-2 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white flex items-center justify-center gap-2"
             >
               <HiPlus className="w-4 h-4 mr-2" />
               Add Another Milestone
@@ -279,10 +283,10 @@ const MilestoneModal: React.FC<MilestoneModalProps> = ({
         </div>
 
         <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
-          <Button type="button" variant="outline" onClick={handleSkip}>
+          <Button type="button" variant="outline" onClick={handleSkip} className="border-2 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white flex items-center justify-center gap-2">
             Skip Milestones
           </Button>
-          <Button type="button" onClick={handleSave}>
+          <Button type="button" onClick={handleSave} className="  border-2 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white flex items-center justify-center gap-2">
             Save Milestones & Tasks
           </Button>
         </div>

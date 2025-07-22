@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState } from 'react';
-import { HiPlus, HiTrash, HiCalendar } from 'react-icons/hi';
+import { HiPlus, HiTrash } from 'react-icons/hi';
 import { Button } from './button';
 import Input from './Input type 2';
 import type {
@@ -105,6 +106,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
           type="button"
           variant="outline"
           size="sm"
+          className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
           onClick={() => setShowAddTask(!showAddTask)}
         >
           <HiPlus className="w-4 h-4 mr-1" />
@@ -127,8 +129,9 @@ const TaskForm: React.FC<TaskFormProps> = ({
                     value={task.title}
                     onChange={(e) => updateTask(index, 'title', e.target.value)}
                     placeholder="Enter task title"
-                    className="mb-2"
+                    
                     required
+                    className={`mb-2 block w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-gray-200`}
                   />
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Description
@@ -159,20 +162,22 @@ const TaskForm: React.FC<TaskFormProps> = ({
                   label="Start Date"
                   value={task.startDate}
                   onChange={(e) => updateTask(index, 'startDate', e.target.value)}
-                  icon={<HiCalendar className="w-4 h-4" />}
+                  // icon={<HiCalendar className="w-4 h-4" />}
                   min={milestoneStartDate}
                   max={milestoneEndDate}
                   required
+                  className={`block w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-gray-200`}
                 />
                 <Input
                   type="date"
                   label="End Date"
                   value={task.endDate}
                   onChange={(e) => updateTask(index, 'endDate', e.target.value)}
-                  icon={<HiCalendar className="w-4 h-4" />}
+                  // icon={<HiCalendar className="w-4 h-4" />}
                   min={task.startDate || milestoneStartDate}
                   max={milestoneEndDate}
                   required
+                  className={`block w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-gray-200`}
                 />
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -229,6 +234,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
               onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
               placeholder="Enter task title"
               required
+                    className={`block w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-gray-200`}
             />
             
             <div>
@@ -251,7 +257,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
                 label="Start Date"
                 value={newTask.startDate}
                 onChange={(e) => setNewTask({ ...newTask, startDate: e.target.value })}
-                icon={<HiCalendar className="w-4 h-4" />}
+                    className={`block w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-gray-200`}                
                 min={milestoneStartDate}
                 max={milestoneEndDate}
                 required
@@ -261,7 +267,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
                 label="End Date"
                 value={newTask.endDate}
                 onChange={(e) => setNewTask({ ...newTask, endDate: e.target.value })}
-                icon={<HiCalendar className="w-4 h-4" />}
+                className={`block w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-gray-200`}
                 min={newTask.startDate || milestoneStartDate}
                 max={milestoneEndDate}
                 required
@@ -311,6 +317,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
                 variant="outline"
                 size="sm"
                 onClick={() => setShowAddTask(false)}
+                className="text-gray-600 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-200"
               >
                 Cancel
               </Button>
@@ -318,6 +325,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
                 type="button"
                 size="sm"
                 onClick={handleAddTask}
+                className="bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
               >
                 Add Task
               </Button>

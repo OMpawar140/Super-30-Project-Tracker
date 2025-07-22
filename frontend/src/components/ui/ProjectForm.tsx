@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useState, useCallback, useMemo } from 'react';
-import { HiCalendar } from 'react-icons/hi';
+// import { HiCalendar } from 'react-icons/hi';
 import { Button } from './button';
 import Input from './Input type 2';
 import MemberModal from './MemberModal';
@@ -409,6 +410,9 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
             required
             error={formErrors.name}
             disabled={isAnyLoading}
+            className={`block w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-gray-200 ${
+              formErrors.description ? 'border-red-500' : ''
+            }`}
           />
         </div>
 
@@ -422,10 +426,8 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
             onChange={handleChange}
             rows={4}
             disabled={isAnyLoading}
-            className={`w-full px-4 py-2 rounded-md border focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-700 dark:text-white ${
-              formErrors.description 
-                ? 'border-red-500 dark:border-red-500' 
-                : 'border-gray-300 dark:border-gray-600'
+            className={`block w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-gray-200 ${
+              formErrors.description ? 'border-red-500' : ''
             }`}
             placeholder="Enter project description"
             required
@@ -445,10 +447,12 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
               name="startDate"
               value={formData.startDate}
               onChange={handleChange}
-              icon={<HiCalendar className="w-5 h-5" />}
               required
               error={formErrors.startDate}
               disabled={isAnyLoading}
+              className={`block w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-gray-200 ${
+              formErrors.description ? 'border-red-500' : ''
+            }`}
             />
           </div>
           <div>
@@ -458,10 +462,12 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
               name="endDate"
               value={formData.endDate}
               onChange={handleChange}
-              icon={<HiCalendar className="w-5 h-5" />}
               required
               error={formErrors.endDate}
               disabled={isAnyLoading}
+              className={`block w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-gray-200 ${
+              formErrors.description ? 'border-red-500' : ''
+            }`}
             />
           </div>
         </div>
@@ -472,14 +478,14 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
             variant="outline"
             onClick={onCancel}
             disabled={isAnyLoading}
-            className="cursor-pointer"
+            className="cursor-pointer flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-200 "
           >
             Cancel
           </Button>
           <Button 
             type="submit" 
             disabled={isAnyLoading || !isFormValid}
-            className="cursor-pointer flex items-center gap-2"
+            className="cursor-pointer flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors duration-200"
           >
             {loadingStates.creatingProject && <LoadingSpinner size="sm" />}
             {loadingStates.creatingProject 

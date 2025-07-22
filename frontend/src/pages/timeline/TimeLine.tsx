@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useState, useEffect, useMemo } from 'react';
 import { Calendar, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Clock, User, Target, Loader2, AlertCircle, X, Info } from 'lucide-react';
 import { apiService, useApiCall } from '@/services/api';
@@ -498,10 +499,10 @@ const TimeLinePage: React.FC = () => {
   };
 
   // Check if a date falls within a given range
-  const isDateInRange = (date: Date, startDate: Date, endDate: Date): boolean => {
-    const dateTime = date.getTime();
-    return dateTime >= startDate.getTime() && dateTime <= endDate.getTime();
-  };
+  // const isDateInRange = (date: Date, startDate: Date, endDate: Date): boolean => {
+  //   const dateTime = date.getTime();
+  //   return dateTime >= startDate.getTime() && dateTime <= endDate.getTime();
+  // };
 
   // Check if a date overlaps with a given range
   const doesDateRangeOverlap = (
@@ -701,7 +702,7 @@ const TimeLinePage: React.FC = () => {
       `}</style>
 
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-40 transition-colors duration-300">
+      <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-4">

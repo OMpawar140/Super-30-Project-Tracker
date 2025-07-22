@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 export interface Notification {
+  priority: string;
   id: string;
   type: NotificationType;
   title: string;

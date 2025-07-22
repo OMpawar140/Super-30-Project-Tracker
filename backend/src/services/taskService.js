@@ -706,6 +706,7 @@ async createTask(milestoneId, userEmail, taskData) {
       });
       // Send notification to task assignee about review completion
       try {
+        console.log(taskReview);
         await NotificationTriggers.taskReviewCompleted(taskReview.task, {
           id: taskReview.id,
           status: taskReview.status,
