@@ -1,4 +1,4 @@
-# Project Management System
+# Project Management System.
 
 A comprehensive project management application built with modern web technologies, featuring role-based access control, milestone tracking, and task management capabilities.
 
