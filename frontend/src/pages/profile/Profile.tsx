@@ -411,7 +411,7 @@ const Profile: React.FC = () => {
                     <p className="text-slate-800 dark:text-slate-200 font-medium">Profile created</p>
                     <p className="text-slate-500 dark:text-slate-400 text-sm">Welcome to the platform!</p>
                   </div>
-                  <span className="text-slate-400 dark:text-slate-500 text-sm">Today</span>
+                  {/* <span className="text-slate-400 dark:text-slate-500 text-sm">Today</span> */}
                 </div>
                 <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl border border-slate-200 dark:border-slate-600">
                   <div className="w-3 h-3 bg-blue-500 rounded-full shadow-lg"></div>
@@ -419,7 +419,6 @@ const Profile: React.FC = () => {
                     <p className="text-slate-800 dark:text-slate-200 font-medium">Connected Google account</p>
                     <p className="text-slate-500 dark:text-slate-400 text-sm">Secure authentication enabled</p>
                   </div>
-                  <span className="text-slate-400 dark:text-slate-500 text-sm">Today</span>
                 </div>
               </div>
             </div>
