@@ -189,14 +189,20 @@ class TaskService {
               skillset: true,
             }
           },
-          // // Task creator information
-          // creator: {
-          //   select: {
-          //     email: true,
-          //     skillset: true,
-          //   }
-          // },
-
+          // Task reviews (for task completers to see feedback)
+          reviews: {
+            include: {
+              reviewer: {
+                select: {
+                  email: true,
+                  skillset: true
+                }
+              }
+            },
+            orderBy: {
+              createdAt: 'desc'
+            }
+          },
           // Complete milestone and project hierarchy
           milestone: {
             select: {
@@ -303,6 +309,9 @@ class TaskService {
           ),
           canAssign: ['CREATOR', 'ADMIN'].some(role => 
             this.checkTaskPermission(taskId, userEmail, [role])
+          ),
+          canViewReviews: task.assignee?.email === userEmail || ['CREATOR', 'ADMIN'].some(role => 
+            this.checkTaskPermission(taskId, userEmail, [role])
           )
         }
       };
@@ -313,7 +322,74 @@ class TaskService {
       throw error;
     }
   }
-  
+
+  // Get task reviews (for task completer to see feedback)
+  async getTaskReviews(taskId, userEmail) {
+    try {
+      // Check if user has permission to view reviews
+      // Task assignee can view reviews of their task, creators/admins can view all reviews
+      const hasPermission = await this.checkTaskPermission(
+        taskId, 
+        userEmail, 
+        ['CREATOR', 'ADMIN', 'TASK_COMPLETER']
+      );
+      
+      if (!hasPermission) {
+        return null;
+      }
+
+      // Additional check: if user is task completer, ensure they are assigned to this task
+      const task = await prisma.task.findUnique({
+        where: { id: taskId },
+        select: {
+          assigneeId: true,
+          assignee: {
+            select: {
+              email: true
+            }
+          }
+        }
+      });
+
+      if (!task) {
+        return null;
+      }
+
+      // If user is not creator/admin, they must be the assignee to view reviews
+      const isCreatorOrAdmin = await this.checkTaskPermission(taskId, userEmail, ['CREATOR', 'ADMIN']);
+      if (!isCreatorOrAdmin && task.assignee?.email !== userEmail) {
+        return null;
+      }
+
+      const reviews = await prisma.taskReview.findMany({
+        where: { taskId },
+        include: {
+          reviewer: {
+            select: {
+              email: true,
+              skillset: true
+            }
+          },
+          task: {
+            select: {
+              id: true,
+              title: true,
+              status: true
+            }
+          }
+        },
+        orderBy: {
+          createdAt: 'desc'
+        }
+      });
+
+      return reviews;
+    } catch (error) {
+      console.error('Error in getTaskReviews:', error);
+      throw error;
+    }
+  }
+
   // Create new task
 async createTask(milestoneId, userEmail, taskData) {
   try {
@@ -532,6 +608,7 @@ async createTask(milestoneId, userEmail, taskData) {
     }
   }
 
+  // Submit task review
   async submitTaskReview(taskId, userEmail, reviewData) {
     try {
       // Check if user has permission to review tasks in this milestone
@@ -542,6 +619,11 @@ async createTask(milestoneId, userEmail, taskData) {
             select: {
               id: true,
               projectId: true
+            }
+          },
+          assignee: {
+            select: {
+              email: true
             }
           }
         }
@@ -561,43 +643,67 @@ async createTask(milestoneId, userEmail, taskData) {
         return null;
       }
 
-      const taskReview = await prisma.taskReview.create({
-        data: {
-          status: reviewData.status,
-          comment: reviewData.comment || null,
-          taskId,
-          reviewerId: userEmail,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        },
-        include: {
-          task: {
-            select: {
-              id: true,
-              title: true,
-              milestone: {
-                select: {
-                  id: true,
-                  name: true,
-                  project: {
-                    select: {
-                      id: true,
-                      name: true
+      // Update task status based on review status
+      const taskUpdateData = {};
+      if (reviewData.status === 'APPROVED') {
+        taskUpdateData.status = 'COMPLETED';
+      } else if (reviewData.status === 'REJECTED') {
+        taskUpdateData.status = 'IN_PROGRESS'; // Send back to in progress for rework
+      }
+
+      // Create review and update task in a transaction
+      const result = await prisma.$transaction(async (tx) => {
+        // Create the review
+        const taskReview = await tx.taskReview.create({
+          data: {
+            status: reviewData.status,
+            comment: reviewData.comment || null,
+            taskId,
+            reviewerId: userEmail,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          },
+          include: {
+            task: {
+              select: {
+                id: true,
+                title: true,
+                milestone: {
+                  select: {
+                    id: true,
+                    name: true,
+                    project: {
+                      select: {
+                        id: true,
+                        name: true
+                      }
                     }
                   }
                 }
               }
-            }
-          },
-          reviewer: {
-            select: {
-              email: true,
-              skillset: true
+            },
+            reviewer: {
+              select: {
+                email: true,
+                skillset: true
+              }
             }
           }
-        }
-      });
+        });
 
+        // Update task status if needed
+        if (Object.keys(taskUpdateData).length > 0) {
+          await tx.task.update({
+            where: { id: taskId },
+            data: {
+              ...taskUpdateData,
+              updatedAt: new Date()
+            }
+          });
+        }
+
+        return taskReview;
+      });
       // Send notification to task assignee about review completion
       try {
         await NotificationTriggers.taskReviewCompleted(taskReview.task, {
@@ -611,7 +717,8 @@ async createTask(milestoneId, userEmail, taskData) {
         console.error('Failed to send task review notification:', notificationError);
       }
 
-      return taskReview;
+      return result;
+      
     } catch (error) {
       console.error('Error in submitTaskReview:', error);
       throw error;

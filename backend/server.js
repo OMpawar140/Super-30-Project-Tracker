@@ -18,6 +18,7 @@ const milestoneRoutes = require('./src/routes/milestoneRoutes');
 const taskRoutes = require('./src/routes/taskRoutes');
 const fileRoutes = require('./src/routes/fileRoutes');
 const notificationRoutes = require('./src/routes/notificationRoutes');
+const userRoutes = require('./src/routes/userRoutes'); // Add this line
 
 // Initialize Express app
 const app = express();
@@ -95,6 +96,7 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api', protectedRoutes);
 app.use('/api/files', fileRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/users', userRoutes); // Add this line
 
 // 404 handler
 app.use('*', (req, res) => {

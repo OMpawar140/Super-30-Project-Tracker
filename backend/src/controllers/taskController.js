@@ -181,6 +181,27 @@ class TaskController {
     }
   }
 
+  // Get task reviews for a specific task (for task completer to see feedback)
+  async getTaskReviews(req, res) {
+    try {
+      const { id } = req.params;
+      const userEmail = req.user.email;
+
+      console.log('Getting task reviews for task:', id, 'by user:', userEmail);
+
+      const reviews = await taskService.getTaskReviews(id, userEmail);
+      
+      if (reviews === null) {
+        return errorResponse(res, 'Task not found or access denied', 404);
+      }
+
+      return successResponse(res, 'Task reviews retrieved successfully', reviews);
+    } catch (error) {
+      console.error('Error getting task reviews:', error);
+      return errorResponse(res, 'Failed to retrieve task reviews', 500);
+    }
+  }
+
   // Submit Task Review
   async submitReview(req, res) {
     try {
@@ -197,16 +218,16 @@ class TaskController {
         reviewerId: userEmail
       };
 
-      const task = await taskService.submitTaskReview(id, userEmail, reviewData);
+      const review = await taskService.submitTaskReview(id, userEmail, reviewData);
       
-      if (!task) {
+      if (!review) {
         return errorResponse(res, 'Task not found or access denied', 404);
       }
 
-      return successResponse(res, 'Task status updated successfully', task);
+      return successResponse(res, 'Task review submitted successfully', review);
     } catch (error) {
-      console.error('Error updating task status:', error);
-      return errorResponse(res, 'Failed to update task status', 500);
+      console.error('Error submitting task review:', error);
+      return errorResponse(res, 'Failed to submit task review', 500);
     }
   }
 
