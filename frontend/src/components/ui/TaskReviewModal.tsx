@@ -94,49 +94,6 @@ const TaskReviewModal: React.FC<TaskReviewModalProps> = ({
     }
   }, [isOpen]);
 
-  // const fetchTaskFiles = async () => {
-  //   try {
-  //     setLoading(true);
-  //     setError(null);
-  //     const response = await callApi(() => apiService.files.getFileDetails(taskId));
-  //     console.log('Fetched task files:', response);
-
-  //     // Check if response indicates a 404 error
-  //     if (response?.status === 404 || 
-  //         (response?.message && response.message.toLowerCase().includes('no files found')) ||
-  //         (!response?.data && response?.status >= 400)) {
-  //       setError('Task files not found');
-  //       return;
-  //     }
-      
-  //     // Validate response data exists
-  //     if (!response?.data) {
-  //       throw new Error('No file data received');
-  //     }
-  //     // setFiles(prevFiles => {
-  //     //   const currentFiles = Array.isArray(prevFiles) ? prevFiles : [];
-  //     //   return [...currentFiles, response.data];
-  //     // });
-  //     setFiles(prevFiles => {
-  //       const currentFiles = Array.isArray(prevFiles) ? prevFiles : [];
-  //       const newFile = response.data;
-        
-  //       // Remove duplicates based on file ID or name (adjust the key as needed)
-  //       const filteredFiles = currentFiles.filter(file => 
-  //         file.id !== newFile.id // Change 'id' to whatever unique identifier your files have
-  //       );
-        
-  //       // Add the new file
-  //       return [...filteredFiles, newFile];
-  //     });
-  //   } catch (err) {
-  //     console.error('Error fetching task files:', err);
-  //     setError('No task files available');
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
   const fetchTaskFiles = async () => {
     try {
       setLoading(true);
@@ -144,77 +101,30 @@ const TaskReviewModal: React.FC<TaskReviewModalProps> = ({
       const response = await callApi(() => apiService.files.getFileDetails(taskId));
       console.log('Fetched task files:', response);
 
-      // Check if response indicates a 404 error
-      if (response?.status === 404 || 
-          (response?.message && response.message.toLowerCase().includes('no files found')) ||
-          (!response?.data && response?.status >= 400)) {
-        setError('Task files not found');
-        return;
-      }
-      
-      // Validate response data exists
-      if (!response?.data) {
-        throw new Error('No file data received');
-      }
-
-      // Handle the new multiple files response structure
-      const responseData = response.data;
-      
-      // Check if it's the new format with multiple files
-      if (responseData.files && Array.isArray(responseData.files)) {
-        // New format: response.data contains { taskId, totalFiles, files: [...] }
-        const newFiles = responseData.files.map((file, index) => ({
-          // Create a consistent structure for each file
-          id: file.filename || `${taskId}-${index}`, // Use filename as ID, fallback to index
-          filename: file.filename,
-          preview: file.preview,
-          metadata: file.metadata,
-          content: file.content,
-          message: file.message,
-          error: file.error,
-          taskId: responseData.taskId,
-          // Add any other properties your frontend expects
-        }));
-
-        setFiles(prevFiles => {
-          const currentFiles = Array.isArray(prevFiles) ? prevFiles : [];
-          
-          // Remove any existing files for this taskId to avoid duplicates
-          const filteredFiles = currentFiles.filter(file => 
-            file.taskId !== taskId
-          );
-          
-          // Add all new files for this task
-          return [...filteredFiles, ...newFiles];
-        });
-
-        console.log(`Successfully loaded ${newFiles.length} files for task ${taskId}`);
+      if (response.success && response.data) {
+        console.log('Successfully loaded', response.data.files?.length || 0, 'files for task', taskId);
+        
+        // Transform the response data to match expected format
+        const transformedFiles = response.data.files?.map((file: any) => ({
+          id: file.id || file.filename,
+          filename: file.filename || file.originalName || 'Unknown filename',
+          originalName: file.originalName || file.filename || 'Unknown file',
+          size: file.size || file.metadata?.size || 0,
+          uploadedAt: file.uploadedAt || file.metadata?.lastModified || new Date().toISOString(),
+          url: file.url || '',
+          mimeType: file.mimeType || file.metadata?.contentType || 'application/octet-stream',
+          preview: file.preview !== undefined ? file.preview : true
+        })) || [];
+        
+        setFiles(transformedFiles);
       } else {
-        // Fallback: Handle old format (single file) for backward compatibility
-        const newFile = {
-          id: responseData.filename || responseData.id || Date.now().toString(),
-          ...responseData,
-          taskId: taskId
-        };
-
-        setFiles(prevFiles => {
-          const currentFiles = Array.isArray(prevFiles) ? prevFiles : [];
-          
-          // Remove duplicates based on file ID
-          const filteredFiles = currentFiles.filter(file => 
-            file.id !== newFile.id
-          );
-          
-          // Add the new file
-          return [...filteredFiles, newFile];
-        });
-
-        console.log('Successfully loaded single file for task', taskId);
+        setFiles([]);
+        setError('No files found for this task');
       }
-
     } catch (err) {
       console.error('Error fetching task files:', err);
       setError('No task files available');
+      setFiles([]);
     } finally {
       setLoading(false);
     }
@@ -265,17 +175,23 @@ const TaskReviewModal: React.FC<TaskReviewModalProps> = ({
     }
   };
 
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
+  const formatFileSize = (bytes: number | undefined): string => {
+    if (!bytes || isNaN(bytes) || bytes === 0) return 'Unknown size';
+    
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    const size = (bytes / Math.pow(1024, i)).toFixed(1);
+    
+    return `${size} ${sizes[i]}`;
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | undefined): string => {
+    if (!dateString) return 'Unknown date';
+    
     try {
       const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Invalid date';
+      
       return date.toLocaleDateString('en-US', { 
         month: 'short', 
         day: 'numeric', 
@@ -284,12 +200,12 @@ const TaskReviewModal: React.FC<TaskReviewModalProps> = ({
         minute: '2-digit'
       });
     } catch (error) {
-      console.error('Invalid date format:', dateString, error);
-      return 'Invalid Date';
+      console.error('Error formatting date:', error);
+      return 'Invalid date';
     }
   };
 
-  const getFileIcon = (mimeType: string) => {
+  const getFileIcon = (mimeType: string | undefined) => {
     if (!mimeType) return <HiDocumentText className="w-5 h-5 text-gray-500" />;
     if (mimeType.startsWith('image/')) {
       return <HiEye className="w-5 h-5 text-blue-500" />;
@@ -378,7 +294,7 @@ const TaskReviewModal: React.FC<TaskReviewModalProps> = ({
                     {getFileIcon(file.mimeType)}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                        {file.originalName}
+                        {file.originalName || file.filename || 'Unknown file'}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">
                         {formatFileSize(file.size)} • Submitted {formatDate(file.uploadedAt)}
@@ -386,24 +302,19 @@ const TaskReviewModal: React.FC<TaskReviewModalProps> = ({
                     </div>
                     <div className="flex items-center gap-1">
                       <button
-                        onClick={() => window.open(file.url, '_blank')}
+                        onClick={() => {
+                          if (file.url) {
+                            window.open(file.url, '_blank');
+                          } else {
+                            console.error('No URL available for file:', file);
+                          }
+                        }}
                         className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors rounded-md hover:bg-gray-100 dark:hover:bg-gray-600"
                         title="View file"
+                        disabled={!file.url}
                       >
                         <HiEye className="w-4 h-4" />
                       </button>
-                      {/* <button
-                        onClick={() => {
-                          const link = document.createElement('a');
-                          link.href = file.url;
-                          link.download = file.originalName;
-                          link.click();
-                        }}
-                        className="p-2 text-gray-400 hover:text-green-600 dark:hover:text-green-400 transition-colors rounded-md hover:bg-gray-100 dark:hover:bg-gray-600"
-                        title="Download file"
-                      >
-                        <HiDownload className="w-4 h-4" />
-                      </button> */}
                     </div>
                   </div>
                 ))}

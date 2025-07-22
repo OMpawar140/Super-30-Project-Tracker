@@ -1616,6 +1616,65 @@ async createTask(milestoneId, userEmail, taskData) {
       throw error;
     }
   }
+
+  // Get task files (for file management)
+  async getTaskFiles(taskId, userEmail) {
+    try {
+      // Check if user has permission to view task files
+      const hasPermission = await this.checkTaskPermission(
+        taskId, 
+        userEmail, 
+        ['CREATOR', 'ADMIN', 'TASK_COMPLETER']
+      );
+      
+      if (!hasPermission) {
+        return null;
+      }
+
+      // Additional check: if user is task completer, ensure they are assigned to this task
+      const task = await prisma.task.findUnique({
+        where: { id: taskId },
+        select: {
+          assigneeId: true,
+          assignee: {
+            select: {
+              email: true
+            }
+          },
+          milestone: {
+            select: {
+              project: {
+                select: {
+                  creatorId: true
+                }
+              }
+            }
+          }
+        }
+      });
+
+      if (!task) {
+        return null;
+      }
+
+      // If user is not creator/admin, they must be the assignee to view files
+      const isCreatorOrAdmin = await this.checkTaskPermission(taskId, userEmail, ['CREATOR', 'ADMIN']);
+      if (!isCreatorOrAdmin && task.assignee?.email !== userEmail) {
+        return null;
+      }
+
+      // Return task info for file service integration
+      return {
+        taskId,
+        hasAccess: true,
+        isAssignee: task.assignee?.email === userEmail,
+        isCreator: task.milestone.project.creatorId === userEmail
+      };
+    } catch (error) {
+      console.error('Error in getTaskFiles:', error);
+      throw error;
+    }
+  }
 }
 
 module.exports = new TaskService();
