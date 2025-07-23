@@ -400,25 +400,22 @@ const Profile: React.FC = () => {
             <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-lg border border-slate-200 dark:border-slate-700 p-8">
               <div className="flex items-center gap-3 mb-6">
                 <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl">
-                  <Activity className="text-emerald-600 dark:text-emerald-400" size={24} />
+                  <CheckCircle className="text-emerald-600 dark:text-emerald-400" size={24} />
                 </div>
-                <h3 className="text-xl font-semibold text-slate-900 dark:text-white">Recent Activity</h3>
+                <h3 className="text-xl font-semibold text-slate-900 dark:text-white">Account Status</h3>
               </div>
               <div className="space-y-4">
                 <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl border border-slate-200 dark:border-slate-600">
-                  <div className="w-3 h-3 bg-emerald-500 rounded-full shadow-lg"></div>
-                  <div className="flex-1">
-                    <p className="text-slate-800 dark:text-slate-200 font-medium">Profile created</p>
-                    <p className="text-slate-500 dark:text-slate-400 text-sm">Welcome to the platform!</p>
-                  </div>
-                  {/* <span className="text-slate-400 dark:text-slate-500 text-sm">Today</span> */}
+                  <CheckCircle className="text-emerald-500" size={18} />
+                  <span className="text-slate-700 dark:text-slate-200 font-medium">Email verified</span>
                 </div>
                 <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl border border-slate-200 dark:border-slate-600">
-                  <div className="w-3 h-3 bg-blue-500 rounded-full shadow-lg"></div>
-                  <div className="flex-1">
-                    <p className="text-slate-800 dark:text-slate-200 font-medium">Connected Google account</p>
-                    <p className="text-slate-500 dark:text-slate-400 text-sm">Secure authentication enabled</p>
-                  </div>
+                  <CheckCircle className="text-emerald-500" size={18} />
+                  <span className="text-slate-700 dark:text-slate-200 font-medium">Google connected</span>
+                </div>
+                <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl border border-slate-200 dark:border-slate-600">
+                  <CheckCircle className="text-emerald-500" size={18} />
+                  <span className="text-slate-700 dark:text-slate-200 font-medium">Profile active</span>
                 </div>
               </div>
             </div>
@@ -486,26 +483,6 @@ const Profile: React.FC = () => {
                 </div>
               </div>
             </div>
-
-
-            {/* Account Status */}
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-700 rounded-3xl shadow-lg p-6 border border-blue-200 dark:border-slate-600">
-              <h3 className="font-semibold text-slate-900 dark:text-white mb-4">Account Status</h3>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <CheckCircle className="text-emerald-500" size={18} />
-                  <span className="text-slate-700 dark:text-slate-200">Email verified</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <CheckCircle className="text-emerald-500" size={18} />
-                  <span className="text-slate-700 dark:text-slate-200">Google connected</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <CheckCircle className="text-emerald-500" size={18} />
-                  <span className="text-slate-700 dark:text-slate-200">Profile active</span>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -515,3 +492,4 @@ const Profile: React.FC = () => {
 
 
 export default Profile;
+                
